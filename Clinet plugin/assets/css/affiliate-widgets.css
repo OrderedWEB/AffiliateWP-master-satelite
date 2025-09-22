@@ -1,0 +1,890 @@
+/**
+ * Affiliate Widgets CSS
+ * File: /wp-content/plugins/affiliate-client-integration/assets/css/affiliate-widgets.css
+ * Plugin: Affiliate Client Integration
+ */
+
+/* ==========================================================================
+   Base Widget Styles
+   ========================================================================== */
+
+.aci-widget {
+    background: #fff;
+    border: 1px solid #e1e5e9;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 16px 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.5;
+}
+
+.aci-widget * {
+    box-sizing: border-box;
+}
+
+.aci-widget-title {
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #2c3e50;
+    border-bottom: 2px solid #f8f9fa;
+    padding-bottom: 8px;
+}
+
+.aci-widget-content {
+    margin: 0;
+}
+
+.aci-widget-footer {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid #f0f0f1;
+    font-size: 14px;
+    color: #6c757d;
+}
+
+/* ==========================================================================
+   Affiliate Form Widget
+   ========================================================================== */
+
+.aci-widget-affiliate-form {
+    max-width: 500px;
+}
+
+.aci-widget-affiliate-form .aci-form-group {
+    margin-bottom: 16px;
+}
+
+.aci-widget-affiliate-form .aci-form-label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    color: #495057;
+    font-size: 14px;
+}
+
+.aci-widget-affiliate-form .aci-form-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e9ecef;
+    border-radius: 6px;
+    font-size: 16px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    background: #fff;
+}
+
+.aci-widget-affiliate-form .aci-form-input:focus {
+    outline: none;
+    border-color: #007cba;
+    box-shadow: 0 0 0 3px rgba(0, 124, 186, 0.1);
+}
+
+.aci-widget-affiliate-form .aci-form-input.aci-success {
+    border-color: #28a745;
+}
+
+.aci-widget-affiliate-form .aci-form-input.aci-error {
+    border-color: #dc3545;
+}
+
+.aci-widget-affiliate-form .aci-form-button {
+    width: 100%;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #007cba 0%, #005a87 100%);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.aci-widget-affiliate-form .aci-form-button:hover:not(:disabled) {
+    background: linear-gradient(135deg, #005a87 0%, #004066 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 124, 186, 0.3);
+}
+
+.aci-widget-affiliate-form .aci-form-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.aci-widget-affiliate-form .aci-form-message {
+    padding: 10px 12px;
+    border-radius: 4px;
+    margin-top: 12px;
+    font-size: 14px;
+}
+
+.aci-widget-affiliate-form .aci-form-message.aci-success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.aci-widget-affiliate-form .aci-form-message.aci-error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* ==========================================================================
+   Discount Display Widget
+   ========================================================================== */
+
+.aci-widget-discount-display {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: #fff;
+    text-align: center;
+    border: none;
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+.aci-widget-discount-display .aci-widget-title {
+    color: #fff;
+    border-bottom-color: rgba(255, 255, 255, 0.2);
+    margin-bottom: 12px;
+}
+
+.aci-discount-amount {
+    font-size: 32px;
+    font-weight: 700;
+    margin: 8px 0;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.aci-discount-description {
+    font-size: 16px;
+    opacity: 0.9;
+    margin: 0;
+}
+
+.aci-discount-code {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+    margin-top: 8px;
+    font-family: monospace;
+    letter-spacing: 1px;
+}
+
+/* Discount animation */
+.aci-widget-discount-display.aci-animate {
+    animation: aci-discount-pulse 2s ease-in-out infinite;
+}
+
+@keyframes aci-discount-pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+/* ==========================================================================
+   Price Calculator Widget
+   ========================================================================== */
+
+.aci-widget-price-calculator {
+    border: 2px solid #007cba;
+}
+
+.aci-price-calculator-form {
+    display: grid;
+    gap: 16px;
+}
+
+.aci-calculator-section {
+    background: #f8f9fa;
+    padding: 16px;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+.aci-calculator-section-title {
+    margin: 0 0 12px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #495057;
+}
+
+.aci-calculator-items {
+    display: grid;
+    gap: 12px;
+}
+
+.aci-calculator-item {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr auto;
+    gap: 12px;
+    align-items: center;
+    padding: 12px;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+}
+
+.aci-calculator-item-name {
+    font-weight: 500;
+    color: #495057;
+}
+
+.aci-calculator-item input {
+    padding: 8px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.aci-calculator-remove {
+    background: #dc3545;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 8px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.aci-calculator-add-item {
+    background: #28a745;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-top: 8px;
+}
+
+.aci-price-summary {
+    background: #e7f3ff;
+    border: 1px solid #007cba;
+    border-radius: 6px;
+    padding: 16px;
+    margin-top: 16px;
+}
+
+.aci-price-summary-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.aci-price-summary-row:last-child {
+    margin-bottom: 0;
+    font-weight: 600;
+    font-size: 16px;
+    padding-top: 8px;
+    border-top: 1px solid #007cba;
+}
+
+.aci-price-summary-row.aci-discount {
+    color: #28a745;
+}
+
+/* ==========================================================================
+   Affiliate Notice Widget
+   ========================================================================== */
+
+.aci-widget-affiliate-notice {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+    color: #fff;
+    border: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.aci-widget-affiliate-notice::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    animation: aci-shine 3s infinite;
+}
+
+@keyframes aci-shine {
+    0% {
+        left: -100%;
+    }
+
+    100% {
+        left: 100%;
+    }
+}
+
+.aci-widget-affiliate-notice .aci-widget-title {
+    color: #fff;
+    border-bottom-color: rgba(255, 255, 255, 0.2);
+}
+
+.aci-affiliate-notice-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.aci-affiliate-notice-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.aci-affiliate-notice-text {
+    flex: 1;
+}
+
+.aci-affiliate-notice-code {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-family: monospace;
+}
+
+.aci-affiliate-notice-actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+}
+
+.aci-affiliate-notice-button {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s ease;
+}
+
+.aci-affiliate-notice-button:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* ==========================================================================
+   Statistics Widget
+   ========================================================================== */
+
+.aci-widget-statistics {
+    background: linear-gradient(135deg, #6f42c1 0%, #563d7c 100%);
+    color: #fff;
+    border: none;
+}
+
+.aci-widget-statistics .aci-widget-title {
+    color: #fff;
+    border-bottom-color: rgba(255, 255, 255, 0.2);
+}
+
+.aci-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.aci-stat-item {
+    text-align: center;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.aci-stat-value {
+    display: block;
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.aci-stat-label {
+    font-size: 12px;
+    opacity: 0.8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ==========================================================================
+   Social Proof Widget
+   ========================================================================== */
+
+.aci-widget-social-proof {
+    background: #fff;
+    border-left: 4px solid #ffc107;
+}
+
+.aci-social-proof-items {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.aci-social-proof-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+.aci-social-proof-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #007cba;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.aci-social-proof-content {
+    flex: 1;
+}
+
+.aci-social-proof-message {
+    font-size: 14px;
+    color: #495057;
+    margin: 0 0 4px 0;
+}
+
+.aci-social-proof-time {
+    font-size: 12px;
+    color: #6c757d;
+}
+
+/* ==========================================================================
+   Quick Action Widget
+   ========================================================================== */
+
+.aci-widget-quick-actions {
+    padding: 16px;
+}
+
+.aci-quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+}
+
+.aci-quick-action {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px 12px;
+    background: #f8f9fa;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #495057;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.aci-quick-action:hover {
+    border-color: #007cba;
+    background: #e7f3ff;
+    color: #007cba;
+    text-decoration: none;
+    transform: translateY(-2px);
+}
+
+.aci-quick-action-icon {
+    font-size: 24px;
+    margin-bottom: 8px;
+}
+
+.aci-quick-action-label {
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+    line-height: 1.3;
+}
+
+/* ==========================================================================
+   Progress Widget
+   ========================================================================== */
+
+.aci-widget-progress {
+    border-left: 4px solid #28a745;
+}
+
+.aci-progress-items {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.aci-progress-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.aci-progress-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.aci-progress-icon.aci-complete {
+    background: #28a745;
+    color: #fff;
+}
+
+.aci-progress-icon.aci-current {
+    background: #ffc107;
+    color: #212529;
+}
+
+.aci-progress-icon.aci-pending {
+    background: #e9ecef;
+    color: #6c757d;
+}
+
+.aci-progress-content {
+    flex: 1;
+}
+
+.aci-progress-title {
+    font-weight: 600;
+    color: #495057;
+    margin: 0 0 4px 0;
+    font-size: 14px;
+}
+
+.aci-progress-description {
+    font-size: 13px;
+    color: #6c757d;
+    margin: 0;
+}
+
+/* ==========================================================================
+   Countdown Widget
+   ========================================================================== */
+
+.aci-widget-countdown {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: #fff;
+    border: none;
+    text-align: center;
+}
+
+.aci-widget-countdown .aci-widget-title {
+    color: #fff;
+    border-bottom-color: rgba(255, 255, 255, 0.2);
+}
+
+.aci-countdown-timer {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin: 16px 0;
+}
+
+.aci-countdown-unit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 60px;
+}
+
+.aci-countdown-value {
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    padding: 8px 12px;
+    min-width: 50px;
+}
+
+.aci-countdown-label {
+    font-size: 12px;
+    margin-top: 4px;
+    opacity: 0.8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ==========================================================================
+   Widget Themes
+   ========================================================================== */
+
+/* Minimal Theme */
+.aci-widget.aci-theme-minimal {
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    border-bottom: 1px solid #e9ecef;
+    padding: 16px 0;
+    background: transparent;
+}
+
+.aci-widget.aci-theme-minimal .aci-widget-title {
+    border-bottom: none;
+    font-size: 16px;
+    margin-bottom: 12px;
+}
+
+/* Dark Theme */
+.aci-widget.aci-theme-dark {
+    background: #2c3e50;
+    color: #ecf0f1;
+    border-color: #34495e;
+}
+
+.aci-widget.aci-theme-dark .aci-widget-title {
+    color: #ecf0f1;
+    border-bottom-color: #34495e;
+}
+
+.aci-widget.aci-theme-dark .aci-form-input {
+    background: #34495e;
+    border-color: #4a5f7a;
+    color: #ecf0f1;
+}
+
+.aci-widget.aci-theme-dark .aci-form-input:focus {
+    border-color: #3498db;
+}
+
+/* Bordered Theme */
+.aci-widget.aci-theme-bordered {
+    border: 2px solid #007cba;
+    border-radius: 12px;
+}
+
+.aci-widget.aci-theme-bordered .aci-widget-title {
+    background: #007cba;
+    color: #fff;
+    margin: -20px -20px 16px;
+    padding: 16px 20px;
+    border-radius: 10px 10px 0 0;
+    border-bottom: none;
+}
+
+/* ==========================================================================
+   Widget Sizes
+   ========================================================================== */
+
+.aci-widget.aci-size-small {
+    padding: 12px;
+    font-size: 14px;
+}
+
+.aci-widget.aci-size-small .aci-widget-title {
+    font-size: 16px;
+    margin-bottom: 12px;
+}
+
+.aci-widget.aci-size-large {
+    padding: 32px;
+    font-size: 16px;
+}
+
+.aci-widget.aci-size-large .aci-widget-title {
+    font-size: 24px;
+    margin-bottom: 24px;
+}
+
+/* ==========================================================================
+   Widget Animations
+   ========================================================================== */
+
+.aci-widget.aci-animate-fade-in {
+    animation: aci-fade-in 0.5s ease-out;
+}
+
+.aci-widget.aci-animate-slide-up {
+    animation: aci-slide-up 0.5s ease-out;
+}
+
+.aci-widget.aci-animate-scale-in {
+    animation: aci-scale-in 0.5s ease-out;
+}
+
+@keyframes aci-fade-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes aci-slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes aci-scale-in {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    .aci-widget {
+        padding: 16px;
+        margin: 12px 0;
+        border-radius: 6px;
+    }
+
+    .aci-widget-title {
+        font-size: 16px;
+    }
+
+    .aci-calculator-item {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        text-align: center;
+    }
+
+    .aci-countdown-timer {
+        gap: 12px;
+    }
+
+    .aci-countdown-value {
+        font-size: 24px;
+        min-width: 40px;
+        padding: 6px 8px;
+    }
+
+    .aci-quick-actions-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .aci-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .aci-widget {
+        padding: 12px;
+        border-radius: 4px;
+    }
+
+    .aci-countdown-timer {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .aci-quick-actions-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .aci-stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .aci-social-proof-item {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+
+/* ==========================================================================
+   Accessibility
+   ========================================================================== */
+
+.aci-widget:focus-within {
+    outline: 2px solid #007cba;
+    outline-offset: 2px;
+}
+
+.aci-widget button:focus,
+.aci-widget input:focus,
+.aci-widget select:focus {
+    outline: 2px solid #007cba;
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    .aci-widget,
+    .aci-widget *,
+    .aci-widget::before,
+    .aci-widget::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+    .aci-widget {
+        border: 2px solid #000;
+    }
+
+    .aci-widget-title {
+        border-bottom: 2px solid #000;
+    }
+
+    .aci-form-input {
+        border: 2px solid #000;
+    }
+
+    .aci-form-button {
+        border: 2px solid #000;
+    }
+}
+
+/* Print styles */
+@media print {
+    .aci-widget {
+        box-shadow: none;
+        border: 1px solid #000;
+        break-inside: avoid;
+    }
+
+    .aci-widget-countdown,
+    .aci-widget-statistics {
+        background: #fff !important;
+        color: #000 !important;
+    }
+}

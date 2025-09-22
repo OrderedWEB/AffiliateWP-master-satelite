@@ -1,0 +1,1077 @@
+/**
+ * Shortcodes CSS
+ * File: /wp-content/plugins/affiliate-client-integration/assets/css/shortcodes.css
+ * Plugin: Affiliate Client Integration
+ */
+
+/* ==========================================================================
+   Base Shortcode Styles
+   ========================================================================== */
+
+.aci-shortcode {
+    display: block;
+    margin: 16px 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.5;
+}
+
+.aci-shortcode * {
+    box-sizing: border-box;
+}
+
+.aci-shortcode-container {
+    position: relative;
+    overflow: hidden;
+}
+
+/* ==========================================================================
+   Affiliate Form Shortcode
+   ========================================================================== */
+
+.aci-shortcode-affiliate-form {
+    background: #fff;
+    border: 1px solid #e1e5e9;
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    max-width: 500px;
+    margin: 20px auto;
+}
+
+.aci-shortcode-affiliate-form.aci-inline {
+    margin: 16px 0;
+    max-width: none;
+}
+
+.aci-shortcode-affiliate-form .aci-form-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.aci-shortcode-affiliate-form .aci-form-title {
+    margin: 0 0 8px 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.aci-shortcode-affiliate-form .aci-form-description {
+    margin: 0;
+    color: #6c757d;
+    font-size: 14px;
+}
+
+.aci-shortcode-affiliate-form .aci-form-body {
+    margin-bottom: 16px;
+}
+
+.aci-shortcode-affiliate-form .aci-input-group {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.aci-shortcode-affiliate-form .aci-input-wrapper {
+    flex: 1;
+    position: relative;
+}
+
+.aci-shortcode-affiliate-form .aci-form-input {
+    width: 100%;
+    padding: 12px 40px 12px 16px;
+    border: 2px solid #e9ecef;
+    border-radius: 6px;
+    font-size: 16px;
+    transition: all 0.2s ease;
+    background: #fff;
+}
+
+.aci-shortcode-affiliate-form .aci-form-input:focus {
+    outline: none;
+    border-color: #007cba;
+    box-shadow: 0 0 0 3px rgba(0, 124, 186, 0.1);
+}
+
+.aci-shortcode-affiliate-form .aci-form-input.aci-success {
+    border-color: #28a745;
+    padding-right: 40px;
+}
+
+.aci-shortcode-affiliate-form .aci-form-input.aci-error {
+    border-color: #dc3545;
+    padding-right: 40px;
+}
+
+.aci-shortcode-affiliate-form .aci-input-icon {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.aci-shortcode-affiliate-form .aci-input-icon.aci-success {
+    color: #28a745;
+}
+
+.aci-shortcode-affiliate-form .aci-input-icon.aci-error {
+    color: #dc3545;
+}
+
+.aci-shortcode-affiliate-form .aci-input-icon.aci-loading {
+    color: #007cba;
+    animation: aci-spin 1s linear infinite;
+}
+
+@keyframes aci-spin {
+    0% {
+        transform: translateY(-50%) rotate(0deg);
+    }
+
+    100% {
+        transform: translateY(-50%) rotate(360deg);
+    }
+}
+
+.aci-shortcode-affiliate-form .aci-form-button {
+    background: linear-gradient(135deg, #007cba 0%, #005a87 100%);
+    color: #fff;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 120px;
+}
+
+.aci-shortcode-affiliate-form .aci-form-button:hover:not(:disabled) {
+    background: linear-gradient(135deg, #005a87 0%, #004066 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 124, 186, 0.3);
+}
+
+.aci-shortcode-affiliate-form .aci-form-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.aci-shortcode-affiliate-form .aci-form-message {
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-top: 12px;
+    font-size: 14px;
+}
+
+.aci-shortcode-affiliate-form .aci-form-message.aci-success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.aci-shortcode-affiliate-form .aci-form-message.aci-error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.aci-shortcode-affiliate-form .aci-form-message.aci-info {
+    background: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+/* ==========================================================================
+   Discount Display Shortcode
+   ========================================================================== */
+
+.aci-shortcode-discount-display {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 4px 16px rgba(40, 167, 69, 0.3);
+    margin: 20px 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.aci-shortcode-discount-display::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+    animation: aci-discount-glow 3s ease-in-out infinite;
+}
+
+@keyframes aci-discount-glow {
+    0%, 100% {
+        transform: scale(1) rotate(0deg);
+    }
+
+    50% {
+        transform: scale(1.1) rotate(180deg);
+    }
+}
+
+.aci-shortcode-discount-display .aci-discount-content {
+    position: relative;
+    z-index: 1;
+}
+
+.aci-shortcode-discount-display .aci-discount-badge {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+}
+
+.aci-shortcode-discount-display .aci-discount-amount {
+    font-size: 36px;
+    font-weight: 700;
+    margin: 8px 0;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    line-height: 1;
+}
+
+.aci-shortcode-discount-display .aci-discount-description {
+    font-size: 16px;
+    opacity: 0.9;
+    margin: 8px 0 0;
+}
+
+.aci-shortcode-discount-display.aci-hidden {
+    display: none;
+}
+
+.aci-shortcode-discount-display.aci-animate-in {
+    animation: aci-discount-slide-in 0.5s ease-out;
+}
+
+@keyframes aci-discount-slide-in {
+    from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* ==========================================================================
+   Popup Trigger Shortcode
+   ========================================================================== */
+
+.aci-shortcode-popup-trigger {
+    display: inline-block;
+    margin: 8px 0;
+}
+
+.aci-popup-trigger-button {
+    background: linear-gradient(135deg, #6f42c1 0%, #563d7c 100%);
+    color: #fff;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 25px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(111, 66, 193, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.aci-popup-trigger-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.aci-popup-trigger-button:hover::before {
+    left: 100%;
+}
+
+.aci-popup-trigger-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(111, 66, 193, 0.4);
+}
+
+.aci-popup-trigger-button:active {
+    transform: translateY(0);
+}
+
+.aci-popup-trigger-button .aci-button-icon {
+    margin-right: 8px;
+    font-size: 18px;
+}
+
+/* ==========================================================================
+   Price Calculator Shortcode
+   ========================================================================== */
+
+.aci-shortcode-price-calculator {
+    background: #fff;
+    border: 2px solid #007cba;
+    border-radius: 12px;
+    padding: 24px;
+    margin: 20px 0;
+    box-shadow: 0 4px 16px rgba(0, 124, 186, 0.1);
+}
+
+.aci-shortcode-price-calculator .aci-calculator-header {
+    text-align: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.aci-shortcode-price-calculator .aci-calculator-title {
+    margin: 0 0 8px 0;
+    font-size: 22px;
+    font-weight: 600;
+    color: #007cba;
+}
+
+.aci-shortcode-price-calculator .aci-calculator-subtitle {
+    margin: 0;
+    color: #6c757d;
+    font-size: 14px;
+}
+
+.aci-shortcode-price-calculator .aci-calculator-section {
+    margin-bottom: 20px;
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.aci-shortcode-price-calculator .aci-section-title {
+    margin: 0 0 12px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #495057;
+}
+
+.aci-shortcode-price-calculator .aci-calculator-result {
+    background: linear-gradient(135deg, #e7f3ff 0%, #f0f8ff 100%);
+    border: 2px solid #007cba;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 20px;
+    text-align: center;
+}
+
+.aci-shortcode-price-calculator .aci-result-total {
+    font-size: 32px;
+    font-weight: 700;
+    color: #007cba;
+    margin: 8px 0;
+}
+
+.aci-shortcode-price-calculator .aci-result-breakdown {
+    display: grid;
+    gap: 8px;
+    margin-top: 16px;
+    font-size: 14px;
+}
+
+.aci-shortcode-price-calculator .aci-result-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+}
+
+.aci-shortcode-price-calculator .aci-result-row.aci-total {
+    font-weight: 600;
+    font-size: 16px;
+    border-top: 1px solid #007cba;
+    padding-top: 8px;
+    margin-top: 8px;
+}
+
+.aci-shortcode-price-calculator .aci-result-row.aci-discount {
+    color: #28a745;
+    font-weight: 600;
+}
+
+/* ==========================================================================
+   Affiliate Link Shortcode
+   ========================================================================== */
+
+.aci-shortcode-affiliate-link {
+    display: inline-block;
+    position: relative;
+}
+
+.aci-affiliate-link {
+    color: #007cba;
+    text-decoration: none;
+    font-weight: 500;
+    border-bottom: 1px solid transparent;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.aci-affiliate-link:hover {
+    color: #005a87;
+    border-bottom-color: #005a87;
+    text-decoration: none;
+}
+
+.aci-affiliate-link.aci-active::after {
+    content: '💰';
+    margin-left: 4px;
+    font-size: 14px;
+    animation: aci-bounce 2s infinite;
+}
+
+@keyframes aci-bounce {
+    0%, 20%, 50%, 80%, 100% {
+        transform: translateY(0);
+    }
+
+    40% {
+        transform: translateY(-3px);
+    }
+
+    60% {
+        transform: translateY(-2px);
+    }
+}
+
+.aci-affiliate-indicator {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #28a745;
+    color: #fff;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    animation: aci-pulse 2s infinite;
+}
+
+@keyframes aci-pulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.2);
+        opacity: 0.8;
+    }
+}
+
+/* ==========================================================================
+   Affiliate Notice Shortcode
+   ========================================================================== */
+
+.aci-shortcode-affiliate-notice {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+    color: #fff;
+    padding: 16px 20px;
+    border-radius: 8px;
+    margin: 16px 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.aci-shortcode-affiliate-notice::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #ffc107, #fd7e14, #dc3545, #e83e8c, #6f42c1, #6610f2, #007bff, #20c997, #28a745, #ffc107);
+    background-size: 200% 100%;
+    animation: aci-rainbow 3s linear infinite;
+}
+
+@keyframes aci-rainbow {
+    0% {
+        background-position: 0% 0%;
+    }
+
+    100% {
+        background-position: 200% 0%;
+    }
+}
+
+.aci-shortcode-affiliate-notice .aci-notice-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+    z-index: 1;
+}
+
+.aci-shortcode-affiliate-notice .aci-notice-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.aci-shortcode-affiliate-notice .aci-notice-text {
+    flex: 1;
+    font-weight: 500;
+}
+
+.aci-shortcode-affiliate-notice .aci-notice-close {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease;
+}
+
+.aci-shortcode-affiliate-notice .aci-notice-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.aci-shortcode-affiliate-notice.aci-hidden {
+    display: none;
+}
+
+/* Notice positions */
+.aci-shortcode-affiliate-notice.aci-position-top {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    border-radius: 0;
+    margin: 0;
+}
+
+.aci-shortcode-affiliate-notice.aci-position-bottom {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    border-radius: 0;
+    margin: 0;
+}
+
+.aci-shortcode-affiliate-notice.aci-position-floating {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    max-width: 320px;
+    z-index: 9999;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* ==========================================================================
+   Referral Stats Shortcode
+   ========================================================================== */
+
+.aci-shortcode-referral-stats {
+    background: #fff;
+    border: 1px solid #e1e5e9;
+    border-radius: 12px;
+    padding: 24px;
+    margin: 20px 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.aci-shortcode-referral-stats .aci-stats-header {
+    text-align: center;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #f8f9fa;
+}
+
+.aci-shortcode-referral-stats .aci-stats-title {
+    margin: 0 0 8px 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.aci-shortcode-referral-stats .aci-stats-subtitle {
+    margin: 0;
+    color: #6c757d;
+    font-size: 14px;
+}
+
+.aci-shortcode-referral-stats .aci-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+}
+
+.aci-shortcode-referral-stats .aci-stat-card {
+    background: linear-gradient(135deg, #f8f9fa 0%, #fff 100%);
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.aci-shortcode-referral-stats .aci-stat-card:hover {
+    border-color: #007cba;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 124, 186, 0.2);
+}
+
+.aci-shortcode-referral-stats .aci-stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #007cba;
+    margin: 0 0 4px 0;
+    line-height: 1;
+}
+
+.aci-shortcode-referral-stats .aci-stat-label {
+    font-size: 14px;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 500;
+}
+
+.aci-shortcode-referral-stats .aci-stat-change {
+    font-size: 12px;
+    margin-top: 4px;
+    font-weight: 500;
+}
+
+.aci-shortcode-referral-stats .aci-stat-change.aci-positive {
+    color: #28a745;
+}
+
+.aci-shortcode-referral-stats .aci-stat-change.aci-negative {
+    color: #dc3545;
+}
+
+.aci-shortcode-referral-stats .aci-stat-change::before {
+    content: '↗';
+    margin-right: 2px;
+}
+
+.aci-shortcode-referral-stats .aci-stat-change.aci-negative::before {
+    content: '↘';
+}
+
+/* ==========================================================================
+   URL Parameter Shortcode
+   ========================================================================== */
+
+.aci-shortcode-url-parameter {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin: 12px 0;
+    font-size: 14px;
+    color: #856404;
+}
+
+.aci-shortcode-url-parameter .aci-param-label {
+    font-weight: 600;
+    margin-right: 8px;
+}
+
+.aci-shortcode-url-parameter .aci-param-value {
+    font-family: monospace;
+    background: rgba(133, 100, 4, 0.1);
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+
+.aci-shortcode-url-parameter.aci-hidden {
+    display: none;
+}
+
+/* ==========================================================================
+   Shortcode Themes
+   ========================================================================== */
+
+/* Minimal Theme */
+.aci-shortcode.aci-theme-minimal {
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+    padding: 8px 0;
+}
+
+.aci-shortcode.aci-theme-minimal .aci-form-title,
+.aci-shortcode.aci-theme-minimal .aci-stats-title {
+    font-size: 18px;
+    border-bottom: 1px solid #e9ecef;
+    padding-bottom: 8px;
+}
+
+/* Dark Theme */
+.aci-shortcode.aci-theme-dark {
+    background: #2c3e50;
+    color: #ecf0f1;
+    border-color: #34495e;
+}
+
+.aci-shortcode.aci-theme-dark .aci-form-title,
+.aci-shortcode.aci-theme-dark .aci-stats-title {
+    color: #ecf0f1;
+}
+
+.aci-shortcode.aci-theme-dark .aci-form-input {
+    background: #34495e;
+    border-color: #4a5f7a;
+    color: #ecf0f1;
+}
+
+.aci-shortcode.aci-theme-dark .aci-form-input:focus {
+    border-color: #3498db;
+}
+
+.aci-shortcode.aci-theme-dark .aci-stat-card {
+    background: #34495e;
+    border-color: #4a5f7a;
+    color: #ecf0f1;
+}
+
+/* Bordered Theme */
+.aci-shortcode.aci-theme-bordered {
+    border: 3px solid #007cba;
+    border-radius: 12px;
+    position: relative;
+}
+
+.aci-shortcode.aci-theme-bordered::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    bottom: -3px;
+    background: linear-gradient(45deg, #007cba, #28a745, #ffc107, #dc3545);
+    border-radius: 12px;
+    z-index: -1;
+    animation: aci-border-glow 3s linear infinite;
+}
+
+@keyframes aci-border-glow {
+    0% {
+        filter: hue-rotate(0deg);
+    }
+
+    100% {
+        filter: hue-rotate(360deg);
+    }
+}
+
+/* Compact Theme */
+.aci-shortcode.aci-theme-compact {
+    padding: 12px;
+    margin: 8px 0;
+    font-size: 14px;
+}
+
+.aci-shortcode.aci-theme-compact .aci-form-title,
+.aci-shortcode.aci-theme-compact .aci-stats-title {
+    font-size: 16px;
+    margin-bottom: 12px;
+}
+
+.aci-shortcode.aci-theme-compact .aci-form-input,
+.aci-shortcode.aci-theme-compact .aci-form-button {
+    padding: 8px 12px;
+    font-size: 14px;
+}
+
+/* ==========================================================================
+   Shortcode Animations
+   ========================================================================== */
+
+.aci-shortcode.aci-animate-fade-in {
+    animation: aci-fade-in 0.5s ease-out;
+}
+
+.aci-shortcode.aci-animate-slide-up {
+    animation: aci-slide-up 0.5s ease-out;
+}
+
+.aci-shortcode.aci-animate-slide-left {
+    animation: aci-slide-left 0.5s ease-out;
+}
+
+.aci-shortcode.aci-animate-scale-in {
+    animation: aci-scale-in 0.5s ease-out;
+}
+
+.aci-shortcode.aci-animate-bounce-in {
+    animation: aci-bounce-in 0.6s ease-out;
+}
+
+@keyframes aci-fade-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes aci-slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes aci-slide-left {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes aci-scale-in {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes aci-bounce-in {
+    0% {
+        opacity: 0;
+        transform: scale(0.3);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(1.05);
+    }
+
+    70% {
+        transform: scale(0.9);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    .aci-shortcode {
+        margin: 12px 0;
+    }
+
+    .aci-shortcode-affiliate-form,
+    .aci-shortcode-price-calculator,
+    .aci-shortcode-referral-stats {
+        padding: 16px;
+    }
+
+    .aci-input-group {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .aci-form-button {
+        width: 100%;
+    }
+
+    .aci-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .aci-calculator-result .aci-result-total {
+        font-size: 24px;
+    }
+
+    .aci-discount-amount {
+        font-size: 28px;
+    }
+
+    .aci-shortcode-affiliate-notice.aci-position-floating {
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+        max-width: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .aci-shortcode {
+        margin: 8px 0;
+    }
+
+    .aci-shortcode-affiliate-form,
+    .aci-shortcode-price-calculator,
+    .aci-shortcode-referral-stats {
+        padding: 12px;
+        border-radius: 6px;
+    }
+
+    .aci-stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .aci-stat-value {
+        font-size: 20px;
+    }
+
+    .aci-result-total {
+        font-size: 20px;
+    }
+
+    .aci-discount-amount {
+        font-size: 24px;
+    }
+
+    .aci-popup-trigger-button {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+/* ==========================================================================
+   Accessibility
+   ========================================================================== */
+
+.aci-shortcode:focus-within {
+    outline: 2px solid #007cba;
+    outline-offset: 2px;
+}
+
+.aci-shortcode button:focus,
+.aci-shortcode input:focus,
+.aci-shortcode select:focus,
+.aci-shortcode a:focus {
+    outline: 2px solid #007cba;
+    outline-offset: 2px;
+}
+
+/* Screen reader only content */
+.aci-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+    .aci-shortcode {
+        border: 2px solid #000;
+    }
+
+    .aci-form-input,
+    .aci-form-button,
+    .aci-stat-card {
+        border: 2px solid #000;
+    }
+
+    .aci-shortcode-discount-display,
+    .aci-shortcode-affiliate-notice {
+        background: #fff !important;
+        color: #000 !important;
+    }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+
+    .aci-shortcode,
+    .aci-shortcode *,
+    .aci-shortcode::before,
+    .aci-shortcode::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Print styles */
+@media print {
+    .aci-shortcode {
+        box-shadow: none;
+        break-inside: avoid;
+    }
+
+    .aci-shortcode-discount-display,
+    .aci-shortcode-affiliate-notice {
+        background: #fff !important;
+        color: #000 !important;
+        border: 1px solid #000;
+    }
+
+    .aci-popup-trigger-button {
+        display: none;
+    }
+
+    .aci-shortcode-affiliate-notice.aci-position-floating,
+    .aci-shortcode-affiliate-notice.aci-position-top,
+    .aci-shortcode-affiliate-notice.aci-position-bottom {
+        position: static;
+        margin: 16px 0;
+    }
+}

@@ -1,0 +1,1115 @@
+# OpenAPI Specification for Affiliate Cross Domain System
+# Path: /wp-content/plugins/affiliate-cross-domain-system/api/openapi.yaml
+# Plugin: Affiliate Cross Domain System (Master)
+
+openapi: 3.0.3
+info:
+  title: Affiliate Cross Domain API
+  description: |
+    Cross-domain affiliate validation and tracking system API.
+    
+    This API provides secure endpoints for validating affiliate codes, tracking conversions,
+    and managing cross-domain affiliate relationships between master and client domains.
+    
+    ## Authentication
+    All API requests require:
+    - `X-API-Key` header with valid API key
+    - `X-Signature` header with HMAC-SHA256 signature
+    - `X-Client-Domain` header with the requesting domain
+    
+    ## Rate Limiting
+    - 100 requests per minute per API key
+    - 1000 requests per hour per API key  
+    - 10000 requests per day per API key
+    
+    ## Error Handling
+    The API uses standard HTTP status codes and returns detailed error information
+    in JSON format for all error responses.
+    
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: api-support@example.com
+    url: https://example.com/api-support
+  license:
+    name: GPL v2 or later
+    url: https://www.gnu.org/licenses/gpl-2.0.html
+  termsOfService: https://example.com/terms-of-service
+
+servers:
+  - url: https://master.example.com/wp-json/affiliate-cross-domain/v1
+    description: Production API Server
+  - url: https://staging.example.com/wp-json/affiliate-cross-domain/v1
+    description: Staging API Server
+  - url: https://dev.example.com/wp-json/affiliate-cross-domain/v1
+    description: Development API Server
+
+security:
+  - ApiKeyAuth: []
+  - SignatureAuth: []
+
+paths:
+  /validate:
+    post:
+      summary: Validate Affiliate Code
+      description: |
+        Validates an affiliate code and returns discount information if valid.
+        This is the primary endpoint for code validation.
+      operationId: validateAffiliateCode
+      tags:
+        - Validation
+      security:
+        - ApiKeyAuth: []
+        - SignatureAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateCodeRequest'
+            examples:
+              basic_validation:
+                summary: Basic code validation
+                value:
+                  code: "SAVE20"
+                  domain: "https://client.example.com"
+                  timestamp: 1672531200
+                  ip_address: "192.168.1.100"
+                  user_agent: "Mozilla/5.0..."
+              with_metadata:
+                summary: Validation with additional context
+                value:
+                  code: "PREMIUM15"
+                  domain: "https://client.example.com"
+                  timestamp: 1672531200
+                  ip_address: "192.168.1.100"
+                  user_agent: "Mozilla/5.0..."
+                  referer: "https://google.com"
+                  page_url: "https://client.example.com/products/premium"
+                  user_id: 12345
+                  session_id: "sess_abc123"
+      responses:
+        '200':
+          description: Code validation successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidateCodeResponse'
+              examples:
+                valid_percentage:
+                  summary: Valid percentage discount code
+                  value:
+                    valid: true
+                    code: "SAVE20"
+                    discount_type: "percentage"
+                    discount_amount: 20
+                    affiliate_id: "aff_123"
+                    commission_rate: 10
+                    valid_until: "2024-12-31T23:59:59Z"
+                    minimum_order: 50.00
+                    maximum_discount: 100.00
+                    applicable_products: []
+                    excluded_products: []
+                    usage_limit: 1000
+                    current_usage: 45
+                    expires_at: "2024-01-01T12:00:00Z"
+                    metadata:
+                      campaign: "holiday2023"
+                      source: "email"
+                valid_fixed:
+                  summary: Valid fixed amount discount code
+                  value:
+                    valid: true
+                    code: "FIXED10"
+                    discount_type: "fixed"
+                    discount_amount: 10.00
+                    affiliate_id: "aff_456"
+                    commission_rate: 15
+                    valid_until: "2024-06-30T23:59:59Z"
+                    minimum_order: 25.00
+                    maximum_discount: null
+                    applicable_products: [101, 102, 103]
+                    excluded_products: []
+                    usage_limit: 500
+                    current_usage: 23
+                    expires_at: "2024-01-01T12:00:00Z"
+                    metadata:
+                      campaign: "spring2024"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/CodeNotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /convert:
+    post:
+      summary: Track Conversion
+      description: |
+        Records a conversion event for tracking affiliate commissions.
+        Should be called when a purchase is completed using an affiliate code.
+      operationId: trackConversion
+      tags:
+        - Tracking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversionRequest'
+            examples:
+              basic_conversion:
+                summary: Basic conversion tracking
+                value:
+                  code: "SAVE20"
+                  amount: 150.00
+                  currency: "USD"
+                  domain: "https://client.example.com"
+                  timestamp: 1672531200
+                  order_id: "ORD-12345"
+                  user_id: 67890
+                  session_id: "sess_abc123"
+                  ip_address: "192.168.1.100"
+              detailed_conversion:
+                summary: Detailed conversion with products
+                value:
+                  code: "PREMIUM15"
+                  amount: 299.99
+                  currency: "USD"
+                  domain: "https://client.example.com"
+                  timestamp: 1672531200
+                  order_id: "ORD-67890"
+                  user_id: 12345
+                  session_id: "sess_xyz789"
+                  ip_address: "192.168.1.101"
+                  metadata:
+                    products:
+                      - id: 101
+                        name: "Premium Package"
+                        price: 299.99
+                        quantity: 1
+                    customer_email: "customer@example.com"
+                    discount_applied: 45.00
+      responses:
+        '200':
+          description: Conversion tracked successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversionResponse'
+              examples:
+                successful_tracking:
+                  summary: Successful conversion tracking
+                  value:
+                    success: true
+                    tracking_id: "track_abc123def456"
+                    commission_amount: 15.00
+                    commission_rate: 10.0
+                    affiliate_id: "aff_123"
+                    processed_at: "2024-01-01T12:00:00Z"
+                    metadata:
+                      order_id: "ORD-12345"
+                      campaign: "holiday2023"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /track:
+    post:
+      summary: Track Events
+      description: |
+        Track various events like page views, clicks, and impressions
+        for affiliate analytics and optimization.
+      operationId: trackEvent
+      tags:
+        - Tracking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrackEventRequest'
+            examples:
+              page_view:
+                summary: Track page view
+                value:
+                  code: "SAVE20"
+                  event_type: "impression"
+                  domain: "https://client.example.com"
+                  page_url: "https://client.example.com/products"
+                  page_title: "Premium Products"
+                  timestamp: 1672531200
+                  user_id: 12345
+                  session_id: "sess_abc123"
+                  ip_address: "192.168.1.100"
+                  user_agent: "Mozilla/5.0..."
+                  referer: "https://google.com"
+              click_event:
+                summary: Track click event
+                value:
+                  code: "PREMIUM15"
+                  event_type: "click"
+                  domain: "https://client.example.com"
+                  page_url: "https://client.example.com/checkout"
+                  timestamp: 1672531200
+                  session_id: "sess_xyz789"
+                  ip_address: "192.168.1.101"
+                  metadata:
+                    element_type: "button"
+                    element_text: "Apply Discount"
+                    element_id: "apply-btn"
+      responses:
+        '200':
+          description: Event tracked successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrackEventResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /code-details:
+    get:
+      summary: Get Code Details
+      description: |
+        Retrieve detailed information about an affiliate code without
+        triggering usage tracking.
+      operationId: getCodeDetails
+      tags:
+        - Information
+      parameters:
+        - name: code
+          in: query
+          required: true
+          description: The affiliate code to look up
+          schema:
+            type: string
+            example: "SAVE20"
+        - name: domain
+          in: query
+          required: true
+          description: The requesting domain
+          schema:
+            type: string
+            format: uri
+            example: "https://client.example.com"
+      responses:
+        '200':
+          description: Code details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeDetailsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/CodeNotFound'
+
+  /health:
+    get:
+      summary: Health Check
+      description: |
+        Check the health and status of the API service.
+        Used for monitoring and uptime checks.
+      operationId: healthCheck
+      tags:
+        - System
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              examples:
+                healthy:
+                  summary: Healthy service
+                  value:
+                    status: "healthy"
+                    timestamp: "2024-01-01T12:00:00Z"
+                    version: "1.0.0"
+                    uptime: 86400
+                    checks:
+                      database: "ok"
+                      cache: "ok"
+                      external_api: "ok"
+        '503':
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              examples:
+                unhealthy:
+                  summary: Unhealthy service
+                  value:
+                    status: "unhealthy"
+                    timestamp: "2024-01-01T12:00:00Z"
+                    version: "1.0.0"
+                    uptime: 86400
+                    checks:
+                      database: "error"
+                      cache: "ok"
+                      external_api: "timeout"
+
+  /verify-domain:
+    post:
+      summary: Verify Domain Authorization
+      description: |
+        Verify that a domain is authorized to use the API.
+        Used during initial setup and periodic verification.
+      operationId: verifyDomain
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyDomainRequest'
+            examples:
+              domain_verification:
+                summary: Domain verification request
+                value:
+                  domain: "https://client.example.com"
+                  api_key: "affcd_abc123def456"
+                  verification_token: "token_xyz789"
+      responses:
+        '200':
+          description: Domain verified successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyDomainResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for authentication
+    SignatureAuth:
+      type: apiKey
+      in: header
+      name: X-Signature
+      description: HMAC-SHA256 signature for request verification
+
+  schemas:
+    ValidateCodeRequest:
+      type: object
+      required:
+        - code
+        - domain
+        - timestamp
+        - ip_address
+      properties:
+        code:
+          type: string
+          description: The affiliate code to validate
+          example: "SAVE20"
+          minLength: 1
+          maxLength: 50
+        domain:
+          type: string
+          format: uri
+          description: The domain making the request
+          example: "https://client.example.com"
+        timestamp:
+          type: integer
+          description: Unix timestamp of the request
+          example: 1672531200
+        ip_address:
+          type: string
+          format: ipv4
+          description: Client IP address
+          example: "192.168.1.100"
+        user_agent:
+          type: string
+          description: Client user agent string
+          example: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        referer:
+          type: string
+          format: uri
+          description: HTTP referer
+          example: "https://google.com"
+        page_url:
+          type: string
+          format: uri
+          description: Current page URL
+          example: "https://client.example.com/products"
+        user_id:
+          type: integer
+          description: User ID if logged in
+          example: 12345
+        session_id:
+          type: string
+          description: Session identifier
+          example: "sess_abc123"
+
+    ValidateCodeResponse:
+      type: object
+      properties:
+        valid:
+          type: boolean
+          description: Whether the code is valid
+          example: true
+        code:
+          type: string
+          description: The validated code
+          example: "SAVE20"
+        discount_type:
+          type: string
+          enum: [percentage, fixed, buy_x_get_y, tiered]
+          description: Type of discount
+          example: "percentage"
+        discount_amount:
+          type: number
+          format: float
+          description: Discount amount (percentage or fixed value)
+          example: 20.0
+        affiliate_id:
+          type: string
+          description: Unique affiliate identifier
+          example: "aff_123"
+        commission_rate:
+          type: number
+          format: float
+          description: Commission rate percentage
+          example: 10.0
+        valid_until:
+          type: string
+          format: date-time
+          description: Code expiration date
+          example: "2024-12-31T23:59:59Z"
+        minimum_order:
+          type: number
+          format: float
+          description: Minimum order amount required
+          example: 50.00
+        maximum_discount:
+          type: number
+          format: float
+          nullable: true
+          description: Maximum discount amount
+          example: 100.00
+        applicable_products:
+          type: array
+          items:
+            type: integer
+          description: Product IDs this code applies to (empty = all products)
+          example: [101, 102, 103]
+        excluded_products:
+          type: array
+          items:
+            type: integer
+          description: Product IDs this code excludes
+          example: [201, 202]
+        usage_limit:
+          type: integer
+          description: Maximum number of uses allowed
+          example: 1000
+        current_usage:
+          type: integer
+          description: Current number of uses
+          example: 45
+        expires_at:
+          type: string
+          format: date-time
+          description: Session expiration for this validation
+          example: "2024-01-01T12:00:00Z"
+        metadata:
+          type: object
+          description: Additional code metadata
+          example:
+            campaign: "holiday2023"
+            source: "email"
+
+    ConversionRequest:
+      type: object
+      required:
+        - code
+        - amount
+        - currency
+        - domain
+        - timestamp
+        - order_id
+      properties:
+        code:
+          type: string
+          description: The affiliate code used
+          example: "SAVE20"
+        amount:
+          type: number
+          format: float
+          description: Conversion amount
+          example: 150.00
+          minimum: 0
+        currency:
+          type: string
+          description: Currency code (ISO 4217)
+          example: "USD"
+          pattern: "^[A-Z]{3}$"
+        domain:
+          type: string
+          format: uri
+          description: Domain where conversion occurred
+          example: "https://client.example.com"
+        timestamp:
+          type: integer
+          description: Unix timestamp of conversion
+          example: 1672531200
+        order_id:
+          type: string
+          description: Unique order identifier
+          example: "ORD-12345"
+        user_id:
+          type: integer
+          description: User ID who made the purchase
+          example: 67890
+        session_id:
+          type: string
+          description: Session identifier
+          example: "sess_abc123"
+        ip_address:
+          type: string
+          format: ipv4
+          description: Customer IP address
+          example: "192.168.1.100"
+        metadata:
+          type: object
+          description: Additional conversion data
+          example:
+            products:
+              - id: 101
+                name: "Premium Package"
+                price: 299.99
+                quantity: 1
+            customer_email: "customer@example.com"
+            discount_applied: 45.00
+
+    ConversionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether conversion was tracked successfully
+          example: true
+        tracking_id:
+          type: string
+          description: Unique tracking identifier
+          example: "track_abc123def456"
+        commission_amount:
+          type: number
+          format: float
+          description: Commission amount earned
+          example: 15.00
+        commission_rate:
+          type: number
+          format: float
+          description: Commission rate applied
+          example: 10.0
+        affiliate_id:
+          type: string
+          description: Affiliate identifier
+          example: "aff_123"
+        processed_at:
+          type: string
+          format: date-time
+          description: When the conversion was processed
+          example: "2024-01-01T12:00:00Z"
+        metadata:
+          type: object
+          description: Additional processing metadata
+          example:
+            order_id: "ORD-12345"
+            campaign: "holiday2023"
+
+    TrackEventRequest:
+      type: object
+      required:
+        - event_type
+        - domain
+        - timestamp
+      properties:
+        code:
+          type: string
+          description: Associated affiliate code
+          example: "SAVE20"
+        event_type:
+          type: string
+          enum: [impression, click, view, interaction]
+          description: Type of event to track
+          example: "impression"
+        domain:
+          type: string
+          format: uri
+          description: Domain where event occurred
+          example: "https://client.example.com"
+        page_url:
+          type: string
+          format: uri
+          description: Page URL where event occurred
+          example: "https://client.example.com/products"
+        page_title:
+          type: string
+          description: Page title
+          example: "Premium Products"
+        timestamp:
+          type: integer
+          description: Unix timestamp of event
+          example: 1672531200
+        user_id:
+          type: integer
+          description: User ID if available
+          example: 12345
+        session_id:
+          type: string
+          description: Session identifier
+          example: "sess_abc123"
+        ip_address:
+          type: string
+          format: ipv4
+          description: Client IP address
+          example: "192.168.1.100"
+        user_agent:
+          type: string
+          description: Client user agent
+          example: "Mozilla/5.0..."
+        referer:
+          type: string
+          format: uri
+          description: HTTP referer
+          example: "https://google.com"
+        metadata:
+          type: object
+          description: Additional event data
+          example:
+            element_type: "button"
+            element_text: "Apply Discount"
+            element_id: "apply-btn"
+
+    TrackEventResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether event was tracked successfully
+          example: true
+        tracking_id:
+          type: string
+          description: Unique tracking identifier
+          example: "event_abc123def456"
+        processed_at:
+          type: string
+          format: date-time
+          description: When the event was processed
+          example: "2024-01-01T12:00:00Z"
+
+    CodeDetailsResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          description: The affiliate code
+          example: "SAVE20"
+        name:
+          type: string
+          description: Human-readable code name
+          example: "Holiday 2023 - 20% Off"
+        description:
+          type: string
+          description: Code description
+          example: "Get 20% off your entire order during our holiday sale"
+        discount_type:
+          type: string
+          enum: [percentage, fixed, buy_x_get_y, tiered]
+          description: Type of discount
+          example: "percentage"
+        discount_amount:
+          type: number
+          format: float
+          description: Discount amount
+          example: 20.0
+        minimum_order:
+          type: number
+          format: float
+          description: Minimum order amount
+          example: 50.00
+        maximum_discount:
+          type: number
+          format: float
+          nullable: true
+          description: Maximum discount amount
+          example: 100.00
+        valid_from:
+          type: string
+          format: date-time
+          description: Code activation date
+          example: "2023-12-01T00:00:00Z"
+        valid_until:
+          type: string
+          format: date-time
+          description: Code expiration date
+          example: "2024-12-31T23:59:59Z"
+        usage_limit:
+          type: integer
+          description: Maximum uses allowed
+          example: 1000
+        current_usage:
+          type: integer
+          description: Current usage count
+          example: 45
+        applicable_products:
+          type: array
+          items:
+            type: integer
+          description: Applicable product IDs
+          example: [101, 102, 103]
+        excluded_products:
+          type: array
+          items:
+            type: integer
+          description: Excluded product IDs
+          example: [201, 202]
+        terms_and_conditions:
+          type: string
+          description: Terms and conditions text
+          example: "Cannot be combined with other offers. Valid for first-time customers only."
+
+    VerifyDomainRequest:
+      type: object
+      required:
+        - domain
+        - api_key
+        - verification_token
+      properties:
+        domain:
+          type: string
+          format: uri
+          description: Domain to verify
+          example: "https://client.example.com"
+        api_key:
+          type: string
+          description: API key for the domain
+          example: "affcd_abc123def456"
+        verification_token:
+          type: string
+          description: Domain verification token
+          example: "token_xyz789"
+
+    VerifyDomainResponse:
+      type: object
+      properties:
+        verified:
+          type: boolean
+          description: Whether domain is verified
+          example: true
+        domain:
+          type: string
+          format: uri
+          description: Verified domain
+          example: "https://client.example.com"
+        verified_at:
+          type: string
+          format: date-time
+          description: Verification timestamp
+          example: "2024-01-01T12:00:00Z"
+        expires_at:
+          type: string
+          format: date-time
+          description: Verification expiration
+          example: "2025-01-01T12:00:00Z"
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+          description: Overall service status
+          example: "healthy"
+        timestamp:
+          type: string
+          format: date-time
+          description: Health check timestamp
+          example: "2024-01-01T12:00:00Z"
+        version:
+          type: string
+          description: API version
+          example: "1.0.0"
+        uptime:
+          type: integer
+          description: Service uptime in seconds
+          example: 86400
+        checks:
+          type: object
+          description: Individual component health checks
+          properties:
+            database:
+              type: string
+              enum: [ok, warning, error]
+              example: "ok"
+            cache:
+              type: string
+              enum: [ok, warning, error]
+              example: "ok"
+            external_api:
+              type: string
+              enum: [ok, warning, error, timeout]
+              example: "ok"
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code
+              example: "INVALID_CODE"
+            message:
+              type: string
+              description: Human-readable error message
+              example: "The provided affiliate code is invalid or expired"
+            details:
+              type: object
+              description: Additional error details
+              example:
+                code: "SAVE20"
+                reason: "expired"
+                expired_at: "2023-12-31T23:59:59Z"
+        timestamp:
+          type: string
+          format: date-time
+          description: Error timestamp
+          example: "2024-01-01T12:00:00Z"
+        request_id:
+          type: string
+          description: Unique request identifier for debugging
+          example: "req_abc123def456"
+
+    RateLimitResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: "RATE_LIMIT_EXCEEDED"
+            message:
+              type: string
+              example: "Rate limit exceeded. Please try again later."
+        rate_limit:
+          type: object
+          properties:
+            limit:
+              type: integer
+              description: Request limit per window
+              example: 100
+            remaining:
+              type: integer
+              description: Remaining requests in current window
+              example: 0
+            reset:
+              type: integer
+              description: Unix timestamp when limit resets
+              example: 1672531260
+            window:
+              type: string
+              description: Rate limit window
+              example: "1 minute"
+
+  responses:
+    BadRequest:
+      description: Bad Request - Invalid input parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            invalid_code:
+              summary: Invalid affiliate code format
+              value:
+                error:
+                  code: "INVALID_INPUT"
+                  message: "Affiliate code must be between 1 and 50 characters"
+                  details:
+                    field: "code"
+                    value: ""
+                timestamp: "2024-01-01T12:00:00Z"
+                request_id: "req_abc123"
+
+    Unauthorized:
+      description: Unauthorized - Invalid or missing API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            missing_api_key:
+              summary: Missing API key
+              value:
+                error:
+                  code: "MISSING_API_KEY"
+                  message: "API key is required in X-API-Key header"
+                timestamp: "2024-01-01T12:00:00Z"
+                request_id: "req_def456"
+
+    Forbidden:
+      description: Forbidden - Domain not authorized or signature invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            domain_not_authorized:
+              summary: Domain not authorized
+              value:
+                error:
+                  code: "DOMAIN_NOT_AUTHORIZED"
+                  message: "Domain https://unauthorized.example.com is not authorized to use this API"
+                  details:
+                    domain: "https://unauthorized.example.com"
+                timestamp: "2024-01-01T12:00:00Z"
+                request_id: "req_ghi789"
+
+    CodeNotFound:
+      description: Not Found - Affiliate code not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            code_not_found:
+              summary: Code not found
+              value:
+                error:
+                  code: "CODE_NOT_FOUND"
+                  message: "Affiliate code 'INVALID123' was not found"
+                  details:
+                    code: "INVALID123"
+                timestamp: "2024-01-01T12:00:00Z"
+                request_id: "req_jkl012"
+
+    RateLimitExceeded:
+      description: Too Many Requests - Rate limit exceeded
+      headers:
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: Request limit per window
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+          description: Remaining requests in current window
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+          description: Unix timestamp when limit resets
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds until next request is allowed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/RateLimitResponse'
+
+    InternalServerError:
+      description: Internal Server Error - Unexpected server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            internal_error:
+              summary: Internal server error
+              value:
+                error:
+                  code: "INTERNAL_ERROR"
+                  message: "An unexpected error occurred. Please try again later."
+                timestamp: "2024-01-01T12:00:00Z"
+                request_id: "req_mno345"
+
+  parameters:
+    ApiKeyHeader:
+      name: X-API-Key
+      in: header
+      required: true
+      description: API key for authentication
+      schema:
+        type: string
+        example: "affcd_abc123def456789"
+
+    SignatureHeader:
+      name: X-Signature
+      in: header
+      required: true
+      description: HMAC-SHA256 signature of the request
+      schema:
+        type: string
+        example: "MTY3MjUzMTIwMDpub25jZV9hYmMxMjM6c2lnbmF0dXJlX2hhc2g="
+
+    ClientDomainHeader:
+      name: X-Client-Domain
+      in: header
+      required: true
+      description: The domain making the request
+      schema:
+        type: string
+        format: uri
+        example: "https://client.example.com"
+
+    ClientVersionHeader:
+      name: X-Client-Version
+      in: header
+      required: false
+      description: Client plugin version
+      schema:
+        type: string
+        example: "1.0.0"
+
+tags:
+  - name: Validation
+    description: Affiliate code validation operations
+  - name: Tracking
+    description: Event and conversion tracking operations
+  - name: Information
+    description: Information retrieval operations
+  - name: Authentication
+    description: Authentication and authorization operations
+  - name: System
+    description: System health and monitoring operations
+
+externalDocs:
+  description: Affiliate Cross Domain API Documentation
+  url: https://example.com/api-docs

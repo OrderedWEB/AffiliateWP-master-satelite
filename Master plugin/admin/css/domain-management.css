@@ -1,0 +1,339 @@
+/**
+ * Domain Management CSS
+ * Referenced in the original domain-management.php file
+ */
+
+/* Progress bar for bulk operations */
+.affcd-progress {
+    background: #f1f1f1;
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 15px 0;
+    position: relative;
+    height: 20px;
+}
+
+.affcd-progress-bar {
+    background: #0073aa;
+    height: 100%;
+    transition: width 0.3s ease;
+    border-radius: 3px;
+}
+
+.affcd-progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 12px;
+    color: #333;
+    font-weight: 500;
+}
+
+/* Domain list enhancements */
+.domain-list-item {
+    transition: all 0.2s ease;
+    border-radius: 4px;
+}
+
+.domain-list-item:hover {
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+}
+
+.domain-list-item.verified {
+    border-left: 4px solid #46b450;
+}
+
+.domain-list-item.error {
+    border-left: 4px solid #dc3232;
+}
+
+.domain-list-item.pending {
+    border-left: 4px solid #ffb900;
+}
+
+/* Domain actions */
+.domain-actions {
+    flex-shrink: 0;
+}
+
+.domain-actions .button {
+    margin-left: 5px;
+}
+
+.domain-actions .button:first-child {
+    margin-left: 0;
+}
+
+.domain-select {
+    margin-right: 10px;
+}
+
+/* Status indicators */
+.status-indicator {
+    display: inline-block;
+    margin-left: 10px;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.status-verified {
+    background: #46b450;
+    color: white;
+    animation: pulse-green 2s infinite;
+}
+
+.status-error {
+    background: #dc3232;
+    color: white;
+    animation: pulse-red 2s infinite;
+}
+
+.status-pending {
+    background: #ffb900;
+    color: #333;
+    animation: pulse-yellow 2s infinite;
+}
+
+@keyframes pulse-green {
+    0%, 100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
+}
+
+@keyframes pulse-red {
+    0%, 100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
+}
+
+@keyframes pulse-yellow {
+    0%, 100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.8;
+    }
+}
+
+/* Form enhancements */
+.form-table input.changed,
+.form-table select.changed,
+.form-table textarea.changed {
+    border-color: #ffb900;
+    box-shadow: 0 0 0 1px #ffb900;
+}
+
+/* API key display */
+.api-key-display {
+    position: relative;
+    max-width: 500px;
+    word-wrap: break-word;
+}
+
+.api-key-display:empty::before {
+    content: "No API key generated";
+    color: #666;
+    font-style: italic;
+}
+
+/* Webhook test results */
+.webhook-test-result {
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 3px;
+}
+
+.webhook-test-result.success::before {
+    content: "✓ ";
+    color: #155724;
+}
+
+.webhook-test-result.error::before {
+    content: "✗ ";
+    color: #721c24;
+}
+
+/* Stats grid improvements */
+.stats-grid {
+    margin-top: 20px;
+}
+
+.stats-card {
+    text-align: center;
+    transition: transform 0.2s ease;
+    cursor: default;
+}
+
+.stats-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.stats-number {
+    display: block;
+    line-height: 1.2;
+}
+
+.stats-label {
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Tab content spacing */
+.tab-content .postbox {
+    margin-bottom: 20px;
+}
+
+.tab-content .postbox:last-child {
+    margin-bottom: 0;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 782px) {
+    .domain-list-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .domain-actions {
+        margin-top: 10px;
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .api-key-display {
+        font-size: 12px;
+        padding: 8px;
+    }
+}
+
+@media screen and (max-width: 600px) {
+    .domain-info .domain-url {
+        font-size: 14px;
+    }
+
+    .domain-stats {
+        font-size: 11px;
+    }
+
+    .domain-actions .button {
+        padding: 4px 8px;
+        font-size: 11px;
+    }
+}
+
+/* Loading states */
+.button.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.button.loading::after {
+    content: "";
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin-left: 5px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Notice enhancements */
+.notice.is-dismissible {
+    position: relative;
+    animation: slideInDown 0.3s ease-out;
+}
+
+@keyframes slideInDown {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Security and validation styling */
+.security-warning {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    color: #856404;
+    padding: 10px 15px;
+    border-radius: 4px;
+    margin: 10px 0;
+}
+
+.security-warning::before {
+    content: "⚠ ";
+    font-weight: bold;
+}
+
+.validation-error {
+    color: #dc3232;
+    font-size: 12px;
+    margin-top: 5px;
+}
+
+.validation-success {
+    color: #46b450;
+    font-size: 12px;
+    margin-top: 5px;
+}
+
+/* Accessibility improvements */
+.screen-reader-text {
+    clip: rect(1px, 1px, 1px, 1px);
+    position: absolute !important;
+    height: 1px;
+    width: 1px;
+    overflow: hidden;
+}
+
+.button:focus,
+.domain-select:focus {
+    box-shadow: 0 0 0 2px #0073aa;
+    outline: none;
+}
+
+/* Print styles */
+@media print {
+
+    .domain-actions,
+    .button,
+    .nav-tab-wrapper {
+        display: none !important;
+    }
+
+    .domain-list-item {
+        break-inside: avoid;
+        border: 1px solid #000 !important;
+        margin-bottom: 10px;
+    }
+}

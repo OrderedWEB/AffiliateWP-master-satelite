@@ -1,0 +1,639 @@
+/**
+ * Affiliate Client Full - Addon-Specific Styles
+ * 
+ * Styling for enhanced tracking of supported WordPress plugins.
+ * Provides visual indicators and improved UX for addon integrations.
+ * 
+ * @package AffiliateClientFull
+ * @version 1.0.0
+ */
+
+/* ==========================================================================
+   WooCommerce Integration Styles
+   ========================================================================== */
+
+.woocommerce .affiliate-tracked-product {
+    position: relative;
+}
+
+.woocommerce .affiliate-tracked-product::before {
+    content: "🎯";
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(76, 175, 80, 0.9);
+    color: white;
+    border-radius: 50%;
+    width: 25px;
+    height: 25px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 10;
+}
+
+.affiliate-debug-mode .woocommerce .affiliate-tracked-product::before {
+    opacity: 1;
+}
+
+.woocommerce .affiliate-cart-tracking {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 15px 0;
+    position: relative;
+}
+
+.woocommerce .affiliate-cart-tracking::before {
+    content: "📊 Affiliate Tracking Active";
+    font-size: 12px;
+    color: #4CAF50;
+    font-weight: 500;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.woocommerce .affiliate-conversion-banner {
+    background: linear-gradient(135deg, #4CAF50, #66BB6A);
+    color: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 20px 0;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.woocommerce .affiliate-conversion-banner h3 {
+    margin: 0 0 10px 0;
+    font-size: 18px;
+}
+
+.woocommerce .affiliate-conversion-banner p {
+    margin: 0;
+    opacity: 0.9;
+}
+
+/* WooCommerce Product Grid Enhancements */
+.woocommerce ul.products li.product.affiliate-tracked {
+    border: 2px solid transparent;
+    transition: border-color 0.3s ease;
+}
+
+.affiliate-debug-mode .woocommerce ul.products li.product.affiliate-tracked {
+    border-color: rgba(76, 175, 80, 0.3);
+}
+
+.woocommerce ul.products li.product.affiliate-tracked:hover {
+    border-color: rgba(76, 175, 80, 0.6);
+}
+
+/* ==========================================================================
+   Easy Digital Downloads Integration Styles
+   ========================================================================== */
+
+.edd_downloads_list .affiliate-tracked-download {
+    position: relative;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.affiliate-debug-mode .edd_downloads_list .affiliate-tracked-download {
+    border-color: rgba(76, 175, 80, 0.3);
+}
+
+.edd_downloads_list .affiliate-tracked-download::after {
+    content: "📥";
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #4CAF50;
+    color: white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.affiliate-debug-mode .edd_downloads_list .affiliate-tracked-download::after {
+    opacity: 1;
+}
+
+.edd-cart .affiliate-edd-tracking {
+    background: #f0f8ff;
+    border: 1px solid #b3d9ff;
+    border-radius: 5px;
+    padding: 10px;
+    margin: 10px 0;
+    font-size: 13px;
+    color: #0066cc;
+}
+
+/* ==========================================================================
+   MemberPress Integration Styles
+   ========================================================================== */
+
+.mepr-signup-form.affiliate-tracked {
+    position: relative;
+    background: linear-gradient(135deg, #fff, #f8f9fa);
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.mepr-signup-form.affiliate-tracked::before {
+    content: "🏆 Referred Signup";
+    position: absolute;
+    top: -10px;
+    left: 20px;
+    background: #4CAF50;
+    color: white;
+    padding: 5px 15px;
+    border-radius: 15px;
+    font-size: 12px;
+    font-weight: 500;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.affiliate-debug-mode .mepr-signup-form.affiliate-tracked::before {
+    opacity: 1;
+}
+
+.mepr-membership-benefits.affiliate-enhanced {
+    border-left: 4px solid #4CAF50;
+    padding-left: 15px;
+    background: rgba(76, 175, 80, 0.05);
+}
+
+/* ==========================================================================
+   LifterLMS Integration Styles
+   ========================================================================== */
+
+.llms-course-list .llms-loop-item.affiliate-tracked {
+    position: relative;
+    overflow: hidden;
+}
+
+.llms-course-list .llms-loop-item.affiliate-tracked::before {
+    content: "🎓";
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: rgba(33, 150, 243, 0.9);
+    color: white;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    z-index: 5;
+    opacity: 0;
+    transform: scale(0.8);
+    transition: all 0.3s ease;
+}
+
+.affiliate-debug-mode .llms-course-list .llms-loop-item.affiliate-tracked::before {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.llms-purchase-form.affiliate-tracked {
+    border: 2px dashed #2196F3;
+    border-radius: 8px;
+    padding: 20px;
+    background: linear-gradient(135deg, #e3f2fd, #f3e5f5);
+}
+
+/* ==========================================================================
+   Gravity Forms Integration Styles
+   ========================================================================== */
+
+.gform_wrapper.affiliate-tracked {
+    position: relative;
+    background: rgba(76, 175, 80, 0.02);
+    border-radius: 8px;
+    padding: 20px;
+    border: 1px solid rgba(76, 175, 80, 0.1);
+}
+
+.gform_wrapper.affiliate-tracked::before {
+    content: "📋 Tracked Form";
+    position: absolute;
+    top: -8px;
+    left: 20px;
+    background: white;
+    color: #4CAF50;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 500;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.affiliate-debug-mode .gform_wrapper.affiliate-tracked::before {
+    opacity: 1;
+}
+
+.gform_wrapper .gfield.affiliate-field-tracked {
+    position: relative;
+}
+
+.gform_wrapper .gfield.affiliate-field-tracked::after {
+    content: "👁";
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0;
+    font-size: 12px;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.affiliate-debug-mode .gform_wrapper .gfield.affiliate-field-tracked::after {
+    opacity: 0.6;
+}
+
+/* ==========================================================================
+   Contact Form 7 Integration Styles
+   ========================================================================== */
+
+.wpcf7-form.affiliate-tracked {
+    background: linear-gradient(135deg, #fff, #f9f9f9);
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+
+.wpcf7-form.affiliate-tracked::before {
+    content: "✉️ Contact Tracking";
+    position: absolute;
+    top: -10px;
+    right: 20px;
+    background: #FF9800;
+    color: white;
+    padding: 5px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.affiliate-debug-mode .wpcf7-form.affiliate-tracked::before {
+    opacity: 1;
+}
+
+.wpcf7-response-output.affiliate-success {
+    background: #d4edda;
+    border-color: #c3e6cb;
+    color: #155724;
+    padding: 15px;
+    border-radius: 5px;
+    border: 1px solid;
+    position: relative;
+}
+
+.wpcf7-response-output.affiliate-success::before {
+    content: "✅ ";
+    font-weight: bold;
+}
+
+/* ==========================================================================
+   Universal Form Enhancements
+   ========================================================================== */
+
+.affiliate-form-progress {
+    background: #f8f9fa;
+    border-radius: 20px;
+    height: 6px;
+    margin: 15px 0;
+    overflow: hidden;
+    position: relative;
+}
+
+.affiliate-form-progress-bar {
+    background: linear-gradient(90deg, #4CAF50, #66BB6A);
+    height: 100%;
+    border-radius: 20px;
+    transition: width 0.5s ease;
+    position: relative;
+}
+
+.affiliate-form-progress-bar::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg,
+            transparent,
+            rgba(255, 255, 255, 0.4),
+            transparent);
+    animation: affiliate-progress-shimmer 2s infinite;
+}
+
+@keyframes affiliate-progress-shimmer {
+    0% {
+        transform: translateX(-100%);
+    }
+
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+/* ==========================================================================
+   E-commerce Enhancement Indicators
+   ========================================================================== */
+
+.affiliate-price-tracking {
+    position: relative;
+    display: inline-block;
+}
+
+.affiliate-price-tracking::after {
+    content: "💰";
+    position: absolute;
+    top: -5px;
+    right: -15px;
+    font-size: 10px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.affiliate-debug-mode .affiliate-price-tracking::after {
+    opacity: 0.7;
+}
+
+.affiliate-cart-badge {
+    position: relative;
+}
+
+.affiliate-cart-badge::before {
+    content: "🛒";
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #4CAF50;
+    color: white;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    opacity: 0;
+    transform: scale(0);
+    transition: all 0.3s ease;
+}
+
+.affiliate-debug-mode .affiliate-cart-badge::before {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* ==========================================================================
+   Video and Media Tracking
+   ========================================================================== */
+
+.affiliate-video-tracked {
+    position: relative;
+}
+
+.affiliate-video-tracked::before {
+    content: "📹";
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.affiliate-debug-mode .affiliate-video-tracked::before {
+    opacity: 1;
+}
+
+/* ==========================================================================
+   Social Media Integration
+   ========================================================================== */
+
+.affiliate-social-share {
+    position: relative;
+    display: inline-block;
+}
+
+.affiliate-social-share::after {
+    content: "📢";
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    font-size: 10px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.affiliate-debug-mode .affiliate-social-share::after {
+    opacity: 0.8;
+}
+
+/* ==========================================================================
+   Download Tracking
+   ========================================================================== */
+
+.affiliate-download-link {
+    position: relative;
+    padding-right: 20px;
+}
+
+.affiliate-download-link::after {
+    content: "⬇️";
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.affiliate-debug-mode .affiliate-download-link::after {
+    opacity: 0.7;
+}
+
+/* ==========================================================================
+   Scroll and Engagement Tracking
+   ========================================================================== */
+
+.affiliate-scroll-indicator {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: rgba(76, 175, 80, 0.3);
+    z-index: 999997;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.affiliate-scroll-indicator.active {
+    opacity: 1;
+}
+
+.affiliate-scroll-progress {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50, #66BB6A);
+    transition: width 0.1s ease;
+}
+
+/* ==========================================================================
+   Mobile Responsive Enhancements
+   ========================================================================== */
+
+@media (max-width: 768px) {
+
+    .woocommerce .affiliate-tracked-product::before,
+    .edd_downloads_list .affiliate-tracked-download::after,
+    .llms-course-list .llms-loop-item.affiliate-tracked::before {
+        width: 20px;
+        height: 20px;
+        font-size: 10px;
+        top: 5px;
+        right: 5px;
+    }
+
+    .affiliate-conversion-banner {
+        padding: 15px;
+        margin: 15px 0;
+    }
+
+    .affiliate-conversion-banner h3 {
+        font-size: 16px;
+    }
+
+    .gform_wrapper.affiliate-tracked,
+    .wpcf7-form.affiliate-tracked,
+    .mepr-signup-form.affiliate-tracked {
+        padding: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+
+    .affiliate-cart-tracking,
+    .affiliate-edd-tracking {
+        padding: 10px;
+        margin: 10px 0;
+        font-size: 12px;
+    }
+
+    .affiliate-form-progress {
+        height: 4px;
+    }
+
+    .affiliate-scroll-indicator {
+        height: 2px;
+    }
+}
+
+/* ==========================================================================
+   High Contrast and Accessibility
+   ========================================================================== */
+
+@media (prefers-contrast: high) {
+
+    .affiliate-tracked-product::before,
+    .affiliate-tracked-download::after,
+    .affiliate-cart-badge::before {
+        background: #000;
+        border: 2px solid #4CAF50;
+    }
+
+    .affiliate-cart-tracking,
+    .affiliate-edd-tracking {
+        border: 2px solid #000;
+        background: #fff;
+    }
+
+    .affiliate-conversion-banner {
+        background: #000;
+        border: 2px solid #4CAF50;
+    }
+}
+
+/* ==========================================================================
+   Reduced Motion Preferences
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .affiliate-progress-shimmer,
+    .affiliate-form-progress-bar::after {
+        animation: none;
+    }
+
+    .affiliate-tracked-product::before,
+    .affiliate-tracked-download::after,
+    .affiliate-cart-badge::before,
+    .affiliate-video-tracked::before {
+        transition: none;
+    }
+
+    .affiliate-scroll-progress {
+        transition: none;
+    }
+}
+
+/* ==========================================================================
+   Print Styles
+   ========================================================================== */
+
+@media print {
+
+    .affiliate-tracked-product::before,
+    .affiliate-tracked-download::after,
+    .affiliate-cart-badge::before,
+    .affiliate-video-tracked::before,
+    .affiliate-social-share::after,
+    .affiliate-download-link::after,
+    .affiliate-scroll-indicator,
+    .affiliate-form-progress {
+        display: none !important;
+    }
+
+    .affiliate-cart-tracking,
+    .affiliate-edd-tracking,
+    .affiliate-conversion-banner {
+        background: white !important;
+        border: 1px solid #ccc !important;
+        color: black !important;
+    }
+}

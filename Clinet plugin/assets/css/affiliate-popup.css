@@ -1,0 +1,509 @@
+/**
+ * Affiliate Popup CSS
+ * File: /wp-content/plugins/affiliate-client-integration/assets/css/affiliate-popup.css
+ * Plugin: Affiliate Client Integration
+ */
+
+/* Popup Overlay */
+.aci-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(3px);
+}
+
+.aci-popup-overlay.aci-active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Popup Container */
+.aci-popup {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    transform: scale(0.7) translateY(20px);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.aci-popup-overlay.aci-active .aci-popup {
+    transform: scale(1) translateY(0);
+}
+
+/* Popup Header */
+.aci-popup-header {
+    padding: 24px 24px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    position: relative;
+}
+
+.aci-popup-title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+    color: #2c3e50;
+    line-height: 1.3;
+}
+
+.aci-popup-subtitle {
+    margin: 8px 0 0;
+    font-size: 16px;
+    color: #6c757d;
+    line-height: 1.4;
+}
+
+.aci-popup-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #adb5bd;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.aci-popup-close:hover {
+    background: #f8f9fa;
+    color: #6c757d;
+}
+
+/* Popup Body */
+.aci-popup-body {
+    padding: 24px;
+}
+
+.aci-popup-form {
+    margin: 0;
+}
+
+.aci-popup-field {
+    margin-bottom: 20px;
+}
+
+.aci-popup-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #495057;
+    font-size: 14px;
+}
+
+.aci-popup-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 16px;
+    transition: border-color 0.2s ease;
+    background: #fff;
+}
+
+.aci-popup-input:focus {
+    outline: none;
+    border-color: #007cba;
+    box-shadow: 0 0 0 3px rgba(0, 124, 186, 0.1);
+}
+
+.aci-popup-input.aci-error {
+    border-color: #dc3545;
+}
+
+.aci-popup-input.aci-success {
+    border-color: #28a745;
+}
+
+.aci-popup-button {
+    width: 100%;
+    padding: 14px 24px;
+    background: linear-gradient(135deg, #007cba 0%, #005a87 100%);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.aci-popup-button:hover:not(:disabled) {
+    background: linear-gradient(135deg, #005a87 0%, #004066 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 124, 186, 0.3);
+}
+
+.aci-popup-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.aci-popup-button-text {
+    transition: opacity 0.2s ease;
+}
+
+.aci-popup-button.aci-loading .aci-popup-button-text {
+    opacity: 0;
+}
+
+.aci-popup-loader {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.aci-popup-button.aci-loading .aci-popup-loader {
+    opacity: 1;
+}
+
+.aci-popup-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top: 2px solid #fff;
+    border-radius: 50%;
+    animation: aci-spin 1s linear infinite;
+}
+
+@keyframes aci-spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Popup Messages */
+.aci-popup-message {
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+    font-size: 14px;
+    border: 1px solid;
+}
+
+.aci-popup-message.aci-success {
+    background: #d4edda;
+    color: #155724;
+    border-color: #c3e6cb;
+}
+
+.aci-popup-message.aci-error {
+    background: #f8d7da;
+    color: #721c24;
+    border-color: #f5c6cb;
+}
+
+.aci-popup-message.aci-info {
+    background: #d1ecf1;
+    color: #0c5460;
+    border-color: #bee5eb;
+}
+
+/* Benefits Section */
+.aci-popup-benefits {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.aci-benefits-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #495057;
+    margin: 0 0 16px;
+    text-align: center;
+}
+
+.aci-benefits-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.aci-benefit-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 14px;
+    color: #6c757d;
+}
+
+.aci-benefit-icon {
+    width: 20px;
+    height: 20px;
+    margin-right: 12px;
+    color: #28a745;
+    flex-shrink: 0;
+}
+
+/* Popup Variants */
+
+/* Compact Popup */
+.aci-popup.aci-popup-compact {
+    max-width: 400px;
+}
+
+.aci-popup-compact .aci-popup-header {
+    padding: 20px 20px 12px;
+}
+
+.aci-popup-compact .aci-popup-body {
+    padding: 20px;
+}
+
+.aci-popup-compact .aci-popup-title {
+    font-size: 20px;
+}
+
+/* Fullscreen Popup */
+.aci-popup.aci-popup-fullscreen {
+    max-width: 100%;
+    width: 100%;
+    height: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.aci-popup-fullscreen .aci-popup-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 40px;
+}
+
+/* Slide-in Popup */
+.aci-popup.aci-popup-slide {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    max-width: 360px;
+    width: auto;
+    transform: translateX(100%);
+    margin: 0;
+}
+
+.aci-popup-overlay.aci-slide .aci-popup.aci-popup-slide {
+    transform: translateX(0);
+}
+
+.aci-popup-overlay.aci-slide {
+    background: transparent;
+    align-items: flex-end;
+    justify-content: flex-end;
+    backdrop-filter: none;
+}
+
+/* Special Effects */
+.aci-popup-glow {
+    box-shadow: 0 0 30px rgba(0, 124, 186, 0.3);
+}
+
+.aci-popup-shake {
+    animation: aci-shake 0.5s ease-in-out;
+}
+
+@keyframes aci-shake {
+    0%, 100% {
+        transform: translateX(0);
+    }
+
+    25% {
+        transform: translateX(-5px);
+    }
+
+    75% {
+        transform: translateX(5px);
+    }
+}
+
+/* Dark Theme */
+.aci-popup.aci-dark {
+    background: #2c3e50;
+    color: #ecf0f1;
+}
+
+.aci-popup.aci-dark .aci-popup-title {
+    color: #ecf0f1;
+}
+
+.aci-popup.aci-dark .aci-popup-subtitle {
+    color: #bdc3c7;
+}
+
+.aci-popup.aci-dark .aci-popup-input {
+    background: #34495e;
+    border-color: #4a5f7a;
+    color: #ecf0f1;
+}
+
+.aci-popup.aci-dark .aci-popup-input:focus {
+    border-color: #3498db;
+}
+
+.aci-popup.aci-dark .aci-popup-close {
+    color: #bdc3c7;
+}
+
+.aci-popup.aci-dark .aci-popup-close:hover {
+    background: #34495e;
+    color: #ecf0f1;
+}
+
+/* Progress Bar */
+.aci-popup-progress {
+    height: 4px;
+    background: #e9ecef;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+
+.aci-popup-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #007cba 0%, #28a745 100%);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .aci-popup {
+        max-width: 95%;
+        margin: 20px;
+    }
+
+    .aci-popup-header {
+        padding: 20px 20px 12px;
+    }
+
+    .aci-popup-body {
+        padding: 20px;
+    }
+
+    .aci-popup-title {
+        font-size: 20px;
+    }
+
+    .aci-popup.aci-popup-slide {
+        right: 12px;
+        bottom: 12px;
+        max-width: calc(100% - 24px);
+    }
+
+    .aci-popup.aci-popup-fullscreen .aci-popup-body {
+        padding: 24px;
+    }
+}
+
+@media (max-width: 480px) {
+    .aci-popup {
+        width: 100%;
+        margin: 0;
+        border-radius: 0;
+        max-height: 100vh;
+    }
+
+    .aci-popup-overlay {
+        align-items: flex-end;
+    }
+
+    .aci-popup-overlay.aci-active .aci-popup {
+        transform: translateY(0);
+    }
+
+    .aci-popup:not(.aci-popup-fullscreen) {
+        transform: translateY(100%);
+    }
+
+    .aci-popup-overlay.aci-active .aci-popup:not(.aci-popup-fullscreen) {
+        transform: translateY(0);
+    }
+}
+
+/* Accessibility */
+.aci-popup:focus {
+    outline: 2px solid #007cba;
+    outline-offset: 2px;
+}
+
+.aci-popup-overlay[aria-hidden="true"] {
+    display: none;
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+    .aci-popup {
+        border: 2px solid #000;
+    }
+
+    .aci-popup-button {
+        border: 2px solid #000;
+    }
+
+    .aci-popup-input {
+        border: 2px solid #000;
+    }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+
+    .aci-popup-overlay,
+    .aci-popup,
+    .aci-popup-button,
+    .aci-popup-input,
+    .aci-popup-close {
+        transition: none;
+    }
+
+    .aci-popup-spinner {
+        animation: none;
+    }
+
+    .aci-popup-shake {
+        animation: none;
+    }
+}
+
+/* Print styles */
+@media print {
+    .aci-popup-overlay {
+        display: none !important;
+    }
+}

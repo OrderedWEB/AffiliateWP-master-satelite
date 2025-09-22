@@ -1,0 +1,663 @@
+/**
+ * Affiliate Responsive CSS
+ * File: /wp-content/plugins/affiliate-client-integration/assets/css/affiliate-responsive.css
+ * Plugin: Affiliate Client Integration
+ */
+
+/* ==========================================================================
+   Base Responsive Framework
+   ========================================================================== */
+
+/* Container Queries Support */
+@supports (container-type: inline-size) {
+    .aci-container {
+        container-type: inline-size;
+    }
+}
+
+/* Flexible Grid System */
+.aci-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: 1fr;
+}
+
+.aci-grid-2 {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+.aci-grid-3 {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.aci-grid-4 {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+/* Flexible Box Layout */
+.aci-flex {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.aci-flex-column {
+    flex-direction: column;
+}
+
+.aci-flex-center {
+    align-items: center;
+    justify-content: center;
+}
+
+.aci-flex-between {
+    justify-content: space-between;
+}
+
+.aci-flex-around {
+    justify-content: space-around;
+}
+
+.aci-flex-1 {
+    flex: 1;
+}
+
+.aci-flex-auto {
+    flex: auto;
+}
+
+.aci-flex-none {
+    flex: none;
+}
+
+/* ==========================================================================
+   Responsive Breakpoints
+   ========================================================================== */
+
+/* Extra Small Devices (Portrait Phones) */
+@media (max-width: 575.98px) {
+    .aci-container {
+        padding: 0 12px;
+    }
+
+    .aci-affiliate-form-inline {
+        padding: 16px;
+        margin: 12px 0;
+    }
+
+    .aci-field-group {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .aci-button {
+        width: 100%;
+        min-height: 44px;
+        font-size: 16px;
+        /* Prevent zoom on iOS */
+    }
+
+    .aci-popup {
+        width: 100%;
+        height: 100%;
+        border-radius: 0;
+        max-height: 100vh;
+    }
+
+    .aci-grid-2,
+    .aci-grid-3,
+    .aci-grid-4 {
+        grid-template-columns: 1fr;
+    }
+
+    /* Touch-friendly sizes */
+    .aci-input {
+        min-height: 44px;
+        font-size: 16px;
+    }
+
+    /* Stack price breakdown vertically */
+    .aci-price-breakdown {
+        flex-direction: column;
+    }
+
+    .aci-price-summary {
+        font-size: 14px;
+    }
+
+    /* Hide less important elements */
+    .aci-benefits-section {
+        display: none;
+    }
+
+    .aci-form-description {
+        font-size: 14px;
+    }
+}
+
+/* Small Devices (Landscape Phones) */
+@media (min-width: 576px) and (max-width: 767.98px) {
+    .aci-container {
+        padding: 0 16px;
+    }
+
+    .aci-affiliate-form-inline {
+        padding: 20px;
+        margin: 16px 0;
+    }
+
+    .aci-field-group {
+        flex-direction: row;
+        align-items: flex-start;
+    }
+
+    .aci-input-wrapper {
+        flex: 2;
+    }
+
+    .aci-button {
+        flex: 1;
+        min-width: 120px;
+    }
+
+    .aci-popup {
+        max-width: 90%;
+        border-radius: 8px;
+    }
+
+    .aci-grid-3,
+    .aci-grid-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Medium Devices (Tablets) */
+@media (min-width: 768px) and (max-width: 991.98px) {
+    .aci-container {
+        padding: 0 20px;
+    }
+
+    .aci-affiliate-form-inline {
+        padding: 24px;
+        margin: 20px 0;
+    }
+
+    .aci-popup {
+        max-width: 600px;
+    }
+
+    .aci-grid-4 {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    /* Show benefits in collapsed state */
+    .aci-benefits-section {
+        margin-top: 16px;
+    }
+
+    .aci-benefits-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .aci-benefit-item {
+        flex: 1;
+        min-width: 150px;
+        font-size: 13px;
+    }
+}
+
+/* Large Devices (Desktops) */
+@media (min-width: 992px) and (max-width: 1199.98px) {
+    .aci-container {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 0 24px;
+    }
+
+    .aci-popup {
+        max-width: 500px;
+    }
+
+    /* Restore full benefits display */
+    .aci-benefits-section {
+        margin-top: 20px;
+    }
+
+    .aci-benefits-list {
+        flex-direction: column;
+    }
+
+    .aci-benefit-item {
+        font-size: 14px;
+    }
+}
+
+/* Extra Large Devices (Large Desktops) */
+@media (min-width: 1200px) {
+    .aci-container {
+        max-width: 1140px;
+        margin: 0 auto;
+        padding: 0 24px;
+    }
+
+    .aci-affiliate-form-inline {
+        max-width: 600px;
+        margin: 24px auto;
+    }
+
+    .aci-popup {
+        max-width: 500px;
+    }
+}
+
+/* ==========================================================================
+   Orientation-Based Responsive Rules
+   ========================================================================== */
+
+/* Portrait Orientation */
+@media (orientation: portrait) {
+    .aci-popup-fullscreen .aci-popup-body {
+        padding: 24px 20px;
+    }
+
+    .aci-price-calculator {
+        flex-direction: column;
+    }
+
+    .aci-benefits-list {
+        flex-direction: column;
+        gap: 12px;
+    }
+}
+
+/* Landscape Orientation */
+@media (orientation: landscape) and (max-height: 600px) {
+    .aci-popup {
+        max-height: 95vh;
+        overflow-y: auto;
+    }
+
+    .aci-popup-header {
+        padding: 16px 24px 12px;
+    }
+
+    .aci-popup-body {
+        padding: 16px 24px 20px;
+    }
+
+    .aci-benefits-section {
+        margin-top: 12px;
+    }
+
+    .aci-benefit-item {
+        margin-bottom: 8px;
+    }
+}
+
+/* ==========================================================================
+   Device-Specific Responsive Rules
+   ========================================================================== */
+
+/* iPhone SE and similar small screens */
+@media (max-width: 375px) {
+    .aci-affiliate-form-inline {
+        padding: 12px;
+        border-radius: 6px;
+    }
+
+    .aci-form-title {
+        font-size: 18px;
+    }
+
+    .aci-form-description {
+        font-size: 13px;
+        line-height: 1.3;
+    }
+
+    .aci-button {
+        padding: 12px 16px;
+        font-size: 15px;
+    }
+
+    .aci-input {
+        padding: 10px 12px;
+        font-size: 16px;
+    }
+}
+
+/* Large phones (iPhone Plus, etc.) */
+@media (min-width: 414px) and (max-width: 767px) {
+    .aci-field-group {
+        flex-direction: row;
+        align-items: stretch;
+    }
+
+    .aci-input-wrapper {
+        flex: 2;
+    }
+
+    .aci-button {
+        flex: 1;
+        max-width: 140px;
+    }
+}
+
+/* iPad and tablet landscape */
+@media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
+    .aci-popup {
+        max-width: 70%;
+        max-height: 80vh;
+    }
+
+    .aci-benefits-list {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+}
+
+/* ==========================================================================
+   Interactive Element Responsive Behavior
+   ========================================================================== */
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+    .aci-button {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    .aci-input {
+        min-height: 44px;
+    }
+
+    .aci-popup-close {
+        width: 44px;
+        height: 44px;
+        font-size: 20px;
+    }
+
+    /* Remove hover effects on touch devices */
+    .aci-button:hover {
+        transform: none;
+        box-shadow: none;
+    }
+
+    /* Add touch feedback */
+    .aci-button:active {
+        transform: scale(0.98);
+    }
+}
+
+/* Mouse/trackpad optimizations */
+@media (hover: hover) and (pointer: fine) {
+    .aci-button {
+        min-height: 40px;
+    }
+
+    .aci-input {
+        min-height: 40px;
+    }
+
+    /* Enhanced hover effects for precise pointers */
+    .aci-button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 124, 186, 0.2);
+    }
+
+    .aci-popup-close:hover {
+        transform: scale(1.1);
+    }
+}
+
+/* ==========================================================================
+   High DPI Display Optimizations
+   ========================================================================== */
+
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .aci-affiliate-form-inline {
+        border-width: 0.5px;
+    }
+
+    .aci-input {
+        border-width: 1px;
+    }
+
+    .aci-button {
+        border-width: 1px;
+    }
+
+    /* Sharper icons and graphics */
+    .aci-icon {
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
+    }
+}
+
+/* ==========================================================================
+   Accessibility-Responsive Features
+   ========================================================================== */
+
+/* Large text preference */
+@media (prefers-reduced-motion: no-preference) {
+    .aci-popup {
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .aci-button {
+        transition: all 0.2s ease;
+    }
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+
+    .aci-popup,
+    .aci-button,
+    .aci-input,
+    .aci-notification {
+        transition: none;
+    }
+
+    .aci-spinner {
+        animation: none;
+    }
+}
+
+/* High contrast preference */
+@media (prefers-contrast: high) {
+    .aci-affiliate-form-inline {
+        border: 2px solid #000;
+    }
+
+    .aci-button {
+        border: 2px solid #000;
+        background: #000;
+        color: #fff;
+    }
+
+    .aci-input {
+        border: 2px solid #000;
+    }
+
+    .aci-input:focus {
+        border-color: #000;
+        box-shadow: 0 0 0 3px #000;
+    }
+}
+
+/* ==========================================================================
+   Print-Responsive Styles
+   ========================================================================== */
+
+@media print {
+    .aci-popup-overlay {
+        display: none !important;
+    }
+
+    .aci-affiliate-form-inline {
+        border: 1px solid #000;
+        background: #fff;
+        color: #000;
+        break-inside: avoid;
+    }
+
+    .aci-button {
+        border: 1px solid #000;
+        background: #fff;
+        color: #000;
+    }
+
+    .aci-benefits-section {
+        page-break-inside: avoid;
+    }
+
+    /* Hide interactive elements */
+    .aci-popup-trigger,
+    .aci-close-button {
+        display: none;
+    }
+}
+
+/* ==========================================================================
+   Container Query Responsive (Future-proof)
+   ========================================================================== */
+
+@supports (container-type: inline-size) {
+    @container (max-width: 400px) {
+        .aci-field-group {
+            flex-direction: column;
+        }
+
+        .aci-benefits-list {
+            flex-direction: column;
+        }
+    }
+
+    @container (min-width: 500px) {
+        .aci-field-group {
+            flex-direction: row;
+        }
+
+        .aci-benefits-list {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+}
+
+/* ==========================================================================
+   Utility Classes for Responsive Behavior
+   ========================================================================== */
+
+/* Visibility utilities */
+.aci-hidden-xs {
+    display: none;
+}
+
+@media (min-width: 576px) {
+    .aci-hidden-xs {
+        display: block;
+    }
+}
+
+.aci-hidden-sm {
+    display: block;
+}
+
+@media (min-width: 576px) and (max-width: 767.98px) {
+    .aci-hidden-sm {
+        display: none;
+    }
+}
+
+.aci-hidden-md {
+    display: block;
+}
+
+@media (min-width: 768px) and (max-width: 991.98px) {
+    .aci-hidden-md {
+        display: none;
+    }
+}
+
+.aci-hidden-lg {
+    display: block;
+}
+
+@media (min-width: 992px) {
+    .aci-hidden-lg {
+        display: none;
+    }
+}
+
+/* Text alignment utilities */
+.aci-text-center-mobile {
+    text-align: left;
+}
+
+@media (max-width: 767.98px) {
+    .aci-text-center-mobile {
+        text-align: center;
+    }
+}
+
+.aci-text-left-desktop {
+    text-align: center;
+}
+
+@media (min-width: 768px) {
+    .aci-text-left-desktop {
+        text-align: left;
+    }
+}
+
+/* Spacing utilities */
+.aci-stack-mobile>*+* {
+    margin-top: 0.5rem;
+}
+
+@media (max-width: 767.98px) {
+    .aci-stack-mobile>*+* {
+        margin-top: 1rem;
+    }
+}
+
+.aci-gap-responsive {
+    gap: 0.5rem;
+}
+
+@media (min-width: 576px) {
+    .aci-gap-responsive {
+        gap: 1rem;
+    }
+}
+
+@media (min-width: 768px) {
+    .aci-gap-responsive {
+        gap: 1.5rem;
+    }
+}
+
+/* Size utilities */
+.aci-full-width-mobile {
+    width: auto;
+}
+
+@media (max-width: 767.98px) {
+    .aci-full-width-mobile {
+        width: 100%;
+    }
+}
+
+.aci-auto-width-desktop {
+    width: 100%;
+}
+
+@media (min-width: 768px) {
+    .aci-auto-width-desktop {
+        width: auto;
+    }
+}

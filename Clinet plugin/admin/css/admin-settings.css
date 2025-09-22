@@ -1,0 +1,870 @@
+/**
+ * Admin Settings CSS
+ * File: /wp-content/plugins/affiliate-client-integration/admin/css/admin-settings.css
+ * Plugin: Affiliate Client Integration
+ */
+
+/* ==========================================================================
+   Base Admin Styles
+   ========================================================================== */
+
+.aci-settings-wrap {
+    max-width: 1200px;
+    margin: 20px 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.aci-page-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 28px;
+    margin-bottom: 24px;
+    color: #1d2327;
+    font-weight: 600;
+}
+
+.aci-page-title .aci-icon {
+    font-size: 32px;
+}
+
+/* ==========================================================================
+   Connection Status Banner
+   ========================================================================== */
+
+.aci-status-banner {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+
+.aci-status-banner.aci-connected {
+    border-color: #00a32a;
+    background: linear-gradient(90deg, #f6fff6 0%, #fff 100%);
+    box-shadow: 0 2px 8px rgba(0, 163, 42, 0.1);
+}
+
+.aci-status-banner.aci-disconnected {
+    border-color: #dba617;
+    background: linear-gradient(90deg, #fffbf0 0%, #fff 100%);
+    box-shadow: 0 2px 8px rgba(219, 166, 23, 0.1);
+}
+
+.aci-status-banner.aci-error {
+    border-color: #d63638;
+    background: linear-gradient(90deg, #fff5f5 0%, #fff 100%);
+    box-shadow: 0 2px 8px rgba(214, 54, 56, 0.1);
+}
+
+.aci-status-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.aci-status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.aci-status-icon {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.aci-status-icon.aci-success {
+    color: #00a32a;
+}
+
+.aci-status-icon.aci-warning {
+    color: #dba617;
+}
+
+.aci-status-icon.aci-error {
+    color: #d63638;
+}
+
+.aci-status-text {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1d2327;
+}
+
+.aci-status-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.aci-status-detail {
+    font-size: 14px;
+    color: #646970;
+}
+
+.aci-status-detail strong {
+    color: #1d2327;
+}
+
+.aci-status-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.aci-connection-result {
+    margin-top: 16px;
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    display: none;
+}
+
+.aci-connection-result.aci-success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.aci-connection-result.aci-error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.aci-connection-result.aci-info {
+    background: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+/* ==========================================================================
+   Settings Grid Layout
+   ========================================================================== */
+
+.aci-settings-grid {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.aci-settings-main {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* ==========================================================================
+   Settings Sections
+   ========================================================================== */
+
+.aci-settings-section {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: box-shadow 0.3s ease;
+}
+
+.aci-settings-section:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.aci-section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 16px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1d2327;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #f0f0f1;
+}
+
+.aci-section-icon {
+    font-size: 20px;
+}
+
+.aci-section-description {
+    margin-bottom: 20px;
+    color: #646970;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* ==========================================================================
+   Form Elements
+   ========================================================================== */
+
+.aci-form-table {
+    margin-top: 0;
+    width: 100%;
+}
+
+.aci-form-table th {
+    width: 200px;
+    padding: 12px 0;
+    vertical-align: top;
+    text-align: left;
+    font-weight: 600;
+    color: #1d2327;
+}
+
+.aci-form-table td {
+    padding: 12px 0;
+    vertical-align: top;
+}
+
+.aci-form-table .description {
+    font-size: 13px;
+    color: #646970;
+    margin: 4px 0 0 0;
+    line-height: 1.4;
+}
+
+.aci-input {
+    border-radius: 6px;
+    border: 1px solid #8c8f94;
+    padding: 8px 12px;
+    font-size: 14px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    background: #fff;
+}
+
+.aci-input:focus {
+    border-color: #2271b1;
+    box-shadow: 0 0 0 1px #2271b1;
+    outline: none;
+}
+
+.aci-input.aci-error {
+    border-color: #d63638;
+}
+
+.aci-input.aci-success {
+    border-color: #00a32a;
+}
+
+.aci-select {
+    border-radius: 6px;
+    border: 1px solid #8c8f94;
+    padding: 8px 12px;
+    font-size: 14px;
+    background: #fff;
+    min-width: 200px;
+}
+
+.aci-select:focus {
+    border-color: #2271b1;
+    box-shadow: 0 0 0 1px #2271b1;
+    outline: none;
+}
+
+.aci-field-help {
+    font-size: 13px;
+    color: #646970;
+    margin-top: 6px;
+    line-height: 1.4;
+    font-style: italic;
+}
+
+.aci-input-suffix {
+    margin-left: 8px;
+    color: #646970;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.aci-field-error {
+    color: #d63638;
+    font-size: 13px;
+    margin-top: 4px;
+    font-weight: 500;
+}
+
+/* ==========================================================================
+   Action Cards
+   ========================================================================== */
+
+.aci-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.aci-action-card {
+    border: 1px solid #e2e4e7;
+    border-radius: 8px;
+    padding: 20px;
+    background: linear-gradient(135deg, #f9f9f9 0%, #fff 100%);
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+.aci-action-card:hover {
+    border-color: #2271b1;
+    background: linear-gradient(135deg, #fff 0%, #f0f8ff 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(34, 113, 177, 0.1);
+}
+
+.aci-action-card h3 {
+    margin: 0 0 8px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1d2327;
+}
+
+.aci-action-card p {
+    margin: 0 0 16px;
+    font-size: 14px;
+    color: #646970;
+    line-height: 1.4;
+}
+
+.aci-action-card .button {
+    min-width: 140px;
+}
+
+.aci-button-icon {
+    margin-right: 6px;
+    font-size: 16px;
+}
+
+.aci-action-results {
+    margin-top: 20px;
+    padding: 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    display: none;
+}
+
+.aci-action-results.aci-success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.aci-action-results.aci-error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.aci-action-results.aci-info {
+    background: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+/* ==========================================================================
+   Sidebar
+   ========================================================================== */
+
+.aci-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.aci-sidebar-card {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.aci-sidebar-card h3 {
+    margin: 0 0 16px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1d2327;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f0f0f1;
+}
+
+/* Plugin Info Grid */
+.aci-info-grid {
+    display: grid;
+    gap: 8px;
+}
+
+.aci-info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    padding: 4px 0;
+}
+
+.aci-info-label {
+    color: #646970;
+    font-weight: 500;
+}
+
+.aci-info-value {
+    font-weight: 600;
+    color: #1d2327;
+}
+
+.aci-info-value.aci-status-good {
+    color: #00a32a;
+}
+
+.aci-info-value.aci-status-warning {
+    color: #dba617;
+}
+
+.aci-info-value.aci-status-error {
+    color: #d63638;
+}
+
+/* Link Lists */
+.aci-link-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.aci-link-list li {
+    margin-bottom: 8px;
+}
+
+.aci-external-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #2271b1;
+    text-decoration: none;
+    font-size: 14px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.aci-external-link:hover {
+    color: #135e96;
+    background: #f0f8ff;
+    border-color: #e0efff;
+    text-decoration: none;
+}
+
+.aci-link-icon {
+    font-size: 16px;
+}
+
+/* Support Actions */
+.aci-support-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.aci-support-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+/* Activity List */
+.aci-activity-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #f0f0f1;
+    border-radius: 4px;
+    background: #fafafa;
+}
+
+.aci-activity-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px;
+    font-size: 13px;
+    border-bottom: 1px solid #f0f0f1;
+}
+
+.aci-activity-item:last-child {
+    border-bottom: none;
+}
+
+.aci-activity-time {
+    color: #646970;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.aci-activity-message {
+    color: #1d2327;
+    font-weight: 500;
+}
+
+.aci-activity-details {
+    color: #646970;
+    font-size: 12px;
+    line-height: 1.3;
+}
+
+/* ==========================================================================
+   API Key Management
+   ========================================================================== */
+
+.aci-api-key-section {
+    border: 1px solid #e2e4e7;
+    border-radius: 6px;
+    padding: 16px;
+    background: #fafafa;
+    margin-top: 16px;
+}
+
+.aci-api-key-display {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 12px 0;
+}
+
+.aci-api-key-field {
+    flex: 1;
+    font-family: 'Courier New', monospace;
+    background: #fff;
+    border: 1px solid #8c8f94;
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 13px;
+    color: #1d2327;
+    min-width: 0;
+}
+
+.aci-api-key-field:focus {
+    border-color: #2271b1;
+    box-shadow: 0 0 0 1px #2271b1;
+    outline: none;
+}
+
+.aci-api-key-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.aci-key-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.aci-key-status.aci-valid {
+    color: #00a32a;
+}
+
+.aci-key-status.aci-invalid {
+    color: #d63638;
+}
+
+.aci-key-status.aci-unknown {
+    color: #dba617;
+}
+
+/* ==========================================================================
+   Code Testing Interface
+   ========================================================================== */
+
+.aci-test-section {
+    border: 2px dashed #c3c4c7;
+    border-radius: 8px;
+    padding: 24px;
+    margin-top: 20px;
+    text-align: center;
+    background: #f9f9f9;
+}
+
+.aci-test-form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.aci-test-input {
+    width: 100%;
+    text-align: center;
+    font-size: 16px;
+    padding: 12px 16px;
+    border: 2px solid #8c8f94;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.aci-test-input:focus {
+    border-color: #2271b1;
+    box-shadow: 0 0 0 2px rgba(34, 113, 177, 0.2);
+    outline: none;
+}
+
+.aci-test-result {
+    margin-top: 16px;
+    padding: 16px 20px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    display: none;
+}
+
+.aci-test-result.aci-success {
+    background: #d4edda;
+    color: #155724;
+    border: 2px solid #c3e6cb;
+}
+
+.aci-test-result.aci-error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 2px solid #f5c6cb;
+}
+
+.aci-test-details {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    font-size: 13px;
+    font-weight: normal;
+    color: rgba(0, 0, 0, 0.7);
+}
+
+/* ==========================================================================
+   Loading States
+   ========================================================================== */
+
+.aci-loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.aci-loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #2271b1;
+    border-radius: 50%;
+    animation: aci-spin 1s linear infinite;
+}
+
+@keyframes aci-spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.aci-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #2271b1;
+    border-radius: 50%;
+    animation: aci-spin 1s linear infinite;
+    margin-right: 8px;
+}
+
+/* ==========================================================================
+   Notifications & Alerts
+   ========================================================================== */
+
+.aci-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 6px;
+    margin: 16px 0;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.aci-notice.aci-notice-success {
+    background: #d4edda;
+    color: #155724;
+    border-left: 4px solid #00a32a;
+}
+
+.aci-notice.aci-notice-error {
+    background: #f8d7da;
+    color: #721c24;
+    border-left: 4px solid #d63638;
+}
+
+.aci-notice.aci-notice-warning {
+    background: #fff3cd;
+    color: #856404;
+    border-left: 4px solid #dba617;
+}
+
+.aci-notice.aci-notice-info {
+    background: #d1ecf1;
+    color: #0c5460;
+    border-left: 4px solid #17a2b8;
+}
+
+.aci-notice-icon {
+    font-size: 18px;
+    margin-top: 1px;
+}
+
+.aci-notice-content {
+    flex: 1;
+}
+
+.aci-notice-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.aci-notice-dismiss {
+    background: none;
+    border: none;
+    color: inherit;
+    opacity: 0.7;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 2px;
+    transition: opacity 0.2s ease;
+}
+
+.aci-notice-dismiss:hover {
+    opacity: 1;
+}
+
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
+
+@media screen and (max-width: 1024px) {
+    .aci-settings-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .aci-sidebar {
+        order: -1;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .aci-settings-wrap {
+        margin: 10px 0;
+    }
+
+    .aci-page-title {
+        font-size: 24px;
+        margin-bottom: 20px;
+    }
+
+    .aci-settings-section {
+        padding: 16px;
+    }
+
+    .aci-status-content {
+        flex-direction: column;
+        align-items: flex-start;
+        text-align: left;
+    }
+
+    .aci-status-actions {
+        width: 100%;
+    }
+
+    .aci-status-actions .button {
+        width: 100%;
+        text-align: center;
+    }
+
+    .aci-actions-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .aci-form-table th {
+        width: auto;
+        display: block;
+        padding: 8px 0 4px;
+    }
+
+    .aci-form-table td {
+        display: block;
+        padding: 0 0 16px;
+    }
+
+    .aci-api-key-display {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .aci-api-key-actions {
+        justify-content: center;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .aci-settings-section {
+        padding: 12px;
+        margin-bottom: 16px;
+    }
+
+    .aci-section-title {
+        font-size: 16px;
+        margin-bottom: 12px;
+    }
+
+    .aci-page-title {
+        font-size: 20px;
+        flex-direction: column;
+        text-align: center;
+        gap: 8px;
+    }
+
+    .aci-notice {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .aci-test-form {
+        max-width: 100%;
+    }
+}

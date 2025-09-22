@@ -1,0 +1,167 @@
+{
+  "name": "affiliate-system/client-integration",
+  "description": "WordPress plugin for integrating with affiliate cross-domain system on client sites",
+  "type": "wordpress-plugin",
+  "license": "GPL-2.0-or-later",
+  "version": "1.0.0",
+  "keywords": [
+    "wordpress",
+    "plugin",
+    "affiliate",
+    "client",
+    "integration",
+    "discount",
+    "validation"
+  ],
+  "authors": [
+    {
+      "name": "Affiliate System Team",
+      "email": "support@affiliate-system.com",
+      "role": "Developer"
+    }
+  ],
+  "homepage": "https://github.com/affiliate-system/client-integration",
+  "support": {
+    "email": "support@affiliate-system.com",
+    "issues": "https://github.com/affiliate-system/client-integration/issues",
+    "docs": "https://docs.affiliate-system.com/client-integration"
+  },
+  "require": {
+    "php": ">=7.4",
+    "ext-curl": "*",
+    "ext-json": "*",
+    "ext-openssl": "*"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^9.5",
+    "wp-coding-standards/wpcs": "^2.3",
+    "dealerdirect/phpcodesniffer-composer-installer": "^0.7",
+    "phpcompatibility/phpcompatibility-wp": "^2.1",
+    "roave/security-advisories": "dev-latest"
+  },
+  "suggest": {
+    "ext-redis": "For improved caching performance",
+    "ext-memcached": "Alternative caching backend",
+    "monolog/monolog": "Enhanced logging capabilities"
+  },
+  "autoload": {
+    "psr-4": {
+      "AffiliateClientIntegration\\": "includes/",
+      "ACI\\": "includes/"
+    },
+    "files": [
+      "includes/functions.php"
+    ]
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "AffiliateClientIntegration\\Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "test": [
+      "phpunit"
+    ],
+    "test:unit": [
+      "phpunit --testsuite=unit"
+    ],
+    "test:integration": [
+      "phpunit --testsuite=integration"
+    ],
+    "lint": [
+      "phpcs --standard=WordPress ."
+    ],
+    "lint:fix": [
+      "phpcbf --standard=WordPress ."
+    ],
+    "security": [
+      "composer audit"
+    ],
+    "build": [
+      "@lint",
+      "@test",
+      "@security"
+    ],
+    "pre-commit": [
+      "@lint",
+      "@test:unit"
+    ],
+    "post-install-cmd": [
+      "@php -r \"if (!file_exists('.env.example')) copy('.env.example.dist', '.env.example');\""
+    ],
+    "post-update-cmd": [
+      "@php -r \"echo 'Dependencies updated successfully.\\n';\""
+    ]
+  },
+  "scripts-descriptions": {
+    "test": "Run all tests",
+    "test:unit": "Run unit tests only",
+    "test:integration": "Run integration tests only",
+    "lint": "Check code style",
+    "lint:fix": "Fix code style issues",
+    "security": "Run security audit",
+    "build": "Run complete build process",
+    "pre-commit": "Run pre-commit checks"
+  },
+  "config": {
+    "optimize-autoloader": true,
+    "sort-packages": true,
+    "process-timeout": 300,
+    "allow-plugins": {
+      "dealerdirect/phpcodesniffer-composer-installer": true,
+      "composer/installers": true
+    }
+  },
+  "extra": {
+    "installer-name": "affiliate-client-integration",
+    "wordpress-plugin": {
+      "slug": "affiliate-client-integration",
+      "name": "Affiliate Client Integration",
+      "version": "1.0.0",
+      "author": "Affiliate System Team",
+      "author-uri": "https://affiliate-system.com",
+      "plugin-uri": "https://github.com/affiliate-system/client-integration",
+      "text-domain": "affiliate-client-integration",
+      "domain-path": "/languages",
+      "requires-wp": "5.0",
+      "tested-wp": "6.4",
+      "requires-php": "7.4",
+      "network": false,
+      "license": "GPL-2.0-or-later",
+      "license-uri": "https://www.gnu.org/licenses/gpl-2.0.html"
+    },
+    "branch-alias": {
+      "dev-main": "1.x-dev"
+    }
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true,
+  "repositories": [
+    {
+      "type": "composer",
+      "url": "https://wpackagist.org",
+      "only": [
+        "wpackagist-plugin/*",
+        "wpackagist-theme/*"
+      ]
+    }
+  ],
+  "archive": {
+    "exclude": [
+      "/tests",
+      "/docs",
+      "/.github",
+      "/.gitignore",
+      "/.gitattributes",
+      "/phpunit.xml",
+      "/phpcs.xml",
+      "/.env.example",
+      "/composer.lock",
+      "/node_modules",
+      "/src",
+      "/webpack.config.js",
+      "/package.json",
+      "/package-lock.json"
+    ]
+  }
+}

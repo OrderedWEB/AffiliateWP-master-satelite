@@ -1,0 +1,565 @@
+/**
+ * Affiliate Client Full - Main Styles
+ * 
+ * Core styling for affiliate tracking elements and indicators.
+ * Provides visual feedback and debug information when needed.
+ * 
+ * @package AffiliateClientFull
+ * @version 1.0.0
+ */
+
+/* ==========================================================================
+   Debug and Development Styles
+   ========================================================================== */
+
+.affiliate-client-debug {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    padding: 10px;
+    border-radius: 5px;
+    font-family: 'Monaco', 'Consolas', monospace;
+    font-size: 12px;
+    z-index: 99999;
+    max-width: 300px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.affiliate-client-debug h4 {
+    margin: 0 0 5px 0;
+    color: #4CAF50;
+    font-size: 14px;
+}
+
+.affiliate-client-debug ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.affiliate-client-debug li {
+    margin: 2px 0;
+    padding: 2px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.affiliate-client-debug .debug-toggle {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: none;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    text-align: center;
+}
+
+.affiliate-client-debug.collapsed .debug-content {
+    display: none;
+}
+
+/* ==========================================================================
+   Tracking Indicators
+   ========================================================================== */
+
+.affiliate-tracked-element {
+    position: relative;
+}
+
+.affiliate-tracked-element::after {
+    content: "📊";
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    font-size: 12px;
+    background: #4CAF50;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+.affiliate-debug-mode .affiliate-tracked-element::after {
+    opacity: 1;
+}
+
+.affiliate-tracked-element:hover::after {
+    opacity: 1;
+}
+
+/* ==========================================================================
+   Affiliate Link Styling
+   ========================================================================== */
+
+.affiliate-link {
+    position: relative;
+    text-decoration: none;
+    border-bottom: 1px dotted transparent;
+    transition: all 0.3s ease;
+}
+
+.affiliate-link:hover {
+    border-bottom-color: #4CAF50;
+}
+
+.affiliate-link::before {
+    content: "🔗";
+    font-size: 10px;
+    opacity: 0;
+    margin-right: 3px;
+    transition: opacity 0.3s ease;
+}
+
+.affiliate-debug-mode .affiliate-link::before {
+    opacity: 0.7;
+}
+
+/* ==========================================================================
+   Conversion Tracking Elements
+   ========================================================================== */
+
+.affiliate-conversion-pixel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.affiliate-conversion-success {
+    background: #4CAF50;
+    color: white;
+    padding: 10px;
+    border-radius: 5px;
+    margin: 10px 0;
+    font-size: 14px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.affiliate-conversion-success::before {
+    content: "✓ ";
+    font-weight: bold;
+}
+
+/* ==========================================================================
+   Loading and Status Indicators
+   ========================================================================== */
+
+.affiliate-loading {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #4CAF50;
+    border-radius: 50%;
+    animation: affiliate-spin 1s linear infinite;
+    margin-right: 5px;
+    vertical-align: middle;
+}
+
+@keyframes affiliate-spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.affiliate-status-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 5px;
+    vertical-align: middle;
+}
+
+.affiliate-status-indicator.connected {
+    background: #4CAF50;
+    box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+}
+
+.affiliate-status-indicator.disconnected {
+    background: #f44336;
+    box-shadow: 0 0 5px rgba(244, 67, 54, 0.5);
+}
+
+.affiliate-status-indicator.syncing {
+    background: #FF9800;
+    animation: affiliate-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes affiliate-pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.7;
+        transform: scale(1.1);
+    }
+}
+
+/* ==========================================================================
+   Form Enhancement
+   ========================================================================== */
+
+.affiliate-tracked-form {
+    position: relative;
+}
+
+.affiliate-tracked-form::before {
+    content: "";
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    border: 2px solid transparent;
+    border-radius: 5px;
+    transition: border-color 0.3s ease;
+    pointer-events: none;
+    z-index: -1;
+}
+
+.affiliate-debug-mode .affiliate-tracked-form::before {
+    border-color: rgba(76, 175, 80, 0.3);
+}
+
+.affiliate-form-field-tracked {
+    position: relative;
+}
+
+.affiliate-form-field-tracked::after {
+    content: "📝";
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.affiliate-debug-mode .affiliate-form-field-tracked::after {
+    opacity: 0.5;
+}
+
+/* ==========================================================================
+   Analytics Overlays
+   ========================================================================== */
+
+.affiliate-analytics-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    display: none;
+    z-index: 999999;
+    padding: 20px;
+    box-sizing: border-box;
+    overflow-y: auto;
+}
+
+.affiliate-analytics-overlay.active {
+    display: block;
+}
+
+.affiliate-analytics-content {
+    max-width: 800px;
+    margin: 0 auto;
+    background: #fff;
+    color: #333;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+}
+
+.affiliate-analytics-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.affiliate-analytics-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.affiliate-analytics-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.affiliate-stat-card {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+    border: 1px solid #e9ecef;
+}
+
+.affiliate-stat-number {
+    font-size: 24px;
+    font-weight: bold;
+    color: #4CAF50;
+    margin-bottom: 5px;
+}
+
+.affiliate-stat-label {
+    font-size: 12px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ==========================================================================
+   Notification Styles
+   ========================================================================== */
+
+.affiliate-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #4CAF50;
+    color: white;
+    padding: 15px 20px;
+    border-radius: 5px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+    z-index: 999998;
+    max-width: 300px;
+    font-size: 14px;
+    transform: translateX(320px);
+    transition: transform 0.3s ease;
+}
+
+.affiliate-notification.show {
+    transform: translateX(0);
+}
+
+.affiliate-notification.error {
+    background: #f44336;
+}
+
+.affiliate-notification.warning {
+    background: #FF9800;
+}
+
+.affiliate-notification.info {
+    background: #2196F3;
+}
+
+.affiliate-notification-close {
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0;
+}
+
+/* ==========================================================================
+   Progress Indicators
+   ========================================================================== */
+
+.affiliate-progress-bar {
+    width: 100%;
+    height: 4px;
+    background: #e0e0e0;
+    border-radius: 2px;
+    overflow: hidden;
+    margin: 10px 0;
+}
+
+.affiliate-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50, #66BB6A);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+    position: relative;
+}
+
+.affiliate-progress-fill::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg,
+            transparent,
+            rgba(255, 255, 255, 0.3),
+            transparent);
+    animation: affiliate-shimmer 1.5s infinite;
+}
+
+@keyframes affiliate-shimmer {
+    0% {
+        transform: translateX(-100%);
+    }
+
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    .affiliate-client-debug {
+        bottom: 5px;
+        right: 5px;
+        max-width: 250px;
+        font-size: 11px;
+    }
+
+    .affiliate-analytics-overlay {
+        padding: 10px;
+    }
+
+    .affiliate-analytics-content {
+        padding: 15px;
+    }
+
+    .affiliate-analytics-stats {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 10px;
+    }
+
+    .affiliate-notification {
+        top: 10px;
+        right: 10px;
+        max-width: 250px;
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 480px) {
+    .affiliate-client-debug {
+        max-width: 200px;
+        font-size: 10px;
+    }
+
+    .affiliate-analytics-stats {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .affiliate-stat-number {
+        font-size: 20px;
+    }
+}
+
+/* ==========================================================================
+   Accessibility
+   ========================================================================== */
+
+.affiliate-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.affiliate-focus-visible:focus {
+    outline: 2px solid #4CAF50;
+    outline-offset: 2px;
+}
+
+/* ==========================================================================
+   Print Styles
+   ========================================================================== */
+
+@media print {
+
+    .affiliate-client-debug,
+    .affiliate-notification,
+    .affiliate-analytics-overlay,
+    .affiliate-tracked-element::after,
+    .affiliate-link::before {
+        display: none !important;
+    }
+}
+
+/* ==========================================================================
+   High Contrast Mode
+   ========================================================================== */
+
+@media (prefers-contrast: high) {
+    .affiliate-status-indicator.connected {
+        background: #000;
+        border: 2px solid #4CAF50;
+    }
+
+    .affiliate-status-indicator.disconnected {
+        background: #000;
+        border: 2px solid #f44336;
+    }
+
+    .affiliate-tracked-element::after {
+        background: #000;
+        color: #4CAF50;
+        border: 1px solid #4CAF50;
+    }
+}
+
+/* ==========================================================================
+   Reduced Motion
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .affiliate-loading,
+    .affiliate-progress-fill::after,
+    .affiliate-status-indicator.syncing {
+        animation: none;
+    }
+
+    .affiliate-notification,
+    .affiliate-tracked-element::after,
+    .affiliate-link,
+    .affiliate-form-field-tracked::after {
+        transition: none;
+    }
+}
