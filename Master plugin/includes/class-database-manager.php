@@ -5,7 +5,7 @@
  * Handles all database operations including table creation, updates, migrations,
  * and data management for the affiliate cross-domain system.
  *
- * @package AffiliateWP_Cross_Domain_Full
+ * @package AffiliateWP_Cross_Domain_Plugin_Suite_Master
  * @version 1.0.0
  */
 
@@ -39,7 +39,7 @@ class AFFCD_Database_Manager {
         $this->tables = [
             'vanity_codes' => $wpdb->prefix . 'affcd_vanity_codes',
             'vanity_usage' => $wpdb->prefix . 'affcd_vanity_usage',
-            'authorized_domains' => $wpdb->prefix . 'affcd_authorized_domains',
+            'authorised_domains' => $wpdb->prefix . 'affcd_authorised_domains',
             'analytics' => $wpdb->prefix . 'affcd_analytics',
             'rate_limiting' => $wpdb->prefix . 'affcd_rate_limiting',
             'security_logs' => $wpdb->prefix . 'affcd_security_logs',
@@ -55,7 +55,7 @@ class AFFCD_Database_Manager {
     public function create_tables() {
         $this->create_vanity_codes_table();
         $this->create_vanity_usage_table();
-        $this->create_authorized_domains_table();
+        $this->create_authorised_domains_table();
         $this->create_analytics_table();
         $this->create_rate_limiting_table();
         $this->create_security_logs_table();
@@ -143,12 +143,12 @@ class AFFCD_Database_Manager {
     }
 
     /**
-     * Create authorized domains table
+     * Create authorised domains table
      */
-    private function create_authorized_domains_table() {
+    private function create_authorised_domains_table() {
         global $wpdb;
         
-        $table_name = $this->tables['authorized_domains'];
+        $table_name = $this->tables['authorised_domains'];
         $charset_collate = $wpdb->get_charset_collate();
 
         $sql = "CREATE TABLE IF NOT EXISTS {$table_name} (
@@ -390,8 +390,8 @@ class AFFCD_Database_Manager {
             "CREATE INDEX IF NOT EXISTS idx_conversion_tracking ON {$this->tables['vanity_usage']} (conversion_occurred, conversion_value, created_at)",
             
             // Domain management indexes
-            "CREATE INDEX IF NOT EXISTS idx_domain_activity ON {$this->tables['authorized_domains']} (last_activity_at DESC, status)",
-            "CREATE INDEX IF NOT EXISTS idx_domain_verification ON {$this->tables['authorized_domains']} (verification_status, last_verified_at)",
+            "CREATE INDEX IF NOT EXISTS idx_domain_activity ON {$this->tables['authorised_domains']} (last_activity_at DESC, status)",
+            "CREATE INDEX IF NOT EXISTS idx_domain_verification ON {$this->tables['authorised_domains']} (verification_status, last_verified_at)",
             
             // Analytics reporting indexes
             "CREATE INDEX IF NOT EXISTS idx_analytics_reporting ON {$this->tables['analytics']} (event_type, domain, created_at DESC)",

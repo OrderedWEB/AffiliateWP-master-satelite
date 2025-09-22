@@ -5,7 +5,7 @@
  * Manages webhook notifications to client domains including event handling,
  * delivery management, retry logic, and failure handling.
  *
- * @package AffiliateWP_Cross_Domain_Full
+ * @package AffiliateWP_Cross_Domain_Plugin_Suite_Master
  * @version 1.0.0
  */
 
@@ -68,7 +68,7 @@ class AFFCD_Webhook_Handler {
     }
 
     /**
-     * Initialize webhook handler
+     * Initialse webhook handler
      */
     public function init() {
         $this->schedule_webhook_tasks();
@@ -144,7 +144,7 @@ class AFFCD_Webhook_Handler {
             return false;
         }
 
-        $domain_record = affcd_is_domain_authorized($domain);
+        $domain_record = affcd_is_domain_authorised($domain);
         if (!$domain_record || empty($domain_record->webhook_url)) {
             return false;
         }
@@ -370,7 +370,7 @@ class AFFCD_Webhook_Handler {
  * Manages webhook notifications to client domains including event handling,
  * delivery management, retry logic, and failure handling.
  *
- * @package AffiliateWP_Cross_Domain_Full
+ * @package AffiliateWP_Cross_Domain_Plugin_Suite_Master
  * @version 1.0.0
  */
 
@@ -433,7 +433,7 @@ class AFFCD_Webhook_Handler {
     }
 
     /**
-     * Initialize webhook handler
+     * Initialse webhook handler
      */
     public function init() {
         $this->schedule_webhook_tasks();
@@ -548,7 +548,7 @@ class AFFCD_Webhook_Handler {
     private function update_domain_webhook_stats($domain_record, $success) {
         global $wpdb;
         
-        $domains_table = $wpdb->prefix . 'affcd_authorized_domains';
+        $domains_table = $wpdb->prefix . 'affcd_authorised_domains';
         
         $wpdb->query($wpdb->prepare(
             "UPDATE {$domains_table} SET 
@@ -609,7 +609,7 @@ class AFFCD_Webhook_Handler {
             'domain_id' => $domain_id,
             'domain_name' => $domain_data['domain_name'] ?? '',
             'status' => $domain_data['status'],
-            'welcome_message' => __('Welcome to the affiliate network!', 'affiliate-cross-domain-full')
+            'welcome_message' => __('Welcome to the affiliate network!', 'affiliatewp-cross-domain-plugin-suite')
         ]);
     }
 
@@ -641,7 +641,7 @@ class AFFCD_Webhook_Handler {
     public function broadcast_to_all_domains($event, $data) {
         global $wpdb;
         
-        $domains_table = $wpdb->prefix . 'affcd_authorized_domains';
+        $domains_table = $wpdb->prefix . 'affcd_authorised_domains';
         
         $domains = $wpdb->get_results(
             "SELECT domain_url, webhook_url, webhook_secret, webhook_events 
@@ -678,7 +678,7 @@ class AFFCD_Webhook_Handler {
             'timestamp' => current_time('mysql'),
             'api_version' => '1.0',
             'data' => [
-                'message' => __('This is a test webhook from AffiliateWP Cross Domain Full', 'affiliate-cross-domain-full'),
+                'message' => __('This is a test webhook from AffiliateWP Cross Domain Plugin Suite', 'affiliatewp-cross-domain-plugin-suite'),
                 'test_time' => current_time('mysql')
             ],
             'meta' => [
@@ -840,14 +840,14 @@ class AFFCD_Webhook_Handler {
         check_ajax_referer('affcd_admin_nonce', 'nonce');
         
         if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain-full'));
+            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         $webhook_url = esc_url_raw($_POST['webhook_url'] ?? '');
         $secret = sanitize_text_field($_POST['secret'] ?? '');
 
         if (empty($webhook_url)) {
-            wp_send_json_error(__('Webhook URL is required', 'affiliate-cross-domain-full'));
+            wp_send_json_error(__('Webhook URL is required', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         $result = $this->test_webhook($webhook_url, $secret);
@@ -866,21 +866,21 @@ class AFFCD_Webhook_Handler {
         check_ajax_referer('affcd_admin_nonce', 'nonce');
         
         if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain-full'));
+            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         $webhook_id = absint($_POST['webhook_id'] ?? 0);
         
         if (empty($webhook_id)) {
-            wp_send_json_error(__('Webhook ID is required', 'affiliate-cross-domain-full'));
+            wp_send_json_error(__('Webhook ID is required', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         $success = $this->retry_webhook($webhook_id);
         
         if ($success) {
-            wp_send_json_success(__('Webhook queued for retry', 'affiliate-cross-domain-full'));
+            wp_send_json_success(__('Webhook queued for retry', 'affiliatewp-cross-domain-plugin-suite'));
         } else {
-            wp_send_json_error(__('Failed to queue webhook for retry', 'affiliate-cross-domain-full'));
+            wp_send_json_error(__('Failed to queue webhook for retry', 'affiliatewp-cross-domain-plugin-suite'));
         }
     }
 
@@ -891,16 +891,16 @@ class AFFCD_Webhook_Handler {
      */
     public function get_supported_events() {
         return [
-            'code_validated' => __('Fired when an affiliate code is successfully validated', 'affiliate-cross-domain-full'),
-            'code_created' => __('Fired when a new vanity code is created', 'affiliate-cross-domain-full'),
-            'code_updated' => __('Fired when a vanity code is updated', 'affiliate-cross-domain-full'),
-            'code_deleted' => __('Fired when a vanity code is deleted', 'affiliate-cross-domain-full'),
-            'domain_added' => __('Fired when a new domain is authorized', 'affiliate-cross-domain-full'),
-            'domain_updated' => __('Fired when domain settings are updated', 'affiliate-cross-domain-full'),
-            'domain_suspended' => __('Fired when a domain is suspended', 'affiliate-cross-domain-full'),
-            'conversion_tracked' => __('Fired when a conversion is tracked', 'affiliate-cross-domain-full'),
-            'security_alert' => __('Fired when a security issue is detected', 'affiliate-cross-domain-full'),
-            'rate_limit_exceeded' => __('Fired when rate limits are exceeded', 'affiliate-cross-domain-full')
+            'code_validated' => __('Fired when an affiliate code is successfully validated', 'affiliatewp-cross-domain-plugin-suite'),
+            'code_created' => __('Fired when a new vanity code is created', 'affiliatewp-cross-domain-plugin-suite'),
+            'code_updated' => __('Fired when a vanity code is updated', 'affiliatewp-cross-domain-plugin-suite'),
+            'code_deleted' => __('Fired when a vanity code is deleted', 'affiliatewp-cross-domain-plugin-suite'),
+            'domain_added' => __('Fired when a new domain is authorised', 'affiliatewp-cross-domain-plugin-suite'),
+            'domain_updated' => __('Fired when domain settings are updated', 'affiliatewp-cross-domain-plugin-suite'),
+            'domain_suspended' => __('Fired when a domain is suspended', 'affiliatewp-cross-domain-plugin-suite'),
+            'conversion_tracked' => __('Fired when a conversion is tracked', 'affiliatewp-cross-domain-plugin-suite'),
+            'security_alert' => __('Fired when a security issue is detected', 'affiliatewp-cross-domain-plugin-suite'),
+            'rate_limit_exceeded' => __('Fired when rate limits are exceeded', 'affiliatewp-cross-domain-plugin-suite')
         ];
     }
 }d_webhook_queue';
@@ -953,7 +953,7 @@ class AFFCD_Webhook_Handler {
             return false;
         }
 
-        $domain_record = affcd_is_domain_authorized($domain);
+        $domain_record = affcd_is_domain_authorised($domain);
         if (!$domain_record || empty($domain_record->webhook_url)) {
             return false;
         }
@@ -1269,7 +1269,7 @@ class AFFCD_Webhook_Handler {
     private function update_domain_webhook_stats($domain_record, $success) {
         global $wpdb;
         
-        $domains_table = $wpdb->prefix . 'affcd_authorized_domains';
+        $domains_table = $wpdb->prefix . 'affcd_authorised_domains';
         
         $wpdb->query($wpdb->prepare(
             "UPDATE {$domains_table} SET 
@@ -1336,11 +1336,11 @@ class AFFCD_Webhook_Handler {
             'domain_name' => $domain_data['domain_name'] ?? '',
             'status' => $domain_data['status'],
             'api_key' => substr($domain_data['api_key'] ?? '', 0, 8) . '...',
-            'welcome_message' => __('Welcome to the affiliate network!', 'affiliate-cross-domain-full'),
+            'welcome_message' => __('Welcome to the affiliate network!', 'affiliatewp-cross-domain-plugin-suite'),
             'setup_instructions' => [
-                'install_plugin' => __('Install the client plugin on your site', 'affiliate-cross-domain-full'),
-                'configure_api' => __('Configure API settings with provided credentials', 'affiliate-cross-domain-full'),
-                'test_connection' => __('Test the connection to ensure everything works', 'affiliate-cross-domain-full')
+                'install_plugin' => __('Install the client plugin on your site', 'affiliatewp-cross-domain-plugin-suite'),
+                'configure_api' => __('Configure API settings with provided credentials', 'affiliatewp-cross-domain-plugin-suite'),
+                'test_connection' => __('Test the connection to ensure everything works', 'affiliatewp-cross-domain-plugin-suite')
             ]
         ]);
     }
@@ -1373,25 +1373,25 @@ class AFFCD_Webhook_Handler {
     private function get_security_recommendations($alert_type) {
         $recommendations = [
             'rate_limit_exceeded' => [
-                __('Review rate limiting settings', 'affiliate-cross-domain-full'),
-                __('Consider blocking the IP if abuse continues', 'affiliate-cross-domain-full'),
-                __('Monitor for patterns in failed requests', 'affiliate-cross-domain-full')
+                __('Review rate limiting settings', 'affiliatewp-cross-domain-plugin-suite'),
+                __('Consider blocking the IP if abuse continues', 'affiliatewp-cross-domain-plugin-suite'),
+                __('Monitor for patterns in failed requests', 'affiliatewp-cross-domain-plugin-suite')
             ],
             'repeated_failures' => [
-                __('Investigate the source of repeated failures', 'affiliate-cross-domain-full'),
-                __('Check API credentials configuration', 'affiliate-cross-domain-full'),
-                __('Consider temporarily blocking the IP', 'affiliate-cross-domain-full')
+                __('Investigate the source of repeated failures', 'affiliatewp-cross-domain-plugin-suite'),
+                __('Check API credentials configuration', 'affiliatewp-cross-domain-plugin-suite'),
+                __('Consider temporarily blocking the IP', 'affiliatewp-cross-domain-plugin-suite')
             ],
             'suspicious_activity' => [
-                __('Review access logs for anomalies', 'affiliate-cross-domain-full'),
-                __('Verify all API credentials are secure', 'affiliate-cross-domain-full'),
-                __('Consider additional authentication measures', 'affiliate-cross-domain-full')
+                __('Review access logs for anomalies', 'affiliatewp-cross-domain-plugin-suite'),
+                __('Verify all API credentials are secure', 'affiliatewp-cross-domain-plugin-suite'),
+                __('Consider additional authentication measures', 'affiliatewp-cross-domain-plugin-suite')
             ]
         ];
 
         return $recommendations[$alert_type] ?? [
-            __('Review security logs', 'affiliate-cross-domain-full'),
-            __('Monitor for continued suspicious activity', 'affiliate-cross-domain-full')
+            __('Review security logs', 'affiliatewp-cross-domain-plugin-suite'),
+            __('Monitor for continued suspicious activity', 'affiliatewp-cross-domain-plugin-suite')
         ];
     }
 
@@ -1405,7 +1405,7 @@ class AFFCD_Webhook_Handler {
     public function broadcast_to_all_domains($event, $data) {
         global $wpdb;
         
-        $domains_table = $wpdb->prefix . 'affcd_authorized_domains';
+        $domains_table = $wpdb->prefix . 'affcd_authorised_domains';
         
         $domains = $wpdb->get_results(
             "SELECT domain_url, webhook_url, webhook_secret, webhook_events 
@@ -1450,7 +1450,7 @@ class AFFCD_Webhook_Handler {
             'timestamp' => current_time('mysql'),
             'api_version' => '1.0',
             'data' => [
-                'message' => __('This is a test webhook from AffiliateWP Cross Domain Full', 'affiliate-cross-domain-full'),
+                'message' => __('This is a test webhook from AffiliateWP Cross Domain Plugin Suite', 'affiliatewp-cross-domain-plugin-suite'),
                 'test_time' => current_time('mysql'),
                 'server_info' => [
                     'php_version' => PHP_VERSION,
@@ -1807,32 +1807,32 @@ class AFFCD_Webhook_Handler {
         check_ajax_referer('affcd_admin_nonce', 'nonce');
         
         if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain-full'));
+            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         $webhook_url = esc_url_raw($_POST['webhook_url'] ?? '');
         $secret = sanitize_text_field($_POST['secret'] ?? '');
 
         if (empty($webhook_url)) {
-            wp_send_json_error(__('Webhook URL is required', 'affiliate-cross-domain-full'));
+            wp_send_json_error(__('Webhook URL is required', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         if (!filter_var($webhook_url, FILTER_VALIDATE_URL)) {
-            wp_send_json_error(__('Invalid webhook URL format', 'affiliate-cross-domain-full'));
+            wp_send_json_error(__('Invalid webhook URL format', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         $result = $this->test_webhook($webhook_url, $secret);
         
         if ($result['success']) {
             wp_send_json_success([
-                'message' => __('Webhook test successful', 'affiliate-cross-domain-full'),
+                'message' => __('Webhook test successful', 'affiliatewp-cross-domain-plugin-suite'),
                 'response_time' => $result['response_time'],
                 'response_code' => $result['response_code']
             ]);
         } else {
             wp_send_json_error([
-                'message' => __('Webhook test failed', 'affiliate-cross-domain-full'),
-                'error' => $result['error'] ?? __('Unknown error', 'affiliate-cross-domain-full'),
+                'message' => __('Webhook test failed', 'affiliatewp-cross-domain-plugin-suite'),
+                'error' => $result['error'] ?? __('Unknown error', 'affiliatewp-cross-domain-plugin-suite'),
                 'response_code' => $result['response_code'] ?? 0
             ]);
         }
@@ -1845,24 +1845,24 @@ class AFFCD_Webhook_Handler {
         check_ajax_referer('affcd_admin_nonce', 'nonce');
         
         if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain-full'));
+            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         $webhook_id = absint($_POST['webhook_id'] ?? 0);
         
         if (empty($webhook_id)) {
-            wp_send_json_error(__('Webhook ID is required', 'affiliate-cross-domain-full'));
+            wp_send_json_error(__('Webhook ID is required', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         $success = $this->retry_webhook($webhook_id);
         
         if ($success) {
             wp_send_json_success([
-                'message' => __('Webhook queued for retry', 'affiliate-cross-domain-full')
+                'message' => __('Webhook queued for retry', 'affiliatewp-cross-domain-plugin-suite')
             ]);
         } else {
             wp_send_json_error([
-                'message' => __('Failed to queue webhook for retry', 'affiliate-cross-domain-full')
+                'message' => __('Failed to queue webhook for retry', 'affiliatewp-cross-domain-plugin-suite')
             ]);
         }
     }
@@ -1874,7 +1874,7 @@ class AFFCD_Webhook_Handler {
         check_ajax_referer('affcd_admin_nonce', 'nonce');
         
         if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain-full'));
+            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         $status = $this->get_queue_status();
@@ -1888,7 +1888,7 @@ class AFFCD_Webhook_Handler {
         check_ajax_referer('affcd_admin_nonce', 'nonce');
         
         if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain-full'));
+            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         $days = absint($_POST['days'] ?? 30);
@@ -1896,7 +1896,7 @@ class AFFCD_Webhook_Handler {
         
         wp_send_json_success([
             'message' => sprintf(
-                __('Cleaned %d webhook records older than %d days', 'affiliate-cross-domain-full'),
+                __('Cleaned %d webhook records older than %d days', 'affiliatewp-cross-domain-plugin-suite'),
                 $deleted,
                 $days
             ),
@@ -1911,16 +1911,16 @@ class AFFCD_Webhook_Handler {
      */
     public function get_supported_events() {
         return [
-            'code_validated' => __('Fired when an affiliate code is successfully validated', 'affiliate-cross-domain-full'),
-            'code_created' => __('Fired when a new vanity code is created', 'affiliate-cross-domain-full'),
-            'code_updated' => __('Fired when a vanity code is updated', 'affiliate-cross-domain-full'),
-            'code_deleted' => __('Fired when a vanity code is deleted', 'affiliate-cross-domain-full'),
-            'domain_added' => __('Fired when a new domain is authorized', 'affiliate-cross-domain-full'),
-            'domain_updated' => __('Fired when domain settings are updated', 'affiliate-cross-domain-full'),
-            'domain_suspended' => __('Fired when a domain is suspended', 'affiliate-cross-domain-full'),
-            'conversion_tracked' => __('Fired when a conversion is tracked', 'affiliate-cross-domain-full'),
-            'security_alert' => __('Fired when a security issue is detected', 'affiliate-cross-domain-full'),
-            'rate_limit_exceeded' => __('Fired when rate limits are exceeded', 'affiliate-cross-domain-full')
+            'code_validated' => __('Fired when an affiliate code is successfully validated', 'affiliatewp-cross-domain-plugin-suite'),
+            'code_created' => __('Fired when a new vanity code is created', 'affiliatewp-cross-domain-plugin-suite'),
+            'code_updated' => __('Fired when a vanity code is updated', 'affiliatewp-cross-domain-plugin-suite'),
+            'code_deleted' => __('Fired when a vanity code is deleted', 'affiliatewp-cross-domain-plugin-suite'),
+            'domain_added' => __('Fired when a new domain is authorised', 'affiliatewp-cross-domain-plugin-suite'),
+            'domain_updated' => __('Fired when domain settings are updated', 'affiliatewp-cross-domain-plugin-suite'),
+            'domain_suspended' => __('Fired when a domain is suspended', 'affiliatewp-cross-domain-plugin-suite'),
+            'conversion_tracked' => __('Fired when a conversion is tracked', 'affiliatewp-cross-domain-plugin-suite'),
+            'security_alert' => __('Fired when a security issue is detected', 'affiliatewp-cross-domain-plugin-suite'),
+            'rate_limit_exceeded' => __('Fired when rate limits are exceeded', 'affiliatewp-cross-domain-plugin-suite')
         ];
     }
 
@@ -1941,20 +1941,20 @@ class AFFCD_Webhook_Handler {
         check_ajax_referer('affcd_admin_nonce', 'nonce');
         
         if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain-full'));
+            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         $webhook_ids = array_map('absint', $_POST['webhook_ids'] ?? []);
         
         if (empty($webhook_ids)) {
-            wp_send_json_error(__('No webhook IDs provided', 'affiliate-cross-domain-full'));
+            wp_send_json_error(__('No webhook IDs provided', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         $cancelled = $this->bulk_cancel_webhooks($webhook_ids);
         
         wp_send_json_success([
             'message' => sprintf(
-                __('Cancelled %d webhooks', 'affiliate-cross-domain-full'),
+                __('Cancelled %d webhooks', 'affiliatewp-cross-domain-plugin-suite'),
                 $cancelled
             ),
             'cancelled_count' => $cancelled
@@ -1968,7 +1968,7 @@ class AFFCD_Webhook_Handler {
         check_ajax_referer('affcd_admin_nonce', 'nonce');
         
         if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain-full'));
+            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         $days = absint($_POST['days'] ?? 30);

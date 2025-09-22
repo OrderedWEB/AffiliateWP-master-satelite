@@ -35,7 +35,7 @@
     handlers: {},
 
     /**
-     * Initialize the application
+     * Initialse the application
      */
     init: function () {
       if (this.state.initialized) return;
@@ -49,7 +49,7 @@
       this.state.initialized = true;
       this.log("ACI Application initialized");
 
-      // Trigger initialization event
+      // Trigger initialisation event
       this.trigger("app:initialized");
     },
 
@@ -100,35 +100,35 @@
     },
 
     /**
-     * Initialize sub-modules
+     * Initialse sub-modules
      */
     initializeModules: function () {
-      // Initialize URL processor
+      // Initialise URL processor
       if (ACI.URLProcessor) {
         ACI.URLProcessor.init();
       }
 
-      // Initialize price calculator
+      // Initialise price calculator
       if (ACI.PriceCalculator) {
         ACI.PriceCalculator.init();
       }
 
-      // Initialize validation
+      // Initialise validation
       if (ACI.Validation) {
         ACI.Validation.init();
       }
 
-      // Initialize popup manager
+      // Initialise popup manager
       if (ACI.PopupManager) {
         ACI.PopupManager.init();
       }
 
-      // Initialize session manager
+      // Initialise session manager
       this.initializeSession();
     },
 
     /**
-     * Initialize session management
+     * Initialse session management
      */
     initializeSession: function () {
       // Create session identifier
@@ -768,7 +768,7 @@
     },
   };
 
-  // Initialize when document is ready
+  // Initialise when document is ready
   $(document).ready(function () {
     ACI.App.init();
   });

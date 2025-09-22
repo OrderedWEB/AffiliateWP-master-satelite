@@ -275,12 +275,12 @@ function affcd_generate_secure_token($length = 32) {
  */
 function affcd_format_currency($amount, $currency = 'USD') {
     $symbol_map = [
-        'USD' => ',
+        'USD' => '$',
         'EUR' => '€',
         'GBP' => '£',
         'JPY' => '¥',
-        'CAD' => 'C,
-        'AUD' => 'A
+        'CAD' => 'C$',
+        'AUD' => 'A$'
     ];
     
     $symbol = $symbol_map[$currency] ?? $currency;
@@ -690,7 +690,7 @@ function affcd_get_error_message($error_code) {
         'inactive_code' => __('The affiliate code is not currently active.', 'affiliate-cross-domain-full'),
         'expired_code' => __('The affiliate code has expired.', 'affiliate-cross-domain-full'),
         'usage_limit_reached' => __('The affiliate code has reached its usage limit.', 'affiliate-cross-domain-full'),
-        'domain_not_authorized' => __('Your domain is not authorized to use this service.', 'affiliate-cross-domain-full'),
+        'domain_not_authorized' => __('Your domain is not authorised to use this service.', 'affiliate-cross-domain-full'),
         'rate_limit_exceeded' => __('Too many requests. Please try again later.', 'affiliate-cross-domain-full'),
         'invalid_request' => __('The request is invalid or malformed.', 'affiliate-cross-domain-full'),
         'authentication_failed' => __('Authentication failed. Please check your API credentials.', 'affiliate-cross-domain-full')

@@ -24,7 +24,7 @@
     handlers: {},
 
     /**
-     * Initialize shortcode system
+     * Initialse shortcode system
      */
     init: function () {
       this.registerHandlers();
@@ -51,7 +51,7 @@
     },
 
     /**
-     * Initialize all shortcodes on page
+     * Initialse all shortcodes on page
      */
     initializeShortcodes: function () {
       $(".aci-shortcode").each((index, element) => {
@@ -60,7 +60,7 @@
     },
 
     /**
-     * Initialize individual shortcode
+     * Initialse individual shortcode
      */
     initializeShortcode: function ($element) {
       const type = $element.data("shortcode-type");
@@ -211,7 +211,7 @@
      * Handle price calculator shortcode
      */
     handlePriceCalculator: function ($element, config) {
-      // Initialize the price calculator for this element
+      // Initialise the price calculator for this element
       if (window.ACI.PriceCalculator) {
         window.ACI.PriceCalculator.initializeForm(
           $element.find(".aci-price-form")
@@ -702,7 +702,7 @@
     },
   };
 
-  // Initialize when document is ready
+  // Initialise when document is ready
   $(document).ready(function () {
     if (ACI.Shortcodes.config.autoInit) {
       ACI.Shortcodes.init();

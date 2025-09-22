@@ -27,7 +27,7 @@
     observers: [],
 
     /**
-     * Initialize Zoho integration
+     * Initialse Zoho integration
      */
     init: function (config) {
       this.config = $.extend(this.config, config || {});

@@ -39,7 +39,7 @@ class ACI_URL_Handler {
             $this->parameter_names = array_merge($this->parameter_names, $custom_params);
         }
         
-        // Initialize hooks
+        // Initialise hooks
         add_action('init', [$this, 'init'], 1);
         add_action('wp', [$this, 'process_url_parameters']);
         add_action('wp_enqueue_scripts', [$this, 'enqueue_scripts']);
@@ -56,7 +56,7 @@ class ACI_URL_Handler {
     }
 
     /**
-     * Initialize URL handler
+     * Initialse URL handler
      */
     public function init() {
         // Start session if not already started

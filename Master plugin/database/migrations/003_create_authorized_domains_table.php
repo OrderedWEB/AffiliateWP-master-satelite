@@ -1,8 +1,8 @@
 <?php
 /**
- * Authorized Domains Table Migration for Affiliate Cross Domain System
+ * authorised Domains Table Migration for Affiliate Cross Domain System
  * 
- * Path: /wp-content/plugins/affiliate-cross-domain-system/database/migrations/003_create_authorized_domains_table.php
+ * Path: /wp-content/plugins/affiliate-cross-domain-system/database/migrations/003_create_authorised_domains_table.php
  * Plugin: Affiliate Cross Domain System (Master)
  */
 
@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class AFFCD_Migration_003_Create_Authorized_Domains_Table {
+class AFFCD_Migration_003_Create_authorised_Domains_Table {
 
     /**
      * Run the migration
@@ -19,7 +19,7 @@ class AFFCD_Migration_003_Create_Authorized_Domains_Table {
     public static function up() {
         global $wpdb;
         
-        $table_name = $wpdb->prefix . 'affcd_authorized_domains';
+        $table_name = $wpdb->prefix . 'affcd_authorised_domains';
         $charset_collate = $wpdb->get_charset_collate();
         
         $sql = "CREATE TABLE IF NOT EXISTS {$table_name} (
@@ -107,7 +107,7 @@ class AFFCD_Migration_003_Create_Authorized_Domains_Table {
     public static function update_domain_statistics($domain_id, $stats_data) {
         global $wpdb;
         
-        $table_name = $wpdb->prefix . 'affcd_authorized_domains';
+        $table_name = $wpdb->prefix . 'affcd_authorised_domains';
         
         $current_stats = $wpdb->get_var($wpdb->prepare(
             "SELECT statistics FROM {$table_name} WHERE id = %d",
@@ -135,7 +135,7 @@ class AFFCD_Migration_003_Create_Authorized_Domains_Table {
     public static function get_domain_by_api_key($api_key) {
         global $wpdb;
         
-        $table_name = $wpdb->prefix . 'affcd_authorized_domains';
+        $table_name = $wpdb->prefix . 'affcd_authorised_domains';
         
         return $wpdb->get_row($wpdb->prepare(
             "SELECT * FROM {$table_name} WHERE api_key = %s AND status = 'active'",
@@ -149,7 +149,7 @@ class AFFCD_Migration_003_Create_Authorized_Domains_Table {
     public static function check_rate_limits($domain_id) {
         global $wpdb;
         
-        $table_name = $wpdb->prefix . 'affcd_authorized_domains';
+        $table_name = $wpdb->prefix . 'affcd_authorised_domains';
         
         $domain = $wpdb->get_row($wpdb->prepare(
             "SELECT current_daily_requests, max_daily_requests, rate_limit_per_minute, rate_limit_per_hour 
@@ -203,7 +203,7 @@ class AFFCD_Migration_003_Create_Authorized_Domains_Table {
     public static function increment_request_counter($domain_id) {
         global $wpdb;
         
-        $table_name = $wpdb->prefix . 'affcd_authorized_domains';
+        $table_name = $wpdb->prefix . 'affcd_authorised_domains';
         
         $updated = $wpdb->query($wpdb->prepare(
             "UPDATE {$table_name} 
@@ -223,7 +223,7 @@ class AFFCD_Migration_003_Create_Authorized_Domains_Table {
     public static function update_last_activity($domain_id) {
         global $wpdb;
         
-        $table_name = $wpdb->prefix . 'affcd_authorized_domains';
+        $table_name = $wpdb->prefix . 'affcd_authorised_domains';
         
         $updated = $wpdb->update(
             $table_name,
@@ -242,7 +242,7 @@ class AFFCD_Migration_003_Create_Authorized_Domains_Table {
     public static function log_verification_attempt($domain_id, $success = false, $error_message = null) {
         global $wpdb;
         
-        $table_name = $wpdb->prefix . 'affcd_authorized_domains';
+        $table_name = $wpdb->prefix . 'affcd_authorised_domains';
         
         $update_data = [
             'last_verification_attempt' => current_time('mysql'),
@@ -313,7 +313,7 @@ class AFFCD_Migration_003_Create_Authorized_Domains_Table {
     public static function regenerate_api_credentials($domain_id) {
         global $wpdb;
         
-        $table_name = $wpdb->prefix . 'affcd_authorized_domains';
+        $table_name = $wpdb->prefix . 'affcd_authorised_domains';
         
         $new_api_key = self::generate_api_key();
         $new_api_secret = self::generate_api_secret();
@@ -349,7 +349,7 @@ class AFFCD_Migration_003_Create_Authorized_Domains_Table {
     public static function bulk_update_domains($domain_ids, $settings) {
         global $wpdb;
         
-        $table_name = $wpdb->prefix . 'affcd_authorized_domains';
+        $table_name = $wpdb->prefix . 'affcd_authorised_domains';
         $updated_count = 0;
         
         if (empty($domain_ids) || empty($settings)) {
@@ -400,8 +400,8 @@ class AFFCD_Migration_003_Create_Authorized_Domains_Table {
     public static function archive_inactive_domains($inactive_days = 180) {
         global $wpdb;
         
-        $table_name = $wpdb->prefix . 'affcd_authorized_domains';
-        $archive_table = $wpdb->prefix . 'affcd_authorized_domains_archive';
+        $table_name = $wpdb->prefix . 'affcd_authorised_domains';
+        $archive_table = $wpdb->prefix . 'affcd_authorised_domains_archive';
         $cutoff_date = date('Y-m-d H:i:s', strtotime("-{$inactive_days} days"));
         
         // Create archive table if it doesn't exist
@@ -441,7 +441,7 @@ class AFFCD_Migration_003_Create_Authorized_Domains_Table {
         
         return $archived_count;
     }
-} Authorized domains table created/updated");
+} authorised domains table created/updated");
         
         return $result;
     }
@@ -452,13 +452,13 @@ class AFFCD_Migration_003_Create_Authorized_Domains_Table {
     public static function down() {
         global $wpdb;
         
-        $table_name = $wpdb->prefix . 'affcd_authorized_domains';
+        $table_name = $wpdb->prefix . 'affcd_authorised_domains';
         
         $sql = "DROP TABLE IF EXISTS {$table_name}";
         $result = $wpdb->query($sql);
         
         // Log rollback
-        error_log("AFFCD Migration 003: Authorized domains table dropped");
+        error_log("AFFCD Migration 003: authorised domains table dropped");
         
         return $result !== false;
     }
@@ -498,7 +498,7 @@ class AFFCD_Migration_003_Create_Authorized_Domains_Table {
             return;
         }
         
-        $table_name = $wpdb->prefix . 'affcd_authorized_domains';
+        $table_name = $wpdb->prefix . 'affcd_authorised_domains';
         $current_user_id = get_current_user_id() ?: 1;
         
         $sample_data = [
@@ -612,7 +612,7 @@ class AFFCD_Migration_003_Create_Authorized_Domains_Table {
             $wpdb->insert($table_name, $data);
         }
         
-        error_log("AFFCD Migration 003: Sample authorized domains seeded successfully");
+        error_log("AFFCD Migration 003: Sample authorised domains seeded successfully");
     }
 
     /**
@@ -635,7 +635,7 @@ class AFFCD_Migration_003_Create_Authorized_Domains_Table {
     public static function migrate_from_options() {
         global $wpdb;
         
-        $table_name = $wpdb->prefix . 'affcd_authorized_domains';
+        $table_name = $wpdb->prefix . 'affcd_authorised_domains';
         $old_domains = get_option('affcd_allowed_domains', []);
         
         if (empty($old_domains)) {
@@ -710,7 +710,7 @@ class AFFCD_Migration_003_Create_Authorized_Domains_Table {
     public static function is_migration_needed() {
         global $wpdb;
         
-        $table_name = $wpdb->prefix . 'affcd_authorized_domains';
+        $table_name = $wpdb->prefix . 'affcd_authorised_domains';
         
         $table_exists = $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = %s AND table_name = %s",
@@ -727,8 +727,8 @@ class AFFCD_Migration_003_Create_Authorized_Domains_Table {
     public static function get_migration_info() {
         return [
             'version' => '003',
-            'name' => 'Create Authorized Domains Table',
-            'description' => 'Creates the authorized domains table for managing client domains, API keys, and security settings',
+            'name' => 'Create authorised Domains Table',
+            'description' => 'Creates the authorised domains table for managing client domains, API keys, and security settings',
             'dependencies' => ['001', '002'],
             'estimated_time' => '45 seconds',
             'affects_data' => true,
@@ -742,7 +742,7 @@ class AFFCD_Migration_003_Create_Authorized_Domains_Table {
     public static function validate_table_structure() {
         global $wpdb;
         
-        $table_name = $wpdb->prefix . 'affcd_authorized_domains';
+        $table_name = $wpdb->prefix . 'affcd_authorised_domains';
         
         $columns = $wpdb->get_results("DESCRIBE {$table_name}");
         $required_columns = [
@@ -782,7 +782,7 @@ class AFFCD_Migration_003_Create_Authorized_Domains_Table {
     public static function reset_daily_counters() {
         global $wpdb;
         
-        $table_name = $wpdb->prefix . 'affcd_authorized_domains';
+        $table_name = $wpdb->prefix . 'affcd_authorised_domains';
         
         $updated = $wpdb->query(
             "UPDATE {$table_name} SET current_daily_requests = 0 WHERE status = 'active'"
@@ -799,7 +799,7 @@ class AFFCD_Migration_003_Create_Authorized_Domains_Table {
     public static function cleanup_expired_domains() {
         global $wpdb;
         
-        $table_name = $wpdb->prefix . 'affcd_authorized_domains';
+        $table_name = $wpdb->prefix . 'affcd_authorised_domains';
         $current_time = current_time('mysql');
         
         // Suspend expired domains
@@ -825,7 +825,7 @@ class AFFCD_Migration_003_Create_Authorized_Domains_Table {
     public static function purge_old_verification_tokens() {
         global $wpdb;
         
-        $table_name = $wpdb->prefix . 'affcd_authorized_domains';
+        $table_name = $wpdb->prefix . 'affcd_authorised_domains';
         $cutoff_time = date('Y-m-d H:i:s', strtotime('-7 days'));
         
         $purged = $wpdb->query($wpdb->prepare(
@@ -849,7 +849,7 @@ class AFFCD_Migration_003_Create_Authorized_Domains_Table {
     public static function update_webhook_failure($domain_id, $error_message = null) {
         global $wpdb;
         
-        $table_name = $wpdb->prefix . 'affcd_authorized_domains';
+        $table_name = $wpdb->prefix . 'affcd_authorised_domains';
         
         $wpdb->query($wpdb->prepare(
             "UPDATE {$table_name} 
@@ -897,7 +897,7 @@ class AFFCD_Migration_003_Create_Authorized_Domains_Table {
     public static function reset_webhook_failure($domain_id) {
         global $wpdb;
         
-        $table_name = $wpdb->prefix . 'affcd_authorized_domains';
+        $table_name = $wpdb->prefix . 'affcd_authorised_domains';
         
         $updated = $wpdb->update(
             $table_name,
@@ -921,7 +921,7 @@ class AFFCD_Migration_003_Create_Authorized_Domains_Table {
     public static function get_domains_for_verification($limit = 50) {
         global $wpdb;
         
-        $table_name = $wpdb->prefix . 'affcd_authorized_domains';
+        $table_name = $wpdb->prefix . 'affcd_authorised_domains';
         
         return $wpdb->get_results($wpdb->prepare(
             "SELECT id, domain_url, verification_method, verification_token, verification_attempts 
@@ -943,7 +943,7 @@ class AFFCD_Migration_003_Create_Authorized_Domains_Table {
     public static function get_domain_performance_metrics($days = 30) {
         global $wpdb;
         
-        $table_name = $wpdb->prefix . 'affcd_authorized_domains';
+        $table_name = $wpdb->prefix . 'affcd_authorised_domains';
         $usage_table = $wpdb->prefix . 'affcd_usage_tracking';
         $date_range = date('Y-m-d', strtotime("-{$days} days"));
         
@@ -992,7 +992,7 @@ class AFFCD_Migration_003_Create_Authorized_Domains_Table {
     public static function get_security_violations($days = 7, $limit = 100) {
         global $wpdb;
         
-        $table_name = $wpdb->prefix . 'affcd_authorized_domains';
+        $table_name = $wpdb->prefix . 'affcd_authorised_domains';
         $security_table = $wpdb->prefix . 'affcd_security_log';
         $date_range = date('Y-m-d', strtotime("-{$days} days"));
         
@@ -1025,7 +1025,7 @@ class AFFCD_Migration_003_Create_Authorized_Domains_Table {
     public static function suspend_domain_for_security($domain_id, $reason, $suspended_by = null) {
         global $wpdb;
         
-        $table_name = $wpdb->prefix . 'affcd_authorized_domains';
+        $table_name = $wpdb->prefix . 'affcd_authorised_domains';
         $suspended_by = $suspended_by ?: get_current_user_id();
         
         $updated = $wpdb->update(
@@ -1058,7 +1058,7 @@ class AFFCD_Migration_003_Create_Authorized_Domains_Table {
     private static function send_security_notification($domain_id, $event_type, $details) {
         global $wpdb;
         
-        $table_name = $wpdb->prefix . 'affcd_authorized_domains';
+        $table_name = $wpdb->prefix . 'affcd_authorised_domains';
         
         $domain = $wpdb->get_row($wpdb->prepare(
             "SELECT domain_url, domain_name, webhook_url, webhook_secret, owner_email 
@@ -1118,7 +1118,7 @@ class AFFCD_Migration_003_Create_Authorized_Domains_Table {
     public static function get_domain_quotas($domain_id) {
         global $wpdb;
         
-        $table_name = $wpdb->prefix . 'affcd_authorized_domains';
+        $table_name = $wpdb->prefix . 'affcd_authorised_domains';
         $usage_table = $wpdb->prefix . 'affcd_usage_tracking';
         
         $domain = $wpdb->get_row($wpdb->prepare(
@@ -1180,7 +1180,7 @@ class AFFCD_Migration_003_Create_Authorized_Domains_Table {
     public static function export_domain_config($domain_id) {
         global $wpdb;
         
-        $table_name = $wpdb->prefix . 'affcd_authorized_domains';
+        $table_name = $wpdb->prefix . 'affcd_authorised_domains';
         
         $domain = $wpdb->get_row($wpdb->prepare(
             "SELECT * FROM {$table_name} WHERE id = %d",
@@ -1220,7 +1220,7 @@ class AFFCD_Migration_003_Create_Authorized_Domains_Table {
             return false;
         }
         
-        $table_name = $wpdb->prefix . 'affcd_authorized_domains';
+        $table_name = $wpdb->prefix . 'affcd_authorised_domains';
         
         // Check if domain already exists
         $existing_id = $wpdb->get_var($wpdb->prepare(
@@ -1285,7 +1285,7 @@ class AFFCD_Migration_003_Create_Authorized_Domains_Table {
     public static function get_table_statistics() {
         global $wpdb;
         
-        $table_name = $wpdb->prefix . 'affcd_authorized_domains';
+        $table_name = $wpdb->prefix . 'affcd_authorised_domains';
         
         $stats = $wpdb->get_row(
             "SELECT 

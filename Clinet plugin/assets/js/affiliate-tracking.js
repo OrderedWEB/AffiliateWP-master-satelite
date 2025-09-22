@@ -22,7 +22,7 @@
     queue: [],
 
     /**
-     * Initialize tracker
+     * Initialse tracker
      */
     init: function (config) {
       this.config = $.extend(
@@ -59,7 +59,7 @@
       this.initialized = true;
       this.log("Tracker initialized", this.sessionData);
 
-      // Fire initialization event
+      // Fire initialisation event
       $(document).trigger("affiliate_client_tracker_ready", [this]);
     },
 

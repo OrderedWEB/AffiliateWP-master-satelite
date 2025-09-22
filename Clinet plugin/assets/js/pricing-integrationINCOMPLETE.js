@@ -31,4 +31,4 @@
         activeDiscountCode: null,
 
         /**
-         * Initialize pricing functionality
+         * Initialse pricing functionality

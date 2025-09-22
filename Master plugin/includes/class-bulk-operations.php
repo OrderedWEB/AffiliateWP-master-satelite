@@ -1,14 +1,14 @@
 <?php
 /**
- * Bulk Operations Class for Affiliate Cross Domain Full
+ * Bulk Operations Class for WP Affiliate Cross Domain Plugin Suite
  *
  * Handles bulk operations for vanity codes, domains, and other
  * administrative tasks with progress tracking and rollback capability.
  *
  * Filename: admin/class-bulk-operations.php
- * Plugin: AffiliateWP Cross Domain Full (Master)
+ * Plugin: WP Affiliate Cross Domain Plugin Suite (Master)
  *
- * @package AffiliateWP_Cross_Domain_Full
+ * @package AffiliateWP_Cross_Domain_Plugin_Suite_Master
  * @version 1.0.0
  * @author Richard King, Starne Consulting
  */
@@ -336,7 +336,7 @@ class AFFCD_Bulk_Operations {
                         <label for="export-type"><?php _e('Data Type', 'affiliate-cross-domain'); ?></label>
                         <select id="export-type" name="export_type">
                             <option value="vanity_codes"><?php _e('Vanity Codes', 'affiliate-cross-domain'); ?></option>
-                            <option value="domains"><?php _e('Authorized Domains', 'affiliate-cross-domain'); ?></option>
+                            <option value="domains"><?php _e('authorised Domains', 'affiliate-cross-domain'); ?></option>
                             <option value="analytics"><?php _e('Analytics Data', 'affiliate-cross-domain'); ?></option>
                             <option value="security_logs"><?php _e('Security Logs', 'affiliate-cross-domain'); ?></option>
                             <option value="all"><?php _e('All Data', 'affiliate-cross-domain'); ?></option>
@@ -387,7 +387,7 @@ class AFFCD_Bulk_Operations {
                         <label for="import-type"><?php _e('Data Type', 'affiliate-cross-domain'); ?></label>
                         <select id="import-type" name="import_type">
                             <option value="vanity_codes"><?php _e('Vanity Codes', 'affiliate-cross-domain'); ?></option>
-                            <option value="domains"><?php _e('Authorized Domains', 'affiliate-cross-domain'); ?></option>
+                            <option value="domains"><?php _e('authorised Domains', 'affiliate-cross-domain'); ?></option>
                         </select>
                     </div>
                     
@@ -626,7 +626,7 @@ class AFFCD_Bulk_Operations {
     private function get_domain_statistics() {
         global $wpdb;
         
-        $domains_table = $wpdb->prefix . 'affcd_authorized_domains';
+        $domains_table = $wpdb->prefix . 'affcd_authorised_domains';
         
         return [
             'total' => $wpdb->get_var("SELECT COUNT(*) FROM {$domains_table}"),
@@ -1050,7 +1050,7 @@ class AFFCD_Bulk_Operations {
     private function rollback_domain_operation($operation, $rollback_data) {
         global $wpdb;
         
-        $domains_table = $wpdb->prefix . 'affcd_authorized_domains';
+        $domains_table = $wpdb->prefix . 'affcd_authorised_domains';
         $errors = [];
         
         foreach ($rollback_data as $domain_id => $original_data) {
@@ -1112,7 +1112,7 @@ class AFFCD_Bulk_Operations {
     private function get_domains_for_bulk($filter = 'all', $limit = 1000) {
         global $wpdb;
         
-        $domains_table = $wpdb->prefix . 'affcd_authorized_domains';
+        $domains_table = $wpdb->prefix . 'affcd_authorised_domains';
         $where_clause = '';
         
         switch ($filter) {

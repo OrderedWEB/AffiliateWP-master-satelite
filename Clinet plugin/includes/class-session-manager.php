@@ -48,7 +48,7 @@ class ACI_Session_Manager {
     }
 
     /**
-     * Initialize session
+     * Initialse session
      */
     public function init_session() {
         if (headers_sent()) {

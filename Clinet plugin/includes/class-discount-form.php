@@ -33,7 +33,7 @@ class AFFILIATE_CLIENT_Discount_Form {
     }
 
     /**
-     * Initialize discount form functionality
+     * Initialse discount form functionality
      */
     public function init() {
         // Register shortcodes

@@ -49,7 +49,7 @@ class AFFILIATE_CLIENT_Addon_Client {
     }
 
     /**
-     * Initialize addon integrations
+     * Initialse addon integrations
      */
     public function init() {
         if (!$this->config['tracking_enabled']) {

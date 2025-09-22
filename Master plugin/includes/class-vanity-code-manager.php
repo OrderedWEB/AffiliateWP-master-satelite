@@ -31,7 +31,7 @@ class AFFCD_Vanity_Code_Manager {
         $this->usage_table = $wpdb->prefix . 'affcd_usage_tracking';
         $this->security_manager = new AFFCD_Security_Manager();
         
-        // Initialize hooks
+        // Initialise hooks
         add_action('init', [$this, 'init']);
         add_action('wp_ajax_affcd_create_vanity_code', [$this, 'ajax_create_vanity_code']);
         add_action('wp_ajax_affcd_update_vanity_code', [$this, 'ajax_update_vanity_code']);
@@ -40,7 +40,7 @@ class AFFCD_Vanity_Code_Manager {
     }
 
     /**
-     * Initialize the manager
+     * Initialse the manager
      */
     public function init() {
         $this->maybe_create_tables();
@@ -349,12 +349,12 @@ class AFFCD_Vanity_Code_Manager {
             ];
         }
 
-        // Verify domain is authorized (if provided)
-        if ($domain && !$this->security_manager->is_domain_authorized($domain)) {
+        // Verify domain is authorised (if provided)
+        if ($domain && !$this->security_manager->is_domain_authorised($domain)) {
             return [
                 'valid' => false,
-                'error' => 'unauthorized_domain',
-                'message' => __('Domain not authorized.', 'affiliate-cross-domain')
+                'error' => 'unauthorised_domain',
+                'message' => __('Domain not authorised.', 'affiliate-cross-domain')
             ];
         }
 

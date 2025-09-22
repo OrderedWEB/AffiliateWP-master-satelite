@@ -268,7 +268,7 @@ if ($animate) {
     const discountDisplay = document.getElementById('<?php echo esc_js($display_id); ?>');
     if (!discountDisplay) return;
     
-    // Initialize functionality
+    // Initialise functionality
     initializeDiscountDisplay();
     
     function initializeDiscountDisplay() {

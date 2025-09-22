@@ -5,7 +5,7 @@
  * Handles domain authorization, verification, and management operations.
  * Works in conjunction with the admin interface for complete domain management.
  *
- * @package AffiliateWP_Cross_Domain_Full
+ * @package AffiliateWP_Cross_Domain_Plugin_Suite_Master
  * @version 1.0.0
  */
 
@@ -35,7 +35,7 @@ class AFFCD_Domain_Manager {
      */
     public function __construct() {
         global $wpdb;
-        $this->table_name = $wpdb->prefix . 'affcd_authorized_domains';
+        $this->table_name = $wpdb->prefix . 'affcd_authorised_domains';
         
         add_action('init', [$this, 'init']);
         add_action('wp_ajax_affcd_get_domains', [$this, 'ajax_get_domains']);
@@ -52,7 +52,7 @@ class AFFCD_Domain_Manager {
     }
 
     /**
-     * Initialize domain manager
+     * Initialse domain manager
      */
     public function init() {
         // Schedule daily domain verification
@@ -74,13 +74,13 @@ class AFFCD_Domain_Manager {
         
         // Validate required fields
         if (empty($data['domain_url'])) {
-            return new WP_Error('missing_domain_url', __('Domain URL is required', 'affiliate-cross-domain-full'));
+            return new WP_Error('missing_domain_url', __('Domain URL is required', 'affiliatewp-cross-domain-plugin-suite'));
         }
         
         // Sanitize domain URL
         $domain_url = affcd_sanitize_domain($data['domain_url']);
         if (empty($domain_url)) {
-            return new WP_Error('invalid_domain_url', __('Invalid domain URL format', 'affiliate-cross-domain-full'));
+            return new WP_Error('invalid_domain_url', __('Invalid domain URL format', 'affiliatewp-cross-domain-plugin-suite'));
         }
         
         // Ensure https protocol
@@ -91,7 +91,7 @@ class AFFCD_Domain_Manager {
         // Check if domain already exists
         $existing = $this->get_domain_by_url($domain_url);
         if ($existing) {
-            return new WP_Error('domain_exists', __('Domain already exists', 'affiliate-cross-domain-full'));
+            return new WP_Error('domain_exists', __('Domain already exists', 'affiliatewp-cross-domain-plugin-suite'));
         }
         
         // Generate API credentials
@@ -134,7 +134,7 @@ class AFFCD_Domain_Manager {
         );
         
         if ($result === false) {
-            return new WP_Error('database_error', __('Failed to add domain', 'affiliate-cross-domain-full'));
+            return new WP_Error('database_error', __('Failed to add domain', 'affiliatewp-cross-domain-plugin-suite'));
         }
         
         $domain_id = $wpdb->insert_id;
@@ -170,7 +170,7 @@ class AFFCD_Domain_Manager {
         // Get existing domain
         $existing = $this->get_domain($domain_id);
         if (!$existing) {
-            return new WP_Error('domain_not_found', __('Domain not found', 'affiliate-cross-domain-full'));
+            return new WP_Error('domain_not_found', __('Domain not found', 'affiliatewp-cross-domain-plugin-suite'));
         }
         
         // Prepare update data
@@ -248,7 +248,7 @@ class AFFCD_Domain_Manager {
         }
         
         if (empty($update_data)) {
-            return new WP_Error('no_changes', __('No valid changes provided', 'affiliate-cross-domain-full'));
+            return new WP_Error('no_changes', __('No valid changes provided', 'affiliatewp-cross-domain-plugin-suite'));
         }
         
         // Update timestamp
@@ -265,7 +265,7 @@ class AFFCD_Domain_Manager {
         );
         
         if ($result === false) {
-            return new WP_Error('database_error', __('Failed to update domain', 'affiliate-cross-domain-full'));
+            return new WP_Error('database_error', __('Failed to update domain', 'affiliatewp-cross-domain-plugin-suite'));
         }
         
         // Clear cache
@@ -298,7 +298,7 @@ class AFFCD_Domain_Manager {
         // Get existing domain
         $existing = $this->get_domain($domain_id);
         if (!$existing) {
-            return new WP_Error('domain_not_found', __('Domain not found', 'affiliate-cross-domain-full'));
+            return new WP_Error('domain_not_found', __('Domain not found', 'affiliatewp-cross-domain-plugin-suite'));
         }
         
         // Delete domain
@@ -309,7 +309,7 @@ class AFFCD_Domain_Manager {
         );
         
         if ($result === false) {
-            return new WP_Error('database_error', __('Failed to delete domain', 'affiliate-cross-domain-full'));
+            return new WP_Error('database_error', __('Failed to delete domain', 'affiliatewp-cross-domain-plugin-suite'));
         }
         
         // Clear cache
@@ -518,7 +518,7 @@ class AFFCD_Domain_Manager {
         if (!$domain) {
             return [
                 'success' => false,
-                'message' => __('Domain not found', 'affiliate-cross-domain-full')
+                'message' => __('Domain not found', 'affiliatewp-cross-domain-plugin-suite')
             ];
         }
         
@@ -543,9 +543,9 @@ class AFFCD_Domain_Manager {
             $status_code = wp_remote_retrieve_response_code($response);
             if ($status_code === 200) {
                 $success = true;
-                $message = sprintf(__('Connection verified successfully (%sms)', 'affiliate-cross-domain-full'), $response_time);
+                $message = sprintf(__('Connection verified successfully (%sms)', 'affiliatewp-cross-domain-plugin-suite'), $response_time);
             } else {
-                $message = sprintf(__('HTTP %d response received', 'affiliate-cross-domain-full'), $status_code);
+                $message = sprintf(__('HTTP %d response received', 'affiliatewp-cross-domain-plugin-suite'), $status_code);
             }
         }
         
@@ -566,7 +566,7 @@ class AFFCD_Domain_Manager {
             if ($update_data['verification_failures'] >= 5) {
                 $update_data['status'] = 'suspended';
                 $update_data['suspended_at'] = current_time('mysql');
-                $update_data['suspended_reason'] = __('Multiple verification failures', 'affiliate-cross-domain-full');
+                $update_data['suspended_reason'] = __('Multiple verification failures', 'affiliatewp-cross-domain-plugin-suite');
             }
         }
         
@@ -644,8 +644,8 @@ class AFFCD_Domain_Manager {
         return [
             'success' => $success,
             'message' => $success 
-                ? sprintf(__('Connection successful (%sms)', 'affiliate-cross-domain-full'), $response_time)
-                : sprintf(__('HTTP %d response', 'affiliate-cross-domain-full'), $status_code),
+                ? sprintf(__('Connection successful (%sms)', 'affiliatewp-cross-domain-plugin-suite'), $response_time)
+                : sprintf(__('HTTP %d response', 'affiliatewp-cross-domain-plugin-suite'), $status_code),
             'response_time' => $response_time,
             'status_code' => $status_code
         ];
@@ -658,7 +658,7 @@ class AFFCD_Domain_Manager {
         check_ajax_referer('affcd_ajax_nonce', 'nonce');
         
         if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain-full'));
+            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
         }
         
         $args = [
@@ -676,10 +676,10 @@ class AFFCD_Domain_Manager {
             $data[] = [
                 'checkbox' => '<input type="checkbox" name="domain_ids[]" value="' . $domain->id . '">',
                 'domain_url' => esc_html($domain->domain_url),
-                'domain_name' => esc_html($domain->domain_name ?: __('N/A', 'affiliate-cross-domain-full')),
+                'domain_name' => esc_html($domain->domain_name ?: __('N/A', 'affiliatewp-cross-domain-plugin-suite')),
                 'status' => $this->get_status_badge($domain->status),
                 'verification_status' => $this->get_verification_badge($domain->verification_status),
-                'last_activity' => $domain->last_activity_at ? affcd_time_ago($domain->last_activity_at) : __('Never', 'affiliate-cross-domain-full'),
+                'last_activity' => $domain->last_activity_at ? affcd_time_ago($domain->last_activity_at) : __('Never', 'affiliatewp-cross-domain-plugin-suite'),
                 'actions' => $this->get_domain_actions($domain)
             ];
         }
@@ -698,7 +698,7 @@ class AFFCD_Domain_Manager {
         check_ajax_referer('affcd_ajax_nonce', 'nonce');
         
         if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain-full'));
+            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
         }
         
         $domain_data = [
@@ -718,7 +718,7 @@ class AFFCD_Domain_Manager {
         }
         
         wp_send_json_success([
-            'message' => __('Domain added successfully', 'affiliate-cross-domain-full'),
+            'message' => __('Domain added successfully', 'affiliatewp-cross-domain-plugin-suite'),
             'domain_id' => $result
         ]);
     }
@@ -730,7 +730,7 @@ class AFFCD_Domain_Manager {
         check_ajax_referer('affcd_ajax_nonce', 'nonce');
         
         if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain-full'));
+            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
         }
         
         $domain_id = absint($_POST['domain_id'] ?? 0);
@@ -752,7 +752,7 @@ class AFFCD_Domain_Manager {
         }
         
         wp_send_json_success([
-            'message' => __('Domain updated successfully', 'affiliate-cross-domain-full')
+            'message' => __('Domain updated successfully', 'affiliatewp-cross-domain-plugin-suite')
         ]);
     }
 
@@ -763,7 +763,7 @@ class AFFCD_Domain_Manager {
         check_ajax_referer('affcd_ajax_nonce', 'nonce');
         
         if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain-full'));
+            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
         }
         
         $domain_id = absint($_POST['domain_id'] ?? 0);
@@ -774,7 +774,7 @@ class AFFCD_Domain_Manager {
         }
         
         wp_send_json_success([
-            'message' => __('Domain deleted successfully', 'affiliate-cross-domain-full')
+            'message' => __('Domain deleted successfully', 'affiliatewp-cross-domain-plugin-suite')
         ]);
     }
 
@@ -785,7 +785,7 @@ class AFFCD_Domain_Manager {
         check_ajax_referer('affcd_ajax_nonce', 'nonce');
         
         if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain-full'));
+            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
         }
         
         $domain_id = absint($_POST['domain_id'] ?? 0);
@@ -805,7 +805,7 @@ class AFFCD_Domain_Manager {
         check_ajax_referer('affcd_ajax_nonce', 'nonce');
         
         if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain-full'));
+            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
         }
         
         $domain_id = absint($_POST['domain_id'] ?? 0);
@@ -818,7 +818,7 @@ class AFFCD_Domain_Manager {
         }
         
         wp_send_json_success([
-            'message' => sprintf(__('Domain status changed to %s', 'affiliate-cross-domain-full'), $status)
+            'message' => sprintf(__('Domain status changed to %s', 'affiliatewp-cross-domain-plugin-suite'), $status)
         ]);
     }
 
@@ -829,7 +829,7 @@ class AFFCD_Domain_Manager {
         check_ajax_referer('affcd_ajax_nonce', 'nonce');
         
         if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain-full'));
+            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
         }
         
         $stats = $this->get_domain_statistics();
@@ -843,14 +843,14 @@ class AFFCD_Domain_Manager {
         check_ajax_referer('affcd_ajax_nonce', 'nonce');
         
         if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain-full'));
+            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
         }
         
         $api_key = affcd_generate_api_key();
         
         wp_send_json_success([
             'api_key' => $api_key,
-            'message' => __('API key generated successfully', 'affiliate-cross-domain-full')
+            'message' => __('API key generated successfully', 'affiliatewp-cross-domain-plugin-suite')
         ]);
     }
 
@@ -861,7 +861,7 @@ class AFFCD_Domain_Manager {
         check_ajax_referer('affcd_ajax_nonce', 'nonce');
         
         if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain-full'));
+            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
         }
         
         $domain_id = absint($_POST['domain_id'] ?? 0);
@@ -887,10 +887,10 @@ class AFFCD_Domain_Manager {
      */
     private function get_status_badge($status) {
         $badges = [
-            'active' => '<span class="status-badge status-active">' . __('Active', 'affiliate-cross-domain-full') . '</span>',
-            'inactive' => '<span class="status-badge status-inactive">' . __('Inactive', 'affiliate-cross-domain-full') . '</span>',
-            'suspended' => '<span class="status-badge status-suspended">' . __('Suspended', 'affiliate-cross-domain-full') . '</span>',
-            'pending' => '<span class="status-badge status-pending">' . __('Pending', 'affiliate-cross-domain-full') . '</span>'
+            'active' => '<span class="status-badge status-active">' . __('Active', 'affiliatewp-cross-domain-plugin-suite') . '</span>',
+            'inactive' => '<span class="status-badge status-inactive">' . __('Inactive', 'affiliatewp-cross-domain-plugin-suite') . '</span>',
+            'suspended' => '<span class="status-badge status-suspended">' . __('Suspended', 'affiliatewp-cross-domain-plugin-suite') . '</span>',
+            'pending' => '<span class="status-badge status-pending">' . __('Pending', 'affiliatewp-cross-domain-plugin-suite') . '</span>'
         ];
         
         return $badges[$status] ?? $status;
@@ -904,9 +904,9 @@ class AFFCD_Domain_Manager {
      */
     private function get_verification_badge($status) {
         $badges = [
-            'verified' => '<span class="verification-badge verification-verified">' . __('Verified', 'affiliate-cross-domain-full') . '</span>',
-            'unverified' => '<span class="verification-badge verification-unverified">' . __('Unverified', 'affiliate-cross-domain-full') . '</span>',
-            'failed' => '<span class="verification-badge verification-failed">' . __('Failed', 'affiliate-cross-domain-full') . '</span>'
+            'verified' => '<span class="verification-badge verification-verified">' . __('Verified', 'affiliatewp-cross-domain-plugin-suite') . '</span>',
+            'unverified' => '<span class="verification-badge verification-unverified">' . __('Unverified', 'affiliatewp-cross-domain-plugin-suite') . '</span>',
+            'failed' => '<span class="verification-badge verification-failed">' . __('Failed', 'affiliatewp-cross-domain-plugin-suite') . '</span>'
         ];
         
         return $badges[$status] ?? $status;
@@ -921,13 +921,13 @@ class AFFCD_Domain_Manager {
     private function get_domain_actions($domain) {
         $actions = [];
         
-        $actions[] = '<button type="button" class="button button-small test-domain-connection" data-domain-id="' . $domain->id . '">' . __('Test', 'affiliate-cross-domain-full') . '</button>';
+        $actions[] = '<button type="button" class="button button-small test-domain-connection" data-domain-id="' . $domain->id . '">' . __('Test', 'affiliatewp-cross-domain-plugin-suite') . '</button>';
         
-        $actions[] = '<button type="button" class="button button-small verify-domain" data-domain-id="' . $domain->id . '">' . __('Verify', 'affiliate-cross-domain-full') . '</button>';
+        $actions[] = '<button type="button" class="button button-small verify-domain" data-domain-id="' . $domain->id . '">' . __('Verify', 'affiliatewp-cross-domain-plugin-suite') . '</button>';
         
-        $actions[] = '<button type="button" class="button button-small edit-domain" data-domain-id="' . $domain->id . '">' . __('Edit', 'affiliate-cross-domain-full') . '</button>';
+        $actions[] = '<button type="button" class="button button-small edit-domain" data-domain-id="' . $domain->id . '">' . __('Edit', 'affiliatewp-cross-domain-plugin-suite') . '</button>';
         
-        $actions[] = '<button type="button" class="button button-small delete-domain" data-domain-id="' . $domain->id . '" data-domain-name="' . esc_attr($domain->domain_url) . '">' . __('Delete', 'affiliate-cross-domain-full') . '</button>';
+        $actions[] = '<button type="button" class="button button-small delete-domain" data-domain-id="' . $domain->id . '" data-domain-name="' . esc_attr($domain->domain_url) . '">' . __('Delete', 'affiliatewp-cross-domain-plugin-suite') . '</button>';
         
         return implode(' ', $actions);
     }

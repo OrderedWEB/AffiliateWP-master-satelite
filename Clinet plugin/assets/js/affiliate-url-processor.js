@@ -28,7 +28,7 @@
     isProcessing: false,
 
     /**
-     * Initialize URL processor
+     * Initialse URL processor
      */
     init: function () {
       this.loadConfig();
@@ -628,7 +628,7 @@
     },
   };
 
-  // Initialize when document is ready
+  // Initialise when document is ready
   $(document).ready(function () {
     ACI.URLProcessor.init();
   });

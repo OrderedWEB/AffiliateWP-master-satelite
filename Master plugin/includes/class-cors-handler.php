@@ -66,7 +66,7 @@ class AFFCD_CORS_Handler {
             return false;
         }
         
-        // Check against authorized domains
+        // Check against authorised domains
         $domains = get_option('affcd_allowed_domains', []);
         
         foreach ($domains as $domain) {

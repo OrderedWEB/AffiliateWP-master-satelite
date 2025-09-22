@@ -1,21 +1,21 @@
 <?php
 /**
- * Plugin Name: AffiliateWP Cross Domain Full
+ * Plugin Name: AffiliateWP Cross Domain Affiliate Tracking Master Plugin
  * Plugin URI: https://starneconsulting.com/affiliatewp-cross-domain-full
- * Description: Central hub for cross-domain affiliate discount code validation and management. Extends AffiliateWP with vanity codes, multi-site API endpoints, and comprehensive analytics across client installations.
+ * Description: Central hub for cross-domain affiliate discount code validation and management. Extends AffiliateWP with vanity codes, multi-site API endpoints, and comprehensive analytics across client installations.  Requires partner satelite plugin on the Clinet domain.
  * Version: 1.0.0
  * Author: Richard King, Starne Consulting
  * Author URI: https://starneconsulting.com
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain: affiliate-cross-domain-full
+ * Text Domain: affiliatewp-cross-domain-plugin-suite
  * Domain Path: /languages
  * Requires at least: 5.0
  * Tested up to: 6.4
  * Requires PHP: 7.4
  * Network: false
  *
- * @package AffiliateWP_Cross_Domain_Full
+ * @package AffiliateWP_Cross_Domain_Plugin_Suite_Master
  * @version 1.0.0
  */
 
@@ -32,14 +32,14 @@ define('AFFCD_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('AFFCD_PLUGIN_BASENAME', plugin_basename(__FILE__));
 
 /**
- * Main AffiliateWP Cross Domain Full Plugin Class
+ * Main AffiliateWP Cross Domain Plugin Suite Plugin Class
  */
-class AffiliateWP_Cross_Domain_Full {
+class AffiliateWP_Cross_Domain_Plugin_Suite_Master {
 
     /**
      * Plugin instance
      *
-     * @var AffiliateWP_Cross_Domain_Full
+     * @var AffiliateWP_Cross_Domain_Plugin_Suite_Master
      */
     private static $instance = null;
 
@@ -109,7 +109,7 @@ class AffiliateWP_Cross_Domain_Full {
     /**
      * Get plugin instance
      *
-     * @return AffiliateWP_Cross_Domain_Full
+     * @return AffiliateWP_Cross_Domain_Plugin_Suite_Master
      */
     public static function instance() {
         if (null === self::$instance) {
@@ -128,12 +128,12 @@ class AffiliateWP_Cross_Domain_Full {
     }
 
     /**
-     * Initialize hooks
+     * Initialse hooks
      */
     private function init_hooks() {
         register_activation_hook(__FILE__, [$this, 'activation']);
         register_deactivation_hook(__FILE__, [$this, 'deactivation']);
-        register_uninstall_hook(__FILE__, ['AffiliateWP_Cross_Domain_Full', 'uninstall']);
+        register_uninstall_hook(__FILE__, ['AffiliateWP_Cross_Domain_Plugin_Suite_Master', 'uninstall']);
 
         add_action('plugins_loaded', [$this, 'load_textdomain']);
         add_action('init', [$this, 'init'], 0);
@@ -176,17 +176,17 @@ class AffiliateWP_Cross_Domain_Full {
     }
 
     /**
-     * Initialize plugin components
+     * Initialse plugin components
      */
     private function init_components() {
-        // Initialize database manager first
+        // Initialise database manager first
         $this->database_manager = new AFFCD_Database_Manager();
         
-        // Initialize security and rate limiting
+        // Initialise security and rate limiting
         $this->security_validator = new AFFCD_Security_Validator();
         $this->rate_limiter = new AFFCD_Rate_Limiter();
         
-        // Initialize business logic components
+        // Initialise business logic components
         $this->vanity_code_manager = new AFFCD_Vanity_Code_Manager();
         $this->webhook_handler = new AFFCD_Webhook_Handler();
         $this->api_endpoints = new AFFCD_API_Endpoints(
@@ -195,7 +195,7 @@ class AffiliateWP_Cross_Domain_Full {
             $this->vanity_code_manager
         );
 
-        // Initialize admin components
+        // Initialise admin components
         if (is_admin()) {
             $this->admin_menu = new AFFCD_Admin_Menu();
             $this->domain_manager = new AFFCD_Domain_Manager();
@@ -203,7 +203,7 @@ class AffiliateWP_Cross_Domain_Full {
     }
 
     /**
-     * Plugin initialization
+     * Plugin initialisation
      */
     public function init() {
         // Check AffiliateWP dependency
@@ -214,7 +214,7 @@ class AffiliateWP_Cross_Domain_Full {
         // Set activated flag
         $this->activated = true;
 
-        // Initialize components that require WordPress to be loaded
+        // Initialise components that require WordPress to be loaded
         do_action('affcd_loaded', $this);
 
         // Schedule cleanup events
@@ -226,7 +226,7 @@ class AffiliateWP_Cross_Domain_Full {
      */
     public function load_textdomain() {
         load_plugin_textdomain(
-            'affiliate-cross-domain-full',
+            'affiliatewp-cross-domain-plugin-suite',
             false,
             dirname(AFFCD_PLUGIN_BASENAME) . '/languages/'
         );
@@ -242,7 +242,7 @@ class AffiliateWP_Cross_Domain_Full {
     }
 
     /**
-     * Admin initialization
+     * Admin initialisation
      */
     public function admin_init() {
         // Register admin settings
@@ -259,7 +259,7 @@ class AffiliateWP_Cross_Domain_Full {
         // Check WordPress and PHP versions
         if (!$this->check_requirements()) {
             deactivate_plugins(AFFCD_PLUGIN_BASENAME);
-            wp_die(__('AffiliateWP Cross Domain Full requires WordPress 5.0+ and PHP 7.4+', 'affiliate-cross-domain-full'));
+            wp_die(__('AffiliateWP Cross Domain Plugin Suite requires WordPress 5.0+ and PHP 7.4+', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         // Create database tables
@@ -349,9 +349,9 @@ class AffiliateWP_Cross_Domain_Full {
         ?>
         <div class="notice notice-error">
             <p>
-                <strong><?php _e('AffiliateWP Cross Domain Full', 'affiliate-cross-domain-full'); ?></strong>: 
-                <?php _e('This plugin requires AffiliateWP to be installed and activated.', 'affiliate-cross-domain-full'); ?>
-                <a href="https://affiliatewp.com" target="_blank"><?php _e('Get AffiliateWP', 'affiliate-cross-domain-full'); ?></a>
+                <strong><?php _e('AffiliateWP Cross Domain Plugin Suite', 'affiliatewp-cross-domain-plugin-suite'); ?></strong>: 
+                <?php _e('This plugin requires AffiliateWP to be installed and activated.', 'affiliatewp-cross-domain-plugin-suite'); ?>
+                <a href="https://affiliatewp.com" target="_blank"><?php _e('Get AffiliateWP', 'affiliatewp-cross-domain-plugin-suite'); ?></a>
             </p>
         </div>
         <?php
@@ -452,13 +452,13 @@ class AffiliateWP_Cross_Domain_Full {
         check_ajax_referer('affcd_admin_nonce', 'nonce');
         
         if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain-full'));
+            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         $domain = sanitize_text_field($_POST['domain'] ?? '');
         
         if (empty($domain)) {
-            wp_send_json_error(__('Domain is required', 'affiliate-cross-domain-full'));
+            wp_send_json_error(__('Domain is required', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         $result = $this->domain_manager->test_domain_connection($domain);
@@ -478,7 +478,7 @@ class AffiliateWP_Cross_Domain_Full {
         $domain = sanitize_text_field($_POST['domain'] ?? '');
         
         if (empty($code)) {
-            wp_send_json_error(__('Code is required', 'affiliate-cross-domain-full'));
+            wp_send_json_error(__('Code is required', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         $result = $this->vanity_code_manager->validate_code($code, $domain);
@@ -495,8 +495,8 @@ class AffiliateWP_Cross_Domain_Full {
             ?>
             <div class="notice notice-success is-dismissible">
                 <p>
-                    <?php _e('AffiliateWP Cross Domain Full activated successfully!', 'affiliate-cross-domain-full'); ?>
-                    <a href="<?php echo admin_url('admin.php?page=affcd-settings'); ?>"><?php _e('Configure Settings', 'affiliate-cross-domain-full'); ?></a>
+                    <?php _e('AffiliateWP Cross Domain Plugin Suite activated successfully!', 'affiliatewp-cross-domain-plugin-suite'); ?>
+                    <a href="<?php echo admin_url('admin.php?page=affcd-settings'); ?>"><?php _e('Configure Settings', 'affiliatewp-cross-domain-plugin-suite'); ?></a>
                 </p>
             </div>
             <?php
@@ -508,8 +508,8 @@ class AffiliateWP_Cross_Domain_Full {
      */
     public function plugin_action_links($links) {
         $action_links = [
-            'settings' => '<a href="' . admin_url('admin.php?page=affcd-settings') . '">' . __('Settings', 'affiliate-cross-domain-full') . '</a>',
-            'docs' => '<a href="https://starneconsulting.com/docs/affiliatewp-cross-domain" target="_blank">' . __('Documentation', 'affiliate-cross-domain-full') . '</a>'
+            'settings' => '<a href="' . admin_url('admin.php?page=affcd-settings') . '">' . __('Settings', 'affiliatewp-cross-domain-plugin-suite') . '</a>',
+            'docs' => '<a href="https://starneconsulting.com/docs/affiliatewp-cross-domain-plugin-suite" target="_blank">' . __('Documentation', 'affiliatewp-cross-domain-plugin-suite') . '</a>'
         ];
 
         return array_merge($action_links, $links);
@@ -575,11 +575,11 @@ class AffiliateWP_Cross_Domain_Full {
 }
 
 /**
- * Initialize the plugin
+ * Initialse the plugin
  */
-function affiliatewp_cross_domain_full() {
-    return AffiliateWP_Cross_Domain_Full::instance();
+function AffiliateWP_Cross_Domain_Plugin_Suite_Master() {
+    return AffiliateWP_Cross_Domain_Plugin_Suite_Master::instance();
 }
 
-// Initialize plugin
-affiliatewp_cross_domain_full();
+// Initialise plugin
+AffiliateWP_Cross_Domain_Plugin_Suite_Master();

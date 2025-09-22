@@ -28,7 +28,7 @@ class AFFCD_Analytics_Dashboard {
         $this->vanity_manager = new AFFCD_Vanity_Code_Manager();
         $this->security_manager = new AFFCD_Security_Manager();
         
-        // Initialize hooks
+        // Initialise hooks
         add_action('admin_menu', [$this, 'add_admin_menu']);
         add_action('wp_ajax_affcd_get_analytics_data', [$this, 'ajax_get_analytics_data']);
         add_action('wp_ajax_affcd_export_analytics', [$this, 'ajax_export_analytics']);
@@ -776,7 +776,7 @@ class AFFCD_Analytics_Dashboard {
         global $wpdb;
         
         $usage_table = $wpdb->prefix . 'affcd_usage_tracking';
-        $domains_table = $wpdb->prefix . 'affcd_authorized_domains';
+        $domains_table = $wpdb->prefix . 'affcd_authorised_domains';
         
         $domain_performance = $wpdb->get_results($wpdb->prepare(
             "SELECT 
@@ -1105,7 +1105,7 @@ class AFFCD_Analytics_Dashboard {
             return $cached;
         }
 
-        $domains_table = $wpdb->prefix . 'affcd_authorized_domains';
+        $domains_table = $wpdb->prefix . 'affcd_authorised_domains';
         $logs_table = $wpdb->prefix . 'affcd_api_logs';
         
         $performance = $wpdb->get_results("
@@ -1608,5 +1608,5 @@ class AFFCD_Analytics_Dashboard {
     }
 }
 
-// Initialize the analytics dashboard
+// Initialise the analytics dashboard
 new AFFCD_Analytics_Dashboard();

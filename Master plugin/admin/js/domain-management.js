@@ -4,7 +4,7 @@
  * Handles all client-side interactions for the domain management interface
  * including AJAX requests, form validation, and real-time testing.
  *
- * @package AffiliateWP_Cross_Domain_Full
+ * @package AffiliateWP_Cross_Domain_Plugin_Suite_Master
  * @version 1.0.0
  */
 
@@ -13,7 +13,7 @@ jQuery(document).ready(function ($) {
 
   const DomainManagement = {
     /**
-     * Initialize domain management
+     * Initialse domain management
      */
     init: function () {
       this.bindEvents();
@@ -75,7 +75,7 @@ jQuery(document).ready(function ($) {
     },
 
     /**
-     * Initialize DataTables
+     * Initialse DataTables
      */
     initDataTables: function () {
       if ($("#domains-table").length) {
@@ -876,7 +876,7 @@ jQuery(document).ready(function ($) {
     });
   };
 
-  // Initialize on document ready
+  // Initialise on document ready
   DomainManagement.init();
 
   // Auto-refresh stats every 30 seconds

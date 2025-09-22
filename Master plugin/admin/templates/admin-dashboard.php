@@ -202,7 +202,7 @@ class AFFCD_Admin_Menu {
                 </div>
                 <div class="affcd-stat">
                     <span class="affcd-stat-number"><?php echo number_format($stats['total_domains']); ?></span>
-                    <span class="affcd-stat-label"><?php _e('Authorized Domains', 'affiliate-cross-domain'); ?></span>
+                    <span class="affcd-stat-label"><?php _e('authorised Domains', 'affiliate-cross-domain'); ?></span>
                 </div>
                 <div class="affcd-stat">
                     <span class="affcd-stat-number"><?php echo number_format($stats['total_requests']); ?></span>
@@ -317,7 +317,7 @@ class AFFCD_Admin_Menu {
         
         <script>
         function testAllConnections() {
-            if (confirm('Test connections to all authorized domains?')) {
+            if (confirm('Test connections to all authorised domains?')) {
                 window.location.href = '<?php echo admin_url('admin.php?page=affcd-domain-management&action=test_all'); ?>';
             }
         }

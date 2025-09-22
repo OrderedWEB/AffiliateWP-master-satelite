@@ -32,7 +32,7 @@ class ACI_Client_Admin {
         $this->shortcode_manager = new ACI_Shortcode_Manager();
         $this->settings = get_option('aci_settings', []);
         
-        // Initialize hooks
+        // Initialise hooks
         add_action('admin_menu', [$this, 'add_admin_menu']);
         add_action('admin_init', [$this, 'register_settings']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_scripts']);

@@ -56,7 +56,7 @@ class AFFILIATE_CLIENT_Tracking_Handler {
     }
 
     /**
-     * Initialize tracking handler
+     * Initialse tracking handler
      */
     public function init() {
         if (!$this->config['tracking_enabled']) {

@@ -23,7 +23,7 @@ class ACI_Validation_Helpers {
     private static $messages = [];
 
     /**
-     * Initialize validation helpers
+     * Initialse validation helpers
      */
     public static function init() {
         self::load_default_rules();

@@ -19,7 +19,7 @@ class AFFCD_Security_Manager {
     private $rate_limit_table;
     private $security_logs_table;
     private $fraud_detection_table;
-    private $authorized_domains_table;
+    private $authorised_domains_table;
     private $cache_prefix = 'affcd_security_';
     
     // Security thresholds
@@ -39,9 +39,9 @@ class AFFCD_Security_Manager {
         $this->rate_limit_table = $wpdb->prefix . 'affcd_rate_limiting';
         $this->security_logs_table = $wpdb->prefix . 'affcd_security_logs';
         $this->fraud_detection_table = $wpdb->prefix . 'affcd_fraud_detection';
-        $this->authorized_domains_table = $wpdb->prefix . 'affcd_authorized_domains';
+        $this->authorised_domains_table = $wpdb->prefix . 'affcd_authorised_domains';
         
-        // Initialize hooks
+        // Initialise hooks
         add_action('init', [$this, 'init']);
         add_action('wp_ajax_affcd_security_test', [$this, 'ajax_security_test']);
         add_action('affcd_cleanup_security_logs', [$this, 'cleanup_old_logs']);
@@ -55,7 +55,7 @@ class AFFCD_Security_Manager {
     }
 
     /**
-     * Initialize security manager
+     * Initialse security manager
      */
     public function init() {
         $this->maybe_create_tables();
@@ -131,8 +131,8 @@ class AFFCD_Security_Manager {
             KEY is_active (is_active)
         ) $charset_collate;";
 
-        // Authorized domains table
-        $sql_authorized_domains = "CREATE TABLE IF NOT EXISTS {$this->authorized_domains_table} (
+        // authorised domains table
+        $sql_authorised_domains = "CREATE TABLE IF NOT EXISTS {$this->authorised_domains_table} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             domain varchar(255) NOT NULL,
             domain_hash varchar(64) NOT NULL,
@@ -160,7 +160,7 @@ class AFFCD_Security_Manager {
         dbDelta($sql_rate_limit);
         dbDelta($sql_security_logs);
         dbDelta($sql_fraud_detection);
-        dbDelta($sql_authorized_domains);
+        dbDelta($sql_authorised_domains);
     }
 
     /**
@@ -277,9 +277,9 @@ class AFFCD_Security_Manager {
     }
 
     /**
-     * Check if domain is authorized
+     * Check if domain is authorised
      */
-    public function is_domain_authorized($domain) {
+    public function is_domain_authorised($domain) {
         global $wpdb;
         
         // Clean and validate domain
@@ -292,34 +292,34 @@ class AFFCD_Security_Manager {
         $cache_key = $this->cache_prefix . 'domain_' . md5($clean_domain);
         $cached = wp_cache_get($cache_key, 'affcd_security');
         if ($cached !== false) {
-            return $cached === 'authorized';
+            return $cached === 'authorised';
         }
         
         // Check database
         $domain_hash = hash('sha256', $clean_domain);
         $domain_record = $wpdb->get_row($wpdb->prepare(
-            "SELECT status, security_settings FROM {$this->authorized_domains_table} 
+            "SELECT status, security_settings FROM {$this->authorised_domains_table} 
              WHERE domain_hash = %s",
             $domain_hash
         ));
         
-        $is_authorized = $domain_record && $domain_record->status === 'active';
+        $is_authorised = $domain_record && $domain_record->status === 'active';
         
         // Cache result
-        wp_cache_set($cache_key, $is_authorized ? 'authorized' : 'unauthorized', 'affcd_security', 300);
+        wp_cache_set($cache_key, $is_authorised ? 'authorised' : 'unauthorised', 'affcd_security', 300);
         
-        if ($is_authorized) {
+        if ($is_authorised) {
             // Update request count
             $this->update_domain_stats($domain_hash, 'request');
         } else {
-            // Log unauthorized attempt
-            $this->log_security_event('unauthorized_domain', 'medium', [
+            // Log unauthorised attempt
+            $this->log_security_event('unauthorised_domain', 'medium', [
                 'domain' => $clean_domain,
                 'status' => $domain_record->status ?? 'not_found'
             ]);
         }
         
-        return $is_authorized;
+        return $is_authorised;
     }
 
     /**
@@ -341,7 +341,7 @@ class AFFCD_Security_Manager {
         $api_key = $this->generate_api_key();
         
         $result = $wpdb->insert(
-            $this->authorized_domains_table,
+            $this->authorised_domains_table,
             [
                 'domain' => $clean_domain,
                 'domain_hash' => $domain_hash,
@@ -362,7 +362,7 @@ class AFFCD_Security_Manager {
         wp_cache_delete($cache_key, 'affcd_security');
         
         // Log authorization
-        $this->log_security_event('domain_authorized', 'low', [
+        $this->log_security_event('domain_authorised', 'low', [
             'domain' => $clean_domain,
             'api_key' => substr($api_key, 0, 8) . '...'
         ]);
@@ -392,7 +392,7 @@ class AFFCD_Security_Manager {
         }
         
         $sql = "SELECT d.domain, d.status, d.security_settings 
-                FROM {$this->authorized_domains_table} d 
+                FROM {$this->authorised_domains_table} d 
                 WHERE d.api_key = %s AND d.status = 'active'";
         $params = [$api_key];
         
@@ -613,7 +613,7 @@ class AFFCD_Security_Manager {
             'code_validation_success' => 'low',
             'code_validation_failed' => 'medium',
             'api_request' => 'low',
-            'unauthorized_access' => 'high'
+            'unauthorised_access' => 'high'
         ];
         
         $severity = $severity_map[$activity_type] ?? 'medium';
@@ -806,7 +806,7 @@ class AFFCD_Security_Manager {
         $field = $stat_type === 'block' ? 'blocked_requests' : 'total_requests';
         
         $wpdb->query($wpdb->prepare(
-            "UPDATE {$this->authorized_domains_table} 
+            "UPDATE {$this->authorised_domains_table} 
              SET {$field} = {$field} + 1 
              WHERE domain_hash = %s",
             $domain_hash
@@ -1059,7 +1059,7 @@ class AFFCD_Security_Manager {
             "SELECT domain, COUNT(*) as request_count
              FROM {$this->security_logs_table} 
              WHERE created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
-               AND event_type = 'unauthorized_domain'
+               AND event_type = 'unauthorised_domain'
              GROUP BY domain 
              HAVING request_count > 50
              ORDER BY request_count DESC",
@@ -1127,15 +1127,15 @@ class AFFCD_Security_Manager {
             ];
         }
         
-        $is_authorized = $this->is_domain_authorized($clean_domain);
+        $is_authorised = $this->is_domain_authorised($clean_domain);
         
         return [
-            'status' => $is_authorized ? 'success' : 'failed',
-            'message' => $is_authorized ? 
-                __('Domain is authorized.', 'affiliate-cross-domain') : 
-                __('Domain is not authorized.', 'affiliate-cross-domain'),
+            'status' => $is_authorised ? 'success' : 'failed',
+            'message' => $is_authorised ? 
+                __('Domain is authorised.', 'affiliate-cross-domain') : 
+                __('Domain is not authorised.', 'affiliate-cross-domain'),
             'domain' => $clean_domain,
-            'authorized' => $is_authorized
+            'authorised' => $is_authorised
         ];
     }
 

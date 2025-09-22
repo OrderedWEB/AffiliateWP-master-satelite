@@ -1,14 +1,14 @@
 <?php
 /**
- * Domain Management for Affiliate Cross Domain Full
+ * Domain Management for WP Affiliate Cross Domain Plugin Suite
  *
- * Administrative interface for managing authorized client domains,
+ * Administrative interface for managing authorised client domains,
  * API keys, webhook configurations, and domain-specific settings.
  *
  * Filename: admin/domain-management.php
- * Plugin: AffiliateWP Cross Domain Full (Master)
+ * Plugin: WP Affiliate Cross Domain Plugin Suite (Master)
  *
- * @package AffiliateWP_Cross_Domain_Full
+ * @package AffiliateWP_Cross_Domain_Plugin_Suite_Master
  * @version 1.0.0
  * @author Richard King, Starne Consulting
  */
@@ -45,7 +45,7 @@ class AFFCD_Domain_Management {
         add_action('wp_ajax_affcd_refresh_domain_list', [$this, 'ajax_refresh_domain_list']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_scripts']);
         
-        // Initialize domain manager
+        // Initialise domain manager
         $this->domain_manager = new AFFCD_Domain_Manager();
     }
 
@@ -312,7 +312,7 @@ class AFFCD_Domain_Management {
             </div>
 
             <div class="domain-management-section">
-                <h2><?php _e('Authorized Domains', 'affiliate-cross-domain'); ?></h2>
+                <h2><?php _e('authorised Domains', 'affiliate-cross-domain'); ?></h2>
                 
                 <?php if (empty($domains)): ?>
                     <p><?php _e('No domains configured yet. Add your first domain above.', 'affiliate-cross-domain'); ?></p>
@@ -1235,5 +1235,5 @@ class AFFCD_Domain_Management {
     }
 }
 
-// Initialize the domain management class
+// Initialise the domain management class
 new AFFCD_Domain_Management();

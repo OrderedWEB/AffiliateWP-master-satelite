@@ -42,7 +42,7 @@ class AFFILIATE_CLIENT_Zoho_Form_Integration {
     }
 
     /**
-     * Initialize Zoho form integration
+     * Initialse Zoho form integration
      */
     public function init() {
         if (!$this->config['tracking_enabled']) {

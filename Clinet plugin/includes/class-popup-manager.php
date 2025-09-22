@@ -28,7 +28,7 @@ class ACI_Popup_Manager {
     private static $current_popup = null;
 
     /**
-     * Initialize popup manager
+     * Initialse popup manager
      */
     public static function init() {
         self::load_default_settings();

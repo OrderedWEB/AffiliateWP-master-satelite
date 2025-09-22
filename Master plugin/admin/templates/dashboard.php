@@ -952,7 +952,7 @@ jQuery(document).ready(function($) {
         });
     });
     
-    // Initialize performance chart if Chart.js is available
+    // Initialise performance chart if Chart.js is available
     if (typeof Chart !== 'undefined') {
         const ctx = document.getElementById('performance-chart');
         if (ctx) {

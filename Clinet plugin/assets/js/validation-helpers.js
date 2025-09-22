@@ -146,7 +146,7 @@
     formStates: new Map(),
 
     /**
-     * Initialize validation
+     * Initialse validation
      */
     init: function () {
       this.loadConfig();
@@ -215,7 +215,7 @@
     },
 
     /**
-     * Initialize forms
+     * Initialse forms
      */
     initializeForms: function () {
       $(".aci-form").each((index, form) => {
@@ -224,7 +224,7 @@
     },
 
     /**
-     * Initialize individual form
+     * Initialse individual form
      */
     initializeForm: function ($form) {
       const formId = $form.attr("id") || "form_" + Date.now();
@@ -759,7 +759,7 @@
     },
   };
 
-  // Initialize when document is ready
+  // Initialise when document is ready
   $(document).ready(function () {
     ACI.Validation.init();
 

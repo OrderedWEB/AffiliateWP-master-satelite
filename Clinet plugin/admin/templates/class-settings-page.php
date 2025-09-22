@@ -48,7 +48,7 @@ class ACI_Settings_Page {
     }
 
     /**
-     * Initialize settings
+     * Initialse settings
      */
     public function init_settings() {
         // Register settings

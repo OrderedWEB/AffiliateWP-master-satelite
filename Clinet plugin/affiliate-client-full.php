@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Affiliate Client Full
  * Plugin URI: https://your-domain.com/affiliate-client-full
- * Description: Client-side affiliate tracking plugin that communicates with AffiliateWP Cross Domain Full. Handles tracking, conversions, and addon integrations for remote affiliate management.
+ * Description: Client-side affiliate tracking plugin that communicates with AffiliateWP Cross Domain Plugin Suite. Handles tracking, conversions, and addon integrations for remote affiliate management.
  * Version: 1.0.0
  * Author: Your Company
  * Author URI: https://your-domain.com
@@ -144,7 +144,7 @@ class AffiliateClientFull {
     }
 
     /**
-     * Initialize WordPress hooks
+     * Initialse WordPress hooks
      */
     private function init_hooks() {
         add_action('init', [$this, 'init']);
@@ -171,7 +171,7 @@ class AffiliateClientFull {
     }
 
     /**
-     * Initialize plugin components
+     * Initialse plugin components
      */
     private function init_components() {
         $this->api_client = new AFFILIATE_CLIENT_API_Client($this->config);
@@ -185,13 +185,13 @@ class AffiliateClientFull {
     }
 
     /**
-     * Initialize plugin
+     * Initialse plugin
      */
     public function init() {
         // Load text domain
         load_plugin_textdomain('affiliate-client-full', false, dirname(plugin_basename(__FILE__)) . '/languages');
         
-        // Initialize components
+        // Initialise components
         if ($this->tracking_handler) {
             $this->tracking_handler->init();
         }
@@ -438,7 +438,7 @@ class AffiliateClientFull {
                                        placeholder="https://your-main-site.com"
                                        required>
                                 <p class="description">
-                                    <?php _e('The URL of your main site running AffiliateWP Cross Domain Full.', 'affiliate-client-full'); ?>
+                                    <?php _e('The URL of your main site running AffiliateWP Cross Domain Plugin Suite.', 'affiliate-client-full'); ?>
                                 </p>
                             </td>
                         </tr>
@@ -914,11 +914,11 @@ class AffiliateClientFull {
 }
 
 /**
- * Initialize the plugin
+ * Initialse the plugin
  */
 function affiliate_client_full() {
     return AffiliateClientFull::instance();
 }
 
-// Initialize plugin
+// Initialise plugin
 affiliate_client_full();

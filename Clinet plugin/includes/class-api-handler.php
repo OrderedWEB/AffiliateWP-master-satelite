@@ -32,7 +32,7 @@ class ACI_API_Handler {
         $this->master_domain = rtrim($settings['master_domain'] ?? '', '/');
         $this->api_key = $settings['api_key'] ?? '';
         
-        // Initialize hooks
+        // Initialise hooks
         add_action('init', [$this, 'init']);
         add_action('wp_ajax_aci_test_connection', [$this, 'ajax_test_connection']);
         add_action('wp_ajax_nopriv_aci_test_connection', [$this, 'ajax_test_connection']);
@@ -43,7 +43,7 @@ class ACI_API_Handler {
     }
 
     /**
-     * Initialize API handler
+     * Initialse API handler
      */
     public function init() {
         $this->validate_configuration();
@@ -308,8 +308,8 @@ class ACI_API_Handler {
         
         $error_messages = [
             400 => __('Bad request. Please check your data.', 'affiliate-client-integration'),
-            401 => __('Unauthorized. Please check your API key.', 'affiliate-client-integration'),
-            403 => __('Forbidden. Your domain may not be authorized.', 'affiliate-client-integration'),
+            401 => __('Unauthorised. Please check your API key.', 'affiliate-client-integration'),
+            403 => __('Forbidden. Your domain may not be authorised.', 'affiliate-client-integration'),
             404 => __('API endpoint not found.', 'affiliate-client-integration'),
             429 => __('Rate limit exceeded. Please try again later.', 'affiliate-client-integration'),
             500 => __('Server error. Please try again later.', 'affiliate-client-integration'),
@@ -881,7 +881,7 @@ class ACI_API_Handler {
      */
     private function handle_domain_auth_webhook($webhook_data) {
         $domain = $webhook_data['domain'] ?? '';
-        $authorization_status = $webhook_data['authorized'] ?? false;
+        $authorization_status = $webhook_data['authorised'] ?? false;
         
         if (empty($domain)) {
             return new WP_Error('invalid_auth_webhook', __('Invalid domain authorization webhook data.', 'affiliate-client-integration'));
@@ -890,8 +890,8 @@ class ACI_API_Handler {
         // If this is our domain and authorization changed
         if ($domain === home_url() || $domain === parse_url(home_url(), PHP_URL_HOST)) {
             if (!$authorization_status) {
-                // Domain was unauthorized - log critical event
-                $this->log_api_event('domain_unauthorized', [
+                // Domain was unauthorised - log critical event
+                $this->log_api_event('domain_unauthorised', [
                     'domain' => $domain,
                     'timestamp' => time()
                 ]);
@@ -899,7 +899,7 @@ class ACI_API_Handler {
                 // Disable API functionality
                 update_option('aci_api_disabled', true);
             } else {
-                // Domain was re-authorized
+                // Domain was re-authorised
                 delete_option('aci_api_disabled');
             }
         }

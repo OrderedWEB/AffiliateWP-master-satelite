@@ -35,7 +35,7 @@
     },
 
     /**
-     * Initialize popup manager
+     * Initialse popup manager
      */
     init: function () {
       this.bindEvents();
@@ -51,7 +51,7 @@
     },
 
     /**
-     * Initialize a specific popup
+     * Initialse a specific popup
      */
     initPopup: function (popupId, triggerType, triggerData) {
       const popup = {
@@ -710,7 +710,7 @@
     },
 
     /**
-     * Initialize analytics
+     * Initialse analytics
      */
     initializeAnalytics: function () {
       this.analytics = {
@@ -824,7 +824,7 @@
     },
   };
 
-  // Initialize when document is ready
+  // Initialise when document is ready
   $(document).ready(function () {
     ACI_PopupManager.init();
   });

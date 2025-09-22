@@ -50,7 +50,7 @@ class AFFILIATE_CLIENT_Discount_Pricing_Integration {
     }
 
     /**
-     * Initialize the integration
+     * Initialse the integration
      */
     public function init() {
         // Shortcodes
@@ -79,7 +79,7 @@ class AFFILIATE_CLIENT_Discount_Pricing_Integration {
     }
 
     /**
-     * Initialize obfuscated field names for security
+     * Initialse obfuscated field names for security
      */
     private function init_obfuscated_fields() {
         $this->obfuscated_fields = [

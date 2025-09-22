@@ -32,7 +32,7 @@ class AFFCD_Security_Logs {
     }
 
     /**
-     * Initialize hooks
+     * Initialse hooks
      */
     public function init_hooks() {
         add_action('wp_login_failed', [$this, 'log_failed_login']);
@@ -329,7 +329,7 @@ class AFFCD_Security_Logs {
         check_ajax_referer('affcd_security_nonce', 'nonce');
         
         if (!current_user_can('manage_affiliates')) {
-            wp_die('Unauthorized');
+            wp_die('Unauthorised');
         }
         
         $page = intval($_POST['page'] ?? 1);
@@ -359,7 +359,7 @@ class AFFCD_Security_Logs {
         check_ajax_referer('affcd_security_nonce', 'nonce');
         
         if (!current_user_can('manage_options')) {
-            wp_die('Unauthorized');
+            wp_die('Unauthorised');
         }
         
         global $wpdb;
@@ -379,7 +379,7 @@ class AFFCD_Security_Logs {
         check_ajax_referer('affcd_security_nonce', 'nonce');
         
         if (!current_user_can('manage_affiliates')) {
-            wp_die('Unauthorized');
+            wp_die('Unauthorised');
         }
         
         $filters = $_POST['filters'] ?? [];

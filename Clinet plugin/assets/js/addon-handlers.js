@@ -20,12 +20,12 @@
     addons: {},
 
     /**
-     * Initialize addon handlers
+     * Initialse addon handlers
      */
     init: function (addons) {
       this.addons = addons || {};
 
-      // Initialize each enabled addon
+      // Initialise each enabled addon
       for (var addon in this.addons) {
         if (this.addons[addon].enabled) {
           this.initAddon(addon);
@@ -42,7 +42,7 @@
     },
 
     /**
-     * Initialize specific addon
+     * Initialse specific addon
      */
     initAddon: function (addonName) {
       switch (addonName) {

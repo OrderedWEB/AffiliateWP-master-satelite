@@ -33,7 +33,7 @@ class AFFILIATE_CLIENT_Discount_Shortcode {
     }
 
     /**
-     * Initialize shortcode and block functionality
+     * Initialse shortcode and block functionality
      */
     public function init() {
         // Register shortcodes

@@ -516,7 +516,7 @@ class AFFILIATE_CLIENT_Conversion_Tracker {
     }
 
     /**
-     * Initialize conversion tracker
+     * Initialse conversion tracker
      */
     public function init() {
         if (!$this->config['tracking_enabled']) {

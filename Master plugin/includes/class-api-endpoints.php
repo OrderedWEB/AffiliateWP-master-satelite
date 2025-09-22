@@ -5,7 +5,7 @@
  * Handles all REST API endpoints for cross-domain affiliate code validation,
  * domain management, analytics, and webhook processing.
  *
- * @package AffiliateWP_Cross_Domain_Full
+ * @package AffiliateWP_Cross_Domain_Plugin_Suite_Master
  * @version 1.0.0
  */
 
@@ -156,7 +156,7 @@ class AFFCD_API_Endpoints {
         if (empty($code)) {
             return new WP_Error(
                 'missing_code',
-                __('Affiliate code is required', 'affiliate-cross-domain-full'),
+                __('Affiliate code is required', 'affiliatewp-cross-domain-plugin-suite'),
                 ['status' => 400]
             );
         }
@@ -165,7 +165,7 @@ class AFFCD_API_Endpoints {
         if (!$this->rate_limiter->check_rate_limit($domain, 'validate_code')) {
             return new WP_Error(
                 'rate_limit_exceeded',
-                __('Rate limit exceeded. Please try again later.', 'affiliate-cross-domain-full'),
+                __('Rate limit exceeded. Please try again later.', 'affiliatewp-cross-domain-plugin-suite'),
                 ['status' => 429]
             );
         }
@@ -212,7 +212,7 @@ class AFFCD_API_Endpoints {
     public function list_domains($request) {
         global $wpdb;
 
-        $domains_table = $wpdb->prefix . 'affcd_authorized_domains';
+        $domains_table = $wpdb->prefix . 'affcd_authorised_domains';
         $page = max(1, intval($request->get_param('page') ?: 1));
         $per_page = min(100, max(1, intval($request->get_param('per_page') ?: 20)));
         $offset = ($page - 1) * $per_page;
@@ -255,13 +255,13 @@ class AFFCD_API_Endpoints {
         if (!filter_var('https://' . $domain, FILTER_VALIDATE_URL)) {
             return new WP_Error(
                 'invalid_domain',
-                __('Invalid domain format', 'affiliate-cross-domain-full'),
+                __('Invalid domain format', 'affiliatewp-cross-domain-plugin-suite'),
                 ['status' => 400]
             );
         }
 
         // Check if domain already exists
-        $domains_table = $wpdb->prefix . 'affcd_authorized_domains';
+        $domains_table = $wpdb->prefix . 'affcd_authorised_domains';
         $existing = $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM {$domains_table} WHERE domain = %s",
             $domain
@@ -270,7 +270,7 @@ class AFFCD_API_Endpoints {
         if ($existing > 0) {
             return new WP_Error(
                 'domain_exists',
-                __('Domain already exists', 'affiliate-cross-domain-full'),
+                __('Domain already exists', 'affiliatewp-cross-domain-plugin-suite'),
                 ['status' => 409]
             );
         }
@@ -298,7 +298,7 @@ class AFFCD_API_Endpoints {
         if ($result === false) {
             return new WP_Error(
                 'database_error',
-                __('Failed to add domain', 'affiliate-cross-domain-full'),
+                __('Failed to add domain', 'affiliatewp-cross-domain-plugin-suite'),
                 ['status' => 500]
             );
         }
@@ -318,7 +318,7 @@ class AFFCD_API_Endpoints {
             'api_key' => $api_key,
             'description' => $description,
             'status' => 'active',
-            'message' => __('Domain added successfully', 'affiliate-cross-domain-full')
+            'message' => __('Domain added successfully', 'affiliatewp-cross-domain-plugin-suite')
         ]);
     }
 
@@ -336,7 +336,7 @@ class AFFCD_API_Endpoints {
         $description = sanitize_text_field($request->get_param('description'));
         $status = sanitize_text_field($request->get_param('status'));
 
-        $domains_table = $wpdb->prefix . 'affcd_authorized_domains';
+        $domains_table = $wpdb->prefix . 'affcd_authorised_domains';
 
         // Check if domain exists
         $existing = $wpdb->get_row($wpdb->prepare(
@@ -347,7 +347,7 @@ class AFFCD_API_Endpoints {
         if (!$existing) {
             return new WP_Error(
                 'domain_not_found',
-                __('Domain not found', 'affiliate-cross-domain-full'),
+                __('Domain not found', 'affiliatewp-cross-domain-plugin-suite'),
                 ['status' => 404]
             );
         }
@@ -360,7 +360,7 @@ class AFFCD_API_Endpoints {
             if (!filter_var('https://' . $domain, FILTER_VALIDATE_URL)) {
                 return new WP_Error(
                     'invalid_domain',
-                    __('Invalid domain format', 'affiliate-cross-domain-full'),
+                    __('Invalid domain format', 'affiliatewp-cross-domain-plugin-suite'),
                     ['status' => 400]
                 );
             }
@@ -381,7 +381,7 @@ class AFFCD_API_Endpoints {
         if (empty($update_data)) {
             return new WP_Error(
                 'no_changes',
-                __('No changes provided', 'affiliate-cross-domain-full'),
+                __('No changes provided', 'affiliatewp-cross-domain-plugin-suite'),
                 ['status' => 400]
             );
         }
@@ -401,7 +401,7 @@ class AFFCD_API_Endpoints {
         if ($result === false) {
             return new WP_Error(
                 'database_error',
-                __('Failed to update domain', 'affiliate-cross-domain-full'),
+                __('Failed to update domain', 'affiliatewp-cross-domain-plugin-suite'),
                 ['status' => 500]
             );
         }
@@ -414,7 +414,7 @@ class AFFCD_API_Endpoints {
         ]);
 
         return rest_ensure_response([
-            'message' => __('Domain updated successfully', 'affiliate-cross-domain-full')
+            'message' => __('Domain updated successfully', 'affiliatewp-cross-domain-plugin-suite')
         ]);
     }
 
@@ -428,7 +428,7 @@ class AFFCD_API_Endpoints {
         global $wpdb;
 
         $domain_id = intval($request->get_param('id'));
-        $domains_table = $wpdb->prefix . 'affcd_authorized_domains';
+        $domains_table = $wpdb->prefix . 'affcd_authorised_domains';
 
         // Check if domain exists
         $existing = $wpdb->get_row($wpdb->prepare(
@@ -439,7 +439,7 @@ class AFFCD_API_Endpoints {
         if (!$existing) {
             return new WP_Error(
                 'domain_not_found',
-                __('Domain not found', 'affiliate-cross-domain-full'),
+                __('Domain not found', 'affiliatewp-cross-domain-plugin-suite'),
                 ['status' => 404]
             );
         }
@@ -454,7 +454,7 @@ class AFFCD_API_Endpoints {
         if ($result === false) {
             return new WP_Error(
                 'database_error',
-                __('Failed to delete domain', 'affiliate-cross-domain-full'),
+                __('Failed to delete domain', 'affiliatewp-cross-domain-plugin-suite'),
                 ['status' => 500]
             );
         }
@@ -467,7 +467,7 @@ class AFFCD_API_Endpoints {
         ]);
 
         return rest_ensure_response([
-            'message' => __('Domain deleted successfully', 'affiliate-cross-domain-full')
+            'message' => __('Domain deleted successfully', 'affiliatewp-cross-domain-plugin-suite')
         ]);
     }
 
@@ -481,7 +481,7 @@ class AFFCD_API_Endpoints {
         global $wpdb;
 
         $domain_id = intval($request->get_param('id'));
-        $domains_table = $wpdb->prefix . 'affcd_authorized_domains';
+        $domains_table = $wpdb->prefix . 'affcd_authorised_domains';
 
         // Get domain details
         $domain = $wpdb->get_row($wpdb->prepare(
@@ -492,7 +492,7 @@ class AFFCD_API_Endpoints {
         if (!$domain) {
             return new WP_Error(
                 'domain_not_found',
-                __('Domain not found', 'affiliate-cross-domain-full'),
+                __('Domain not found', 'affiliatewp-cross-domain-plugin-suite'),
                 ['status' => 404]
             );
         }
@@ -515,9 +515,9 @@ class AFFCD_API_Endpoints {
             $status_code = wp_remote_retrieve_response_code($response);
             if ($status_code === 200) {
                 $verification_success = true;
-                $verification_message = __('Connection verified successfully', 'affiliate-cross-domain-full');
+                $verification_message = __('Connection verified successfully', 'affiliatewp-cross-domain-plugin-suite');
             } else {
-                $verification_message = sprintf(__('HTTP %d response received', 'affiliate-cross-domain-full'), $status_code);
+                $verification_message = sprintf(__('HTTP %d response received', 'affiliatewp-cross-domain-plugin-suite'), $status_code);
             }
         }
 
@@ -562,7 +562,7 @@ class AFFCD_API_Endpoints {
 
         $analytics_table = $wpdb->prefix . 'affcd_analytics';
         $codes_table = $wpdb->prefix . 'affcd_vanity_codes';
-        $domains_table = $wpdb->prefix . 'affcd_authorized_domains';
+        $domains_table = $wpdb->prefix . 'affcd_authorised_domains';
 
         // Get date range
         $date_from = sanitize_text_field($request->get_param('date_from')) ?: date('Y-m-d', strtotime('-30 days'));
@@ -660,7 +660,7 @@ class AFFCD_API_Endpoints {
         if (empty($code)) {
             return new WP_Error(
                 'missing_code',
-                __('Code parameter is required', 'affiliate-cross-domain-full'),
+                __('Code parameter is required', 'affiliatewp-cross-domain-plugin-suite'),
                 ['status' => 400]
             );
         }
@@ -738,7 +738,7 @@ class AFFCD_API_Endpoints {
         // Required tables
         $required_tables = [
             $wpdb->prefix . 'affcd_vanity_codes',
-            $wpdb->prefix . 'affcd_authorized_domains',
+            $wpdb->prefix . 'affcd_authorised_domains',
             $wpdb->prefix . 'affcd_analytics'
         ];
 
@@ -833,7 +833,7 @@ class AFFCD_API_Endpoints {
         if (empty($webhook_url)) {
             return new WP_Error(
                 'missing_url',
-                __('Webhook URL is required', 'affiliate-cross-domain-full'),
+                __('Webhook URL is required', 'affiliatewp-cross-domain-plugin-suite'),
                 ['status' => 400]
             );
         }
@@ -843,7 +843,7 @@ class AFFCD_API_Endpoints {
             'event' => 'test',
             'timestamp' => current_time('mysql'),
             'data' => [
-                'message' => 'This is a test webhook from AffiliateWP Cross Domain Full'
+                'message' => 'This is a test webhook from AffiliateWP Cross Domain Plugin Suite'
             ]
         ];
 
@@ -871,8 +871,8 @@ class AFFCD_API_Endpoints {
             'success' => $success,
             'status_code' => $status_code,
             'message' => $success 
-                ? __('Webhook test successful', 'affiliate-cross-domain-full')
-                : sprintf(__('Webhook test failed with status %d', 'affiliate-cross-domain-full'), $status_code)
+                ? __('Webhook test successful', 'affiliatewp-cross-domain-plugin-suite')
+                : sprintf(__('Webhook test failed with status %d', 'affiliatewp-cross-domain-plugin-suite'), $status_code)
         ]);
     }
 
