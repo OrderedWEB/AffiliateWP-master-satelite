@@ -1041,4 +1041,572 @@ class AFFCD_Analytics_Dashboard {
                 <tr>
                     <th><?php _e('Code', 'affiliate-cross-domain'); ?></th>
                     <th><?php _e('Usage', 'affiliate-cross-domain'); ?></th>
-                    <th><?php _e('Revenue', 'affiliate-cross-domain'); ?
+                    <th><?php _e('Revenue', 'affiliate-cross-domain'); ?></th>
+                </tr>
+                <?php foreach ($data['overview']['top_codes'] as $code): ?>
+                    <tr>
+                        <td><?php echo esc_html($code['code']); ?></td>
+                        <td><?php echo number_format($code['usage']); ?></td>
+                        <td>$<?php echo number_format($code['revenue'], 2); ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            </table>
+        <?php else: ?>
+            <p><?php _e('No codes used in the last 24 hours.', 'affiliate-cross-domain'); ?></p>
+        <?php endif; ?>
+
+        <h3><?php _e('Domain Activity', 'affiliate-cross-domain'); ?></h3>
+        <?php if (!empty($data['overview']['domain_activity'])): ?>
+            <table border="1" cellpadding="5" cellspacing="0">
+                <tr>
+                    <th><?php _e('Domain', 'affiliate-cross-domain'); ?></th>
+                    <th><?php _e('Requests', 'affiliate-cross-domain'); ?></th>
+                    <th><?php _e('Success Rate', 'affiliate-cross-domain'); ?></th>
+                </tr>
+                <?php foreach ($data['overview']['domain_activity'] as $domain): ?>
+                    <tr>
+                        <td><?php echo esc_html($domain['domain_name']); ?></td>
+                        <td><?php echo number_format($domain['request_count']); ?></td>
+                        <td><?php echo number_format($domain['success_rate'], 2); ?>%</td>
+                    </tr>
+                <?php endforeach; ?>
+            </table>
+        <?php else: ?>
+            <p><?php _e('No domain activity in the last 24 hours.', 'affiliate-cross-domain'); ?></p>
+        <?php endif; ?>
+
+        <h3><?php _e('Security Alerts', 'affiliate-cross-domain'); ?></h3>
+        <?php if (!empty($data['security']['alerts'])): ?>
+            <ul>
+                <?php foreach ($data['security']['alerts'] as $alert): ?>
+                    <li><strong><?php echo esc_html($alert['type']); ?>:</strong> <?php echo esc_html($alert['message']); ?></li>
+                <?php endforeach; ?>
+            </ul>
+        <?php else: ?>
+            <p><?php _e('No security alerts in the last 24 hours.', 'affiliate-cross-domain'); ?></p>
+        <?php endif; ?>
+
+        <hr>
+        <p><small><?php _e('This is an automated report from your AffiliateWP Cross Domain system.', 'affiliate-cross-domain'); ?></small></p>
+        <?php
+        return ob_get_clean();
+    }
+
+    /**
+     * Get domain performance metrics
+     */
+    private function get_domain_performance() {
+        global $wpdb;
+        
+        $cache_key = 'affcd_domain_performance_' . md5(serialize(func_get_args()));
+        $cached = wp_cache_get($cache_key, 'affcd_analytics');
+        
+        if ($cached !== false) {
+            return $cached;
+        }
+
+        $domains_table = $wpdb->prefix . 'affcd_authorized_domains';
+        $logs_table = $wpdb->prefix . 'affcd_api_logs';
+        
+        $performance = $wpdb->get_results("
+            SELECT 
+                d.id,
+                d.domain_name,
+                d.domain_url,
+                COUNT(l.id) as request_count,
+                AVG(l.response_time) as avg_response_time,
+                SUM(CASE WHEN l.status = 'success' THEN 1 ELSE 0 END) as successful_requests,
+                (SUM(CASE WHEN l.status = 'success' THEN 1 ELSE 0 END) / COUNT(l.id)) * 100 as success_rate
+            FROM {$domains_table} d
+            LEFT JOIN {$logs_table} l ON d.id = l.domain_id
+            WHERE l.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+            GROUP BY d.id
+            ORDER BY request_count DESC
+        ", ARRAY_A);
+
+        wp_cache_set($cache_key, $performance, 'affcd_analytics', 900); // 15 minutes
+        return $performance;
+    }
+
+    /**
+     * Get conversion funnel data
+     */
+    private function get_conversion_funnel($date_range = 30) {
+        global $wpdb;
+        
+        $logs_table = $wpdb->prefix . 'affcd_api_logs';
+        $conversions_table = $wpdb->prefix . 'affcd_conversions';
+        
+        // Get funnel stages
+        $stages = [
+            'visitors' => $wpdb->get_var($wpdb->prepare("
+                SELECT COUNT(DISTINCT user_ip) 
+                FROM {$logs_table} 
+                WHERE created_at >= DATE_SUB(NOW(), INTERVAL %d DAY)
+            ", $date_range)),
+            
+            'code_attempts' => $wpdb->get_var($wpdb->prepare("
+                SELECT COUNT(*) 
+                FROM {$logs_table} 
+                WHERE action = 'validate_code' 
+                AND created_at >= DATE_SUB(NOW(), INTERVAL %d DAY)
+            ", $date_range)),
+            
+            'successful_validations' => $wpdb->get_var($wpdb->prepare("
+                SELECT COUNT(*) 
+                FROM {$logs_table} 
+                WHERE action = 'validate_code' 
+                AND status = 'success' 
+                AND created_at >= DATE_SUB(NOW(), INTERVAL %d DAY)
+            ", $date_range)),
+            
+            'conversions' => $wpdb->get_var($wpdb->prepare("
+                SELECT COUNT(*) 
+                FROM {$conversions_table} 
+                WHERE created_at >= DATE_SUB(NOW(), INTERVAL %d DAY)
+            ", $date_range))
+        ];
+
+        // Calculate conversion rates
+        $funnel_data = [
+            'visitors' => [
+                'count' => (int)$stages['visitors'],
+                'rate' => 100
+            ],
+            'code_attempts' => [
+                'count' => (int)$stages['code_attempts'],
+                'rate' => $stages['visitors'] > 0 ? round(($stages['code_attempts'] / $stages['visitors']) * 100, 2) : 0
+            ],
+            'successful_validations' => [
+                'count' => (int)$stages['successful_validations'],
+                'rate' => $stages['code_attempts'] > 0 ? round(($stages['successful_validations'] / $stages['code_attempts']) * 100, 2) : 0
+            ],
+            'conversions' => [
+                'count' => (int)$stages['conversions'],
+                'rate' => $stages['successful_validations'] > 0 ? round(($stages['conversions'] / $stages['successful_validations']) * 100, 2) : 0
+            ]
+        ];
+
+        return $funnel_data;
+    }
+
+    /**
+     * Get geographic distribution data
+     */
+    private function get_geographic_data($date_range = 30) {
+        global $wpdb;
+        
+        $logs_table = $wpdb->prefix . 'affcd_api_logs';
+        
+        // Get IP-based geographic data (simplified)
+        $geo_data = $wpdb->get_results($wpdb->prepare("
+            SELECT 
+                user_ip,
+                COUNT(*) as request_count,
+                SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as successful_requests
+            FROM {$logs_table}
+            WHERE created_at >= DATE_SUB(NOW(), INTERVAL %d DAY)
+            GROUP BY user_ip
+            ORDER BY request_count DESC
+            LIMIT 50
+        ", $date_range), ARRAY_A);
+
+        // Convert IPs to countries (simplified - in production, use GeoIP service)
+        $countries = [];
+        foreach ($geo_data as $record) {
+            $country = $this->ip_to_country($record['user_ip']);
+            if (!isset($countries[$country])) {
+                $countries[$country] = [
+                    'country' => $country,
+                    'requests' => 0,
+                    'success_rate' => 0
+                ];
+            }
+            $countries[$country]['requests'] += (int)$record['request_count'];
+            $countries[$country]['success_rate'] += (int)$record['successful_requests'];
+        }
+
+        // Calculate success rates
+        foreach ($countries as &$country) {
+            $country['success_rate'] = $country['requests'] > 0 
+                ? round(($country['success_rate'] / $country['requests']) * 100, 2) 
+                : 0;
+        }
+
+        return array_values($countries);
+    }
+
+    /**
+     * Simple IP to country conversion (placeholder)
+     */
+    private function ip_to_country($ip) {
+        // In production, integrate with GeoIP service like MaxMind
+        // This is a simplified placeholder
+        $ip_parts = explode('.', $ip);
+        $first_octet = (int)$ip_parts[0];
+        
+        if ($first_octet >= 1 && $first_octet <= 126) {
+            return 'United States';
+        } elseif ($first_octet >= 128 && $first_octet <= 191) {
+            return 'Europe';
+        } elseif ($first_octet >= 192 && $first_octet <= 223) {
+            return 'Asia';
+        } else {
+            return 'Other';
+        }
+    }
+
+    /**
+     * Get affiliate leaderboard
+     */
+    private function get_affiliate_leaderboard($date_range = 30) {
+        global $wpdb;
+        
+        $logs_table = $wpdb->prefix . 'affcd_api_logs';
+        $conversions_table = $wpdb->prefix . 'affcd_conversions';
+        $affiliates_table = $wpdb->prefix . 'affiliate_wp_affiliates';
+        
+        return $wpdb->get_results($wpdb->prepare("
+            SELECT 
+                a.affiliate_id,
+                a.first_name,
+                a.last_name,
+                a.user_name,
+                COUNT(DISTINCT l.id) as code_validations,
+                COUNT(DISTINCT c.id) as conversions,
+                COALESCE(SUM(c.amount), 0) as total_revenue,
+                (COUNT(DISTINCT c.id) / COUNT(DISTINCT l.id)) * 100 as conversion_rate
+            FROM {$affiliates_table} a
+            LEFT JOIN {$logs_table} l ON a.affiliate_id = l.affiliate_id 
+                AND l.created_at >= DATE_SUB(NOW(), INTERVAL %d DAY)
+            LEFT JOIN {$conversions_table} c ON a.affiliate_id = c.affiliate_id 
+                AND c.created_at >= DATE_SUB(NOW(), INTERVAL %d DAY)
+            WHERE a.status = 'active'
+            GROUP BY a.affiliate_id
+            HAVING code_validations > 0
+            ORDER BY total_revenue DESC, conversions DESC
+            LIMIT 20
+        ", $date_range, $date_range), ARRAY_A);
+    }
+
+    /**
+     * Get time-based analytics
+     */
+    private function get_time_analytics($date_range = 7) {
+        global $wpdb;
+        
+        $logs_table = $wpdb->prefix . 'affcd_api_logs';
+        $conversions_table = $wpdb->prefix . 'affcd_conversions';
+        
+        // Get daily breakdown
+        $daily_data = $wpdb->get_results($wpdb->prepare("
+            SELECT 
+                DATE(created_at) as date,
+                COUNT(*) as total_requests,
+                SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as successful_requests
+            FROM {$logs_table}
+            WHERE created_at >= DATE_SUB(NOW(), INTERVAL %d DAY)
+            GROUP BY DATE(created_at)
+            ORDER BY date ASC
+        ", $date_range), ARRAY_A);
+
+        // Get hourly breakdown for today
+        $hourly_data = $wpdb->get_results("
+            SELECT 
+                HOUR(created_at) as hour,
+                COUNT(*) as total_requests,
+                SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as successful_requests
+            FROM {$logs_table}
+            WHERE DATE(created_at) = CURDATE()
+            GROUP BY HOUR(created_at)
+            ORDER BY hour ASC
+        ", ARRAY_A);
+
+        return [
+            'daily' => $daily_data,
+            'hourly' => $hourly_data
+        ];
+    }
+
+    /**
+     * Get system health metrics
+     */
+    private function get_system_health() {
+        global $wpdb;
+        
+        $logs_table = $wpdb->prefix . 'affcd_api_logs';
+        $rate_limit_table = $wpdb->prefix . 'affcd_rate_limiting';
+        
+        // Calculate system health metrics
+        $health_metrics = [
+            'api_uptime' => $this->calculate_api_uptime(),
+            'average_response_time' => $wpdb->get_var("
+                SELECT AVG(response_time) 
+                FROM {$logs_table} 
+                WHERE created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+            "),
+            'error_rate' => $wpdb->get_var("
+                SELECT (COUNT(CASE WHEN status = 'error' THEN 1 END) / COUNT(*)) * 100
+                FROM {$logs_table} 
+                WHERE created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+            "),
+            'blocked_requests' => $wpdb->get_var("
+                SELECT COUNT(*) 
+                FROM {$rate_limit_table} 
+                WHERE status = 'blocked' 
+                AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+            "),
+            'database_size' => $this->get_database_size(),
+            'cache_hit_rate' => $this->get_cache_hit_rate()
+        ];
+
+        // Determine overall health status
+        $health_score = 100;
+        if ($health_metrics['error_rate'] > 5) $health_score -= 20;
+        if ($health_metrics['average_response_time'] > 1000) $health_score -= 15;
+        if ($health_metrics['api_uptime'] < 99) $health_score -= 25;
+
+        $health_metrics['overall_score'] = max(0, $health_score);
+        $health_metrics['status'] = $this->determine_health_status($health_score);
+
+        return $health_metrics;
+    }
+
+    /**
+     * Calculate API uptime percentage
+     */
+    private function calculate_api_uptime() {
+        global $wpdb;
+        
+        $logs_table = $wpdb->prefix . 'affcd_api_logs';
+        
+        // Simple uptime calculation based on successful requests
+        $total_requests = $wpdb->get_var("
+            SELECT COUNT(*) 
+            FROM {$logs_table} 
+            WHERE created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+        ");
+        
+        $successful_requests = $wpdb->get_var("
+            SELECT COUNT(*) 
+            FROM {$logs_table} 
+            WHERE status = 'success' 
+            AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+        ");
+
+        return $total_requests > 0 ? round(($successful_requests / $total_requests) * 100, 2) : 100;
+    }
+
+    /**
+     * Get database size
+     */
+    private function get_database_size() {
+        global $wpdb;
+        
+        $result = $wpdb->get_row("
+            SELECT ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS size_mb
+            FROM information_schema.tables 
+            WHERE table_schema = DATABASE()
+            AND table_name LIKE '{$wpdb->prefix}affcd_%'
+        ");
+
+        return $result ? $result->size_mb : 0;
+    }
+
+    /**
+     * Get cache hit rate
+     */
+    private function get_cache_hit_rate() {
+        // Simple cache effectiveness metric
+        $cache_stats = wp_cache_get_multi([
+            'affcd_cache_hits',
+            'affcd_cache_misses'
+        ], 'affcd_stats');
+
+        $hits = $cache_stats['affcd_cache_hits'] ?? 0;
+        $misses = $cache_stats['affcd_cache_misses'] ?? 0;
+        $total = $hits + $misses;
+
+        return $total > 0 ? round(($hits / $total) * 100, 2) : 0;
+    }
+
+    /**
+     * Determine health status
+     */
+    private function determine_health_status($score) {
+        if ($score >= 90) return 'excellent';
+        if ($score >= 75) return 'good';
+        if ($score >= 60) return 'fair';
+        if ($score >= 40) return 'poor';
+        return 'critical';
+    }
+
+    /**
+     * Generate predictive insights
+     */
+    private function generate_insights($data) {
+        $insights = [];
+
+        // Trend analysis
+        if (isset($data['time_analytics']['daily']) && count($data['time_analytics']['daily']) >= 7) {
+            $recent_avg = array_sum(array_column(array_slice($data['time_analytics']['daily'], -3), 'total_requests')) / 3;
+            $previous_avg = array_sum(array_column(array_slice($data['time_analytics']['daily'], -7, 3), 'total_requests')) / 3;
+            
+            if ($recent_avg > $previous_avg * 1.2) {
+                $insights[] = [
+                    'type' => 'growth',
+                    'message' => __('API usage is trending upward significantly. Consider monitoring server resources.', 'affiliate-cross-domain'),
+                    'priority' => 'medium'
+                ];
+            }
+        }
+
+        // Performance insights
+        if ($data['system_health']['average_response_time'] > 500) {
+            $insights[] = [
+                'type' => 'performance',
+                'message' => __('API response times are above optimal levels. Consider database optimization or caching improvements.', 'affiliate-cross-domain'),
+                'priority' => 'high'
+            ];
+        }
+
+        // Security insights
+        if ($data['system_health']['error_rate'] > 10) {
+            $insights[] = [
+                'type' => 'security',
+                'message' => __('High error rate detected. This could indicate malicious activity or system issues.', 'affiliate-cross-domain'),
+                'priority' => 'high'
+            ];
+        }
+
+        // Conversion insights
+        if (!empty($data['conversion_funnel']['conversions']['rate']) && $data['conversion_funnel']['conversions']['rate'] < 5) {
+            $insights[] = [
+                'type' => 'conversion',
+                'message' => __('Conversion rate is below average. Consider reviewing affiliate code effectiveness or user experience.', 'affiliate-cross-domain'),
+                'priority' => 'medium'
+            ];
+        }
+
+        // Domain insights
+        if (!empty($data['domain_performance'])) {
+            $low_performing_domains = array_filter($data['domain_performance'], function($domain) {
+                return $domain['success_rate'] < 80;
+            });
+
+            if (count($low_performing_domains) > 0) {
+                $insights[] = [
+                    'type' => 'domain',
+                    'message' => sprintf(__('%d domains have success rates below 80%%. Review their integration status.', 'affiliate-cross-domain'), count($low_performing_domains)),
+                    'priority' => 'medium'
+                ];
+            }
+        }
+
+        return $insights;
+    }
+
+    /**
+     * Clean up old analytics data
+     */
+    public function cleanup_old_data($days_to_keep = 90) {
+        global $wpdb;
+        
+        $tables_to_clean = [
+            $wpdb->prefix . 'affcd_api_logs',
+            $wpdb->prefix . 'affcd_analytics_cache',
+            $wpdb->prefix . 'affcd_rate_limit_events'
+        ];
+
+        $total_deleted = 0;
+        $cutoff_date = date('Y-m-d H:i:s', strtotime("-{$days_to_keep} days"));
+
+        foreach ($tables_to_clean as $table) {
+            if ($wpdb->get_var("SHOW TABLES LIKE '{$table}'") === $table) {
+                $deleted = $wpdb->query($wpdb->prepare(
+                    "DELETE FROM {$table} WHERE created_at < %s",
+                    $cutoff_date
+                ));
+                $total_deleted += $deleted;
+            }
+        }
+
+        // Clear related cache
+        wp_cache_flush_group('affcd_analytics');
+
+        return $total_deleted;
+    }
+
+    /**
+     * Export analytics data
+     */
+    public function export_data($format = 'csv', $date_range = 30) {
+        $data = $this->get_dashboard_data($date_range);
+        
+        switch ($format) {
+            case 'json':
+                return json_encode($data, JSON_PRETTY_PRINT);
+            
+            case 'xml':
+                return $this->array_to_xml($data, 'analytics');
+            
+            case 'csv':
+            default:
+                return $this->array_to_csv($data);
+        }
+    }
+
+    /**
+     * Convert array to CSV
+     */
+    private function array_to_csv($data) {
+        ob_start();
+        $output = fopen('php://output', 'w');
+        
+        // Export overview metrics
+        fputcsv($output, ['Metric', 'Value']);
+        foreach ($data['overview']['metrics'] as $key => $value) {
+            fputcsv($output, [ucwords(str_replace('_', ' ', $key)), $value]);
+        }
+        
+        fputcsv($output, []); // Empty row
+        
+        // Export top codes
+        if (!empty($data['overview']['top_codes'])) {
+            fputcsv($output, ['Top Performing Codes']);
+            fputcsv($output, ['Code', 'Usage', 'Revenue']);
+            foreach ($data['overview']['top_codes'] as $code) {
+                fputcsv($output, [$code['code'], $code['usage'], $code['revenue']]);
+            }
+        }
+
+        fclose($output);
+        return ob_get_clean();
+    }
+
+    /**
+     * Convert array to XML
+     */
+    private function array_to_xml($data, $root_element = 'data') {
+        $xml = new SimpleXMLElement("<{$root_element}/>");
+        $this->array_to_xml_recursive($data, $xml);
+        return $xml->asXML();
+    }
+
+    /**
+     * Recursive array to XML conversion
+     */
+    private function array_to_xml_recursive($array, $xml) {
+        foreach ($array as $key => $value) {
+            if (is_array($value)) {
+                $subnode = $xml->addChild($key);
+                $this->array_to_xml_recursive($value, $subnode);
+            } else {
+                $xml->addChild($key, htmlspecialchars($value));
+            }
+        }
+    }
+}
+
+// Initialize the analytics dashboard
+new AFFCD_Analytics_Dashboard();
