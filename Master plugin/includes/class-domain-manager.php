@@ -1,484 +1,974 @@
 <?php
 /**
- * Admin menu class referenced in main plugin but not implemented
+ * Domain Manager Class
+ *
+ * Handles domain authorization, verification, and management operations.
+ * Works in conjunction with the admin interface for complete domain management.
+ *
+ * @package AffiliateWP_Cross_Domain_Full
+ * @version 1.0.0
  */
 
+// Prevent direct access
 if (!defined('ABSPATH')) {
     exit;
 }
 
-class AFFCD_Admin_Menu {
-    
+class AFFCD_Domain_Manager {
+
+    /**
+     * Domains table name
+     *
+     * @var string
+     */
+    private $table_name;
+
+    /**
+     * Cache group
+     *
+     * @var string
+     */
+    private $cache_group = 'affcd_domains';
+
+    /**
+     * Constructor
+     */
     public function __construct() {
-        add_action('admin_menu', [$this, 'add_admin_menu']);
-        add_action('admin_init', [$this, 'admin_init']);
+        global $wpdb;
+        $this->table_name = $wpdb->prefix . 'affcd_authorized_domains';
+        
+        add_action('init', [$this, 'init']);
+        add_action('wp_ajax_affcd_get_domains', [$this, 'ajax_get_domains']);
+        add_action('wp_ajax_affcd_add_domain', [$this, 'ajax_add_domain']);
+        add_action('wp_ajax_affcd_update_domain', [$this, 'ajax_update_domain']);
+        add_action('wp_ajax_affcd_delete_domain', [$this, 'ajax_delete_domain']);
+        add_action('wp_ajax_affcd_verify_domain', [$this, 'ajax_verify_domain']);
+        add_action('wp_ajax_affcd_toggle_domain_status', [$this, 'ajax_toggle_domain_status']);
+        add_action('wp_ajax_affcd_bulk_domain_action', [$this, 'ajax_bulk_domain_action']);
+        add_action('wp_ajax_affcd_get_domain_stats', [$this, 'ajax_get_domain_stats']);
+        add_action('wp_ajax_affcd_export_domains', [$this, 'ajax_export_domains']);
+        add_action('wp_ajax_affcd_generate_api_key', [$this, 'ajax_generate_api_key']);
+        add_action('wp_ajax_affcd_test_domain_connection', [$this, 'ajax_test_domain_connection']);
     }
-    
-    public function add_admin_menu() {
-        // Check if AffiliateWP exists, if not create our own menu
-        if (function_exists('affiliate_wp')) {
-            $parent_slug = 'affiliate-wp';
-        } else {
-            // Create main menu
-            add_menu_page(
-                __('Affiliate System', 'affiliate-cross-domain'),
-                __('Affiliate System', 'affiliate-cross-domain'),
-                'manage_options',
-                'affcd-main',
-                [$this, 'render_main_page'],
-                'dashicons-networking',
-                30
+
+    /**
+     * Initialize domain manager
+     */
+    public function init() {
+        // Schedule daily domain verification
+        if (!wp_next_scheduled('affcd_verify_domains_daily')) {
+            wp_schedule_event(time(), 'daily', 'affcd_verify_domains_daily');
+        }
+        
+        add_action('affcd_verify_domains_daily', [$this, 'verify_all_domains']);
+    }
+
+    /**
+     * Add new domain
+     *
+     * @param array $data Domain data
+     * @return int|WP_Error Domain ID or error
+     */
+    public function add_domain($data) {
+        global $wpdb;
+        
+        // Validate required fields
+        if (empty($data['domain_url'])) {
+            return new WP_Error('missing_domain_url', __('Domain URL is required', 'affiliate-cross-domain-full'));
+        }
+        
+        // Sanitize domain URL
+        $domain_url = affcd_sanitize_domain($data['domain_url']);
+        if (empty($domain_url)) {
+            return new WP_Error('invalid_domain_url', __('Invalid domain URL format', 'affiliate-cross-domain-full'));
+        }
+        
+        // Ensure https protocol
+        if (!preg_match('/^https?:\/\//', $domain_url)) {
+            $domain_url = 'https://' . $domain_url;
+        }
+        
+        // Check if domain already exists
+        $existing = $this->get_domain_by_url($domain_url);
+        if ($existing) {
+            return new WP_Error('domain_exists', __('Domain already exists', 'affiliate-cross-domain-full'));
+        }
+        
+        // Generate API credentials
+        $api_key = affcd_generate_api_key();
+        $api_secret = affcd_hash_api_secret(affcd_generate_api_secret());
+        $verification_token = affcd_generate_secure_token();
+        
+        // Prepare domain data
+        $domain_data = [
+            'domain_url' => $domain_url,
+            'domain_name' => sanitize_text_field($data['domain_name'] ?? ''),
+            'api_key' => $api_key,
+            'api_secret' => $api_secret,
+            'verification_token' => $verification_token,
+            'status' => sanitize_text_field($data['status'] ?? 'pending'),
+            'verification_status' => 'unverified',
+            'max_daily_requests' => absint($data['max_daily_requests'] ?? 10000),
+            'rate_limit_per_minute' => absint($data['rate_limit_per_minute'] ?? 100),
+            'rate_limit_per_hour' => absint($data['rate_limit_per_hour'] ?? 1000),
+            'security_level' => sanitize_text_field($data['security_level'] ?? 'medium'),
+            'require_https' => !empty($data['require_https']),
+            'owner_email' => sanitize_email($data['owner_email'] ?? ''),
+            'owner_name' => sanitize_text_field($data['owner_name'] ?? ''),
+            'contact_email' => sanitize_email($data['contact_email'] ?? ''),
+            'timezone' => sanitize_text_field($data['timezone'] ?? 'UTC'),
+            'language' => sanitize_text_field($data['language'] ?? 'en'),
+            'notes' => sanitize_textarea_field($data['notes'] ?? ''),
+            'created_by' => get_current_user_id()
+        ];
+        
+        // Insert domain
+        $result = $wpdb->insert(
+            $this->table_name,
+            $domain_data,
+            [
+                '%s', '%s', '%s', '%s', '%s', '%s', '%s', 
+                '%d', '%d', '%d', '%s', '%d', '%s', '%s', 
+                '%s', '%s', '%s', '%s', '%s', '%d'
+            ]
+        );
+        
+        if ($result === false) {
+            return new WP_Error('database_error', __('Failed to add domain', 'affiliate-cross-domain-full'));
+        }
+        
+        $domain_id = $wpdb->insert_id;
+        
+        // Clear cache
+        wp_cache_delete('all_domains', $this->cache_group);
+        
+        // Log activity
+        affcd_log_activity('domain_added', [
+            'domain_id' => $domain_id,
+            'domain_url' => $domain_url,
+            'status' => $domain_data['status']
+        ]);
+        
+        // Trigger action
+        do_action('affcd_domain_added', $domain_id, $domain_data);
+        
+        return $domain_id;
+    }
+
+    /**
+     * Update domain
+     *
+     * @param int $domain_id Domain ID
+     * @param array $data Update data
+     * @return bool|WP_Error Success or error
+     */
+    public function update_domain($domain_id, $data) {
+        global $wpdb;
+        
+        $domain_id = absint($domain_id);
+        
+        // Get existing domain
+        $existing = $this->get_domain($domain_id);
+        if (!$existing) {
+            return new WP_Error('domain_not_found', __('Domain not found', 'affiliate-cross-domain-full'));
+        }
+        
+        // Prepare update data
+        $update_data = [];
+        $formats = [];
+        
+        if (isset($data['domain_name'])) {
+            $update_data['domain_name'] = sanitize_text_field($data['domain_name']);
+            $formats[] = '%s';
+        }
+        
+        if (isset($data['status']) && in_array($data['status'], ['active', 'inactive', 'suspended', 'pending'])) {
+            $update_data['status'] = $data['status'];
+            $formats[] = '%s';
+        }
+        
+        if (isset($data['max_daily_requests'])) {
+            $update_data['max_daily_requests'] = absint($data['max_daily_requests']);
+            $formats[] = '%d';
+        }
+        
+        if (isset($data['rate_limit_per_minute'])) {
+            $update_data['rate_limit_per_minute'] = absint($data['rate_limit_per_minute']);
+            $formats[] = '%d';
+        }
+        
+        if (isset($data['rate_limit_per_hour'])) {
+            $update_data['rate_limit_per_hour'] = absint($data['rate_limit_per_hour']);
+            $formats[] = '%d';
+        }
+        
+        if (isset($data['security_level'])) {
+            $update_data['security_level'] = sanitize_text_field($data['security_level']);
+            $formats[] = '%s';
+        }
+        
+        if (isset($data['require_https'])) {
+            $update_data['require_https'] = !empty($data['require_https']) ? 1 : 0;
+            $formats[] = '%d';
+        }
+        
+        if (isset($data['owner_email'])) {
+            $update_data['owner_email'] = sanitize_email($data['owner_email']);
+            $formats[] = '%s';
+        }
+        
+        if (isset($data['owner_name'])) {
+            $update_data['owner_name'] = sanitize_text_field($data['owner_name']);
+            $formats[] = '%s';
+        }
+        
+        if (isset($data['contact_email'])) {
+            $update_data['contact_email'] = sanitize_email($data['contact_email']);
+            $formats[] = '%s';
+        }
+        
+        if (isset($data['notes'])) {
+            $update_data['notes'] = sanitize_textarea_field($data['notes']);
+            $formats[] = '%s';
+        }
+        
+        if (isset($data['webhook_url'])) {
+            $update_data['webhook_url'] = esc_url_raw($data['webhook_url']);
+            $formats[] = '%s';
+        }
+        
+        if (isset($data['webhook_secret'])) {
+            $update_data['webhook_secret'] = sanitize_text_field($data['webhook_secret']);
+            $formats[] = '%s';
+        }
+        
+        if (isset($data['webhook_events']) && is_array($data['webhook_events'])) {
+            $update_data['webhook_events'] = wp_json_encode($data['webhook_events']);
+            $formats[] = '%s';
+        }
+        
+        if (empty($update_data)) {
+            return new WP_Error('no_changes', __('No valid changes provided', 'affiliate-cross-domain-full'));
+        }
+        
+        // Update timestamp
+        $update_data['updated_at'] = current_time('mysql');
+        $formats[] = '%s';
+        
+        // Update domain
+        $result = $wpdb->update(
+            $this->table_name,
+            $update_data,
+            ['id' => $domain_id],
+            $formats,
+            ['%d']
+        );
+        
+        if ($result === false) {
+            return new WP_Error('database_error', __('Failed to update domain', 'affiliate-cross-domain-full'));
+        }
+        
+        // Clear cache
+        wp_cache_delete('domain_' . $domain_id, $this->cache_group);
+        wp_cache_delete('all_domains', $this->cache_group);
+        
+        // Log activity
+        affcd_log_activity('domain_updated', [
+            'domain_id' => $domain_id,
+            'changes' => array_keys($update_data)
+        ]);
+        
+        // Trigger action
+        do_action('affcd_domain_updated', $domain_id, $update_data, $existing);
+        
+        return true;
+    }
+
+    /**
+     * Delete domain
+     *
+     * @param int $domain_id Domain ID
+     * @return bool|WP_Error Success or error
+     */
+    public function delete_domain($domain_id) {
+        global $wpdb;
+        
+        $domain_id = absint($domain_id);
+        
+        // Get existing domain
+        $existing = $this->get_domain($domain_id);
+        if (!$existing) {
+            return new WP_Error('domain_not_found', __('Domain not found', 'affiliate-cross-domain-full'));
+        }
+        
+        // Delete domain
+        $result = $wpdb->delete(
+            $this->table_name,
+            ['id' => $domain_id],
+            ['%d']
+        );
+        
+        if ($result === false) {
+            return new WP_Error('database_error', __('Failed to delete domain', 'affiliate-cross-domain-full'));
+        }
+        
+        // Clear cache
+        wp_cache_delete('domain_' . $domain_id, $this->cache_group);
+        wp_cache_delete('all_domains', $this->cache_group);
+        
+        // Log activity
+        affcd_log_activity('domain_deleted', [
+            'domain_id' => $domain_id,
+            'domain_url' => $existing->domain_url
+        ]);
+        
+        // Trigger action
+        do_action('affcd_domain_deleted', $domain_id, $existing);
+        
+        return true;
+    }
+
+    /**
+     * Get domain by ID
+     *
+     * @param int $domain_id Domain ID
+     * @return object|null Domain object or null
+     */
+    public function get_domain($domain_id) {
+        global $wpdb;
+        
+        $domain_id = absint($domain_id);
+        
+        // Check cache
+        $cache_key = 'domain_' . $domain_id;
+        $domain = wp_cache_get($cache_key, $this->cache_group);
+        
+        if ($domain === false) {
+            $domain = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM {$this->table_name} WHERE id = %d",
+                $domain_id
+            ));
+            
+            if ($domain) {
+                wp_cache_set($cache_key, $domain, $this->cache_group, 3600);
+            }
+        }
+        
+        return $domain;
+    }
+
+    /**
+     * Get domain by URL
+     *
+     * @param string $domain_url Domain URL
+     * @return object|null Domain object or null
+     */
+    public function get_domain_by_url($domain_url) {
+        global $wpdb;
+        
+        $domain_url = esc_url_raw($domain_url);
+        
+        return $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$this->table_name} WHERE domain_url = %s",
+            $domain_url
+        ));
+    }
+
+    /**
+     * Get domain by API key
+     *
+     * @param string $api_key API key
+     * @return object|null Domain object or null
+     */
+    public function get_domain_by_api_key($api_key) {
+        global $wpdb;
+        
+        $api_key = sanitize_text_field($api_key);
+        
+        return $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$this->table_name} WHERE api_key = %s AND status = 'active'",
+            $api_key
+        ));
+    }
+
+    /**
+     * Get all domains
+     *
+     * @param array $args Query arguments
+     * @return array Domains list
+     */
+    public function get_domains($args = []) {
+        global $wpdb;
+        
+        $defaults = [
+            'status' => '',
+            'verification_status' => '',
+            'limit' => 50,
+            'offset' => 0,
+            'orderby' => 'created_at',
+            'order' => 'DESC',
+            'search' => ''
+        ];
+        
+        $args = wp_parse_args($args, $defaults);
+        
+        // Build WHERE clause
+        $where_conditions = ['1=1'];
+        $where_values = [];
+        
+        if (!empty($args['status'])) {
+            $where_conditions[] = 'status = %s';
+            $where_values[] = $args['status'];
+        }
+        
+        if (!empty($args['verification_status'])) {
+            $where_conditions[] = 'verification_status = %s';
+            $where_values[] = $args['verification_status'];
+        }
+        
+        if (!empty($args['search'])) {
+            $where_conditions[] = '(domain_url LIKE %s OR domain_name LIKE %s OR owner_name LIKE %s)';
+            $search_term = '%' . $wpdb->esc_like($args['search']) . '%';
+            $where_values[] = $search_term;
+            $where_values[] = $search_term;
+            $where_values[] = $search_term;
+        }
+        
+        $where_clause = implode(' AND ', $where_conditions);
+        
+        // Build ORDER BY clause
+        $allowed_orderby = ['id', 'domain_url', 'domain_name', 'status', 'verification_status', 'created_at', 'last_activity_at'];
+        $orderby = in_array($args['orderby'], $allowed_orderby) ? $args['orderby'] : 'created_at';
+        $order = strtoupper($args['order']) === 'ASC' ? 'ASC' : 'DESC';
+        
+        // Build query
+        $query = "SELECT * FROM {$this->table_name} WHERE {$where_clause} ORDER BY {$orderby} {$order}";
+        
+        if ($args['limit'] > 0) {
+            $query .= $wpdb->prepare(" LIMIT %d OFFSET %d", $args['limit'], $args['offset']);
+        }
+        
+        if (!empty($where_values)) {
+            $query = $wpdb->prepare($query, $where_values);
+        }
+        
+        return $wpdb->get_results($query);
+    }
+
+    /**
+     * Get domain statistics
+     *
+     * @return array Statistics
+     */
+    public function get_domain_statistics() {
+        global $wpdb;
+        
+        $cache_key = 'domain_statistics';
+        $stats = wp_cache_get($cache_key, $this->cache_group);
+        
+        if ($stats === false) {
+            $stats = [
+                'total' => 0,
+                'active' => 0,
+                'inactive' => 0,
+                'suspended' => 0,
+                'pending' => 0,
+                'verified' => 0,
+                'unverified' => 0,
+                'failed' => 0
+            ];
+            
+            // Get status counts
+            $status_counts = $wpdb->get_results(
+                "SELECT status, COUNT(*) as count FROM {$this->table_name} GROUP BY status",
+                OBJECT_K
             );
-            $parent_slug = 'affcd-main';
-        }
-        
-        // Add submenu pages
-        add_submenu_page(
-            $parent_slug,
-            __('Vanity Codes', 'affiliate-cross-domain'),
-            __('Vanity Codes', 'affiliate-cross-domain'),
-            'manage_affiliates',
-            'affcd-vanity-codes',
-            [$this, 'render_vanity_codes_page']
-        );
-        
-        add_submenu_page(
-            $parent_slug,
-            __('Analytics', 'affiliate-cross-domain'),
-            __('Analytics', 'affiliate-cross-domain'),
-            'manage_affiliates',
-            'affcd-analytics',
-            [$this, 'render_analytics_page']
-        );
-        
-        add_submenu_page(
-            $parent_slug,
-            __('Settings', 'affiliate-cross-domain'),
-            __('Settings', 'affiliate-cross-domain'),
-            'manage_options',
-            'affcd-settings',
-            [$this, 'render_settings_page']
-        );
-    }
-    
-    public function admin_init() {
-        // Register settings
-        register_setting('affcd_settings', 'affcd_api_settings');
-        register_setting('affcd_settings', 'affcd_security_settings');
-        register_setting('affcd_settings', 'affcd_webhook_settings');
-        register_setting('affcd_settings', 'affcd_cache_settings');
-    }
-    
-    public function render_main_page() {
-        if (function_exists('affiliate_wp')) {
-            // Redirect to AffiliateWP if it exists
-            wp_redirect(admin_url('admin.php?page=affiliate-wp'));
-            exit;
-        }
-        
-        ?>
-        <div class="wrap">
-            <h1><?php _e('Affiliate Cross-Domain System', 'affiliate-cross-domain'); ?></h1>
             
-            <div class="affcd-dashboard">
-                <div class="affcd-dashboard-widgets">
-                    <?php $this->render_dashboard_widget_stats(); ?>
-                    <?php $this->render_dashboard_widget_recent_activity(); ?>
-                    <?php $this->render_dashboard_widget_quick_actions(); ?>
-                </div>
-            </div>
-        </div>
-        
-        <style>
-        .affcd-dashboard-widgets {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
-        .affcd-widget {
-            background: #fff;
-            border: 1px solid #ccd0d4;
-            border-radius: 4px;
-            padding: 20px;
-        }
-        .affcd-widget h3 {
-            margin-top: 0;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 10px;
-        }
-        </style>
-        <?php
-    }
-    
-    public function render_vanity_codes_page() {
-        ?>
-        <div class="wrap">
-            <h1><?php _e('Vanity Codes', 'affiliate-cross-domain'); ?></h1>
-            <p><?php _e('Manage discount codes for cross-domain affiliate system.', 'affiliate-cross-domain'); ?></p>
-            
-            <?php
-            // Include WP_List_Table for codes
-            if (!class_exists('AFFCD_Vanity_Codes_List_Table')) {
-                require_once AFFCD_ADMIN_DIR . 'class-vanity-codes-list-table.php';
+            foreach ($status_counts as $status => $data) {
+                $stats[$status] = intval($data->count);
+                $stats['total'] += intval($data->count);
             }
             
-            $list_table = new AFFCD_Vanity_Codes_List_Table();
-            $list_table->prepare_items();
-            $list_table->display();
-            ?>
-        </div>
-        <?php
-    }
-    
-    public function render_analytics_page() {
-        ?>
-        <div class="wrap">
-            <h1><?php _e('Analytics', 'affiliate-cross-domain'); ?></h1>
-            <p><?php _e('View usage statistics and performance metrics.', 'affiliate-cross-domain'); ?></p>
+            // Get verification counts
+            $verification_counts = $wpdb->get_results(
+                "SELECT verification_status, COUNT(*) as count FROM {$this->table_name} GROUP BY verification_status",
+                OBJECT_K
+            );
             
-            <?php $this->render_analytics_dashboard(); ?>
-        </div>
-        <?php
-    }
-    
-    public function render_settings_page() {
-        ?>
-        <div class="wrap">
-            <h1><?php _e('Settings', 'affiliate-cross-domain'); ?></h1>
-            
-            <form method="post" action="options.php">
-                <?php settings_fields('affcd_settings'); ?>
-                
-                <table class="form-table">
-                    <tbody>
-                        <tr>
-                            <th scope="row">
-                                <label for="master_api_key"><?php _e('Master API Key', 'affiliate-cross-domain'); ?></label>
-                            </th>
-                            <td>
-                                <?php $api_settings = get_option('affcd_api_settings', []); ?>
-                                <input type="text" 
-                                       id="master_api_key" 
-                                       name="affcd_api_settings[master_api_key]" 
-                                       value="<?php echo esc_attr($api_settings['master_api_key'] ?? ''); ?>" 
-                                       class="regular-text" 
-                                       readonly>
-                                <button type="button" class="button" onclick="generateApiKey()">
-                                    <?php _e('Generate New', 'affiliate-cross-domain'); ?>
-                                </button>
-                                <p class="description">
-                                    <?php _e('Used by client sites to authenticate API requests.', 'affiliate-cross-domain'); ?>
-                                </p>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-                
-                <?php submit_button(); ?>
-            </form>
-        </div>
-        
-        <script>
-        function generateApiKey() {
-            if (confirm('Generate a new API key? This will invalidate the current key.')) {
-                var newKey = 'affcd_' + Math.random().toString(36).substr(2, 32);
-                document.getElementById('master_api_key').value = newKey;
+            foreach ($verification_counts as $status => $data) {
+                $stats[$status] = intval($data->count);
             }
-        }
-        </script>
-        <?php
-    }
-    
-    private function render_dashboard_widget_stats() {
-        $stats = $this->get_dashboard_stats();
-        ?>
-        <div class="affcd-widget">
-            <h3><?php _e('System Statistics', 'affiliate-cross-domain'); ?></h3>
-            <div class="affcd-stats-grid">
-                <div class="affcd-stat">
-                    <span class="affcd-stat-number"><?php echo number_format($stats['total_codes']); ?></span>
-                    <span class="affcd-stat-label"><?php _e('Active Codes', 'affiliate-cross-domain'); ?></span>
-                </div>
-                <div class="affcd-stat">
-                    <span class="affcd-stat-number"><?php echo number_format($stats['total_domains']); ?></span>
-                    <span class="affcd-stat-label"><?php _e('Authorized Domains', 'affiliate-cross-domain'); ?></span>
-                </div>
-                <div class="affcd-stat">
-                    <span class="affcd-stat-number"><?php echo number_format($stats['total_requests']); ?></span>
-                    <span class="affcd-stat-label"><?php _e('API Requests (30d)', 'affiliate-cross-domain'); ?></span>
-                </div>
-                <div class="affcd-stat">
-                    <span class="affcd-stat-number"><?php echo number_format($stats['total_conversions']); ?></span>
-                    <span class="affcd-stat-label"><?php _e('Conversions (30d)', 'affiliate-cross-domain'); ?></span>
-                </div>
-            </div>
-        </div>
-        
-        <style>
-        .affcd-stats-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-        .affcd-stat {
-            text-align: center;
-            padding: 10px;
-            background: #f9f9f9;
-            border-radius: 4px;
-        }
-        .affcd-stat-number {
-            display: block;
-            font-size: 24px;
-            font-weight: bold;
-            color: #0073aa;
-        }
-        .affcd-stat-label {
-            font-size: 12px;
-            color: #666;
-        }
-        </style>
-        <?php
-    }
-    
-    private function render_dashboard_widget_recent_activity() {
-        $recent_activity = $this->get_recent_activity();
-        ?>
-        <div class="affcd-widget">
-            <h3><?php _e('Recent Activity', 'affiliate-cross-domain'); ?></h3>
-            <div class="affcd-activity-list">
-                <?php if (empty($recent_activity)): ?>
-                    <p><?php _e('No recent activity.', 'affiliate-cross-domain'); ?></p>
-                <?php else: ?>
-                    <?php foreach ($recent_activity as $activity): ?>
-                        <div class="affcd-activity-item">
-                            <span class="affcd-activity-time"><?php echo human_time_diff(strtotime($activity->created_at)); ?> ago</span>
-                            <span class="affcd-activity-text">
-                                Code <strong><?php echo esc_html($activity->code); ?></strong> 
-                                <?php if ($activity->conversion): ?>
-                                    converted on <?php echo esc_html($activity->domain); ?>
-                                <?php else: ?>
-                                    validated on <?php echo esc_html($activity->domain); ?>
-                                <?php endif; ?>
-                            </span>
-                        </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
-        </div>
-        
-        <style>
-        .affcd-activity-item {
-            padding: 8px 0;
-            border-bottom: 1px solid #eee;
-        }
-        .affcd-activity-item:last-child {
-            border-bottom: none;
-        }
-        .affcd-activity-time {
-            color: #666;
-            font-size: 11px;
-            display: block;
-        }
-        .affcd-activity-text {
-            font-size: 13px;
-        }
-        </style>
-        <?php
-    }
-    
-    private function render_dashboard_widget_quick_actions() {
-        ?>
-        <div class="affcd-widget">
-            <h3><?php _e('Quick Actions', 'affiliate-cross-domain'); ?></h3>
-            <div class="affcd-quick-actions">
-                <p>
-                    <a href="<?php echo admin_url('admin.php?page=affcd-domain-management'); ?>" class="button button-primary">
-                        <?php _e('Manage Domains', 'affiliate-cross-domain'); ?>
-                    </a>
-                </p>
-                <p>
-                    <a href="<?php echo admin_url('admin.php?page=affcd-vanity-codes'); ?>" class="button">
-                        <?php _e('Add New Code', 'affiliate-cross-domain'); ?>
-                    </a>
-                </p>
-                <p>
-                    <a href="<?php echo admin_url('admin.php?page=affcd-analytics'); ?>" class="button">
-                        <?php _e('View Analytics', 'affiliate-cross-domain'); ?>
-                    </a>
-                </p>
-                <p>
-                    <button type="button" class="button" onclick="testAllConnections()">
-                        <?php _e('Test All Connections', 'affiliate-cross-domain'); ?>
-                    </button>
-                </p>
-            </div>
-        </div>
-        
-        <script>
-        function testAllConnections() {
-            if (confirm('Test connections to all authorized domains?')) {
-                window.location.href = '<?php echo admin_url('admin.php?page=affcd-domain-management&action=test_all'); ?>';
-            }
-        }
-        </script>
-        <?php
-    }
-    
-    private function render_analytics_dashboard() {
-        $analytics = $this->get_analytics_data();
-        ?>
-        <div class="affcd-analytics-dashboard">
-            <div class="affcd-analytics-section">
-                <h3><?php _e('Usage Over Time', 'affiliate-cross-domain'); ?></h3>
-                <canvas id="usageChart" width="400" height="200"></canvas>
-            </div>
             
-            <div class="affcd-analytics-section">
-                <h3><?php _e('Top Performing Codes', 'affiliate-cross-domain'); ?></h3>
-                <table class="wp-list-table widefat fixed striped">
-                    <thead>
-                        <tr>
-                            <th><?php _e('Code', 'affiliate-cross-domain'); ?></th>
-                            <th><?php _e('Uses', 'affiliate-cross-domain'); ?></th>
-                            <th><?php _e('Conversions', 'affiliate-cross-domain'); ?></th>
-                            <th><?php _e('Conversion Rate', 'affiliate-cross-domain'); ?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($analytics['top_codes'] as $code): ?>
-                            <tr>
-                                <td><strong><?php echo esc_html($code->code); ?></strong></td>
-                                <td><?php echo number_format($code->total_uses); ?></td>
-                                <td><?php echo number_format($code->conversions); ?></td>
-                                <td><?php echo $code->total_uses > 0 ? round(($code->conversions / $code->total_uses) * 100, 1) : 0; ?>%</td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-            
-            <div class="affcd-analytics-section">
-                <h3><?php _e('Domain Performance', 'affiliate-cross-domain'); ?></h3>
-                <table class="wp-list-table widefat fixed striped">
-                    <thead>
-                        <tr>
-                            <th><?php _e('Domain', 'affiliate-cross-domain'); ?></th>
-                            <th><?php _e('Requests', 'affiliate-cross-domain'); ?></th>
-                            <th><?php _e('Conversions', 'affiliate-cross-domain'); ?></th>
-                            <th><?php _e('Total Value', 'affiliate-cross-domain'); ?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($analytics['domain_performance'] as $domain): ?>
-                            <tr>
-                                <td><?php echo esc_html($domain->domain); ?></td>
-                                <td><?php echo number_format($domain->total_requests); ?></td>
-                                <td><?php echo number_format($domain->conversions); ?></td>
-                                <td>$<?php echo number_format($domain->total_value, 2); ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+            wp_cache_set($cache_key, $stats, $this->cache_group, 300); // 5 minutes
+        }
         
-        <style>
-        .affcd-analytics-dashboard {
-            display: grid;
-            gap: 20px;
-        }
-        .affcd-analytics-section {
-            background: #fff;
-            border: 1px solid #ccd0d4;
-            border-radius: 4px;
-            padding: 20px;
-        }
-        .affcd-analytics-section h3 {
-            margin-top: 0;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 10px;
-        }
-        </style>
-        <?php
+        return $stats;
     }
-    
-    private function get_dashboard_stats() {
+
+    /**
+     * Verify domain connection
+     *
+     * @param int $domain_id Domain ID
+     * @return array Verification result
+     */
+    public function verify_domain($domain_id) {
         global $wpdb;
         
-        // Get total active codes
-        $total_codes = $wpdb->get_var(
-            "SELECT COUNT(*) FROM {$wpdb->prefix}affcd_vanity_codes WHERE is_active = 1"
+        $domain = $this->get_domain($domain_id);
+        if (!$domain) {
+            return [
+                'success' => false,
+                'message' => __('Domain not found', 'affiliate-cross-domain-full')
+            ];
+        }
+        
+        // Test connection to WordPress REST API
+        $test_url = rtrim($domain->domain_url, '/') . '/wp-json/wp/v2/';
+        $start_time = microtime(true);
+        
+        $response = wp_remote_get($test_url, [
+            'timeout' => 30,
+            'headers' => [
+                'User-Agent' => 'AffiliateWP-Cross-Domain/' . AFFCD_VERSION
+            ]
+        ]);
+        
+        $response_time = round((microtime(true) - $start_time) * 1000, 2);
+        $success = false;
+        $message = '';
+        
+        if (is_wp_error($response)) {
+            $message = $response->get_error_message();
+        } else {
+            $status_code = wp_remote_retrieve_response_code($response);
+            if ($status_code === 200) {
+                $success = true;
+                $message = sprintf(__('Connection verified successfully (%sms)', 'affiliate-cross-domain-full'), $response_time);
+            } else {
+                $message = sprintf(__('HTTP %d response received', 'affiliate-cross-domain-full'), $status_code);
+            }
+        }
+        
+        // Update domain verification status
+        $update_data = [
+            'last_verified_at' => current_time('mysql'),
+            'last_activity_at' => current_time('mysql')
+        ];
+        
+        if ($success) {
+            $update_data['verification_status'] = 'verified';
+            $update_data['verification_failures'] = 0;
+        } else {
+            $update_data['verification_status'] = 'failed';
+            $update_data['verification_failures'] = intval($domain->verification_failures) + 1;
+            
+            // Suspend domain after 5 consecutive failures
+            if ($update_data['verification_failures'] >= 5) {
+                $update_data['status'] = 'suspended';
+                $update_data['suspended_at'] = current_time('mysql');
+                $update_data['suspended_reason'] = __('Multiple verification failures', 'affiliate-cross-domain-full');
+            }
+        }
+        
+        $wpdb->update(
+            $this->table_name,
+            $update_data,
+            ['id' => $domain_id],
+            array_fill(0, count($update_data), '%s'),
+            ['%d']
         );
         
-        // Get total domains
-        $domains = get_option('affcd_allowed_domains', []);
-        $total_domains = count($domains);
+        // Clear cache
+        wp_cache_delete('domain_' . $domain_id, $this->cache_group);
         
-        // Get recent requests (30 days)
-        $total_requests = $wpdb->get_var(
-            "SELECT COUNT(*) FROM {$wpdb->prefix}affcd_usage_tracking 
-             WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)"
-        );
-        
-        // Get recent conversions (30 days)
-        $total_conversions = $wpdb->get_var(
-            "SELECT COUNT(*) FROM {$wpdb->prefix}affcd_usage_tracking 
-             WHERE conversion = 1 AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)"
-        );
+        // Log verification attempt
+        affcd_log_activity('domain_verification', [
+            'domain_id' => $domain_id,
+            'domain_url' => $domain->domain_url,
+            'success' => $success,
+            'response_time' => $response_time,
+            'failures' => $update_data['verification_failures']
+        ]);
         
         return [
-            'total_codes' => (int) $total_codes,
-            'total_domains' => (int) $total_domains,
-            'total_requests' => (int) $total_requests,
-            'total_conversions' => (int) $total_conversions
+            'success' => $success,
+            'message' => $message,
+            'response_time' => $response_time,
+            'failures' => $update_data['verification_failures']
         ];
     }
-    
-    private function get_recent_activity() {
-        global $wpdb;
+
+    /**
+     * Verify all domains
+     */
+    public function verify_all_domains() {
+        $domains = $this->get_domains(['status' => 'active', 'limit' => 0]);
         
-        return $wpdb->get_results(
-            "SELECT code, domain, conversion, created_at 
-             FROM {$wpdb->prefix}affcd_usage_tracking 
-             ORDER BY created_at DESC 
-             LIMIT 10"
-        );
+        foreach ($domains as $domain) {
+            $this->verify_domain($domain->id);
+            // Add small delay to avoid overwhelming servers
+            usleep(500000); // 0.5 seconds
+        }
     }
-    
-    private function get_analytics_data() {
-        global $wpdb;
+
+    /**
+     * Test domain connection
+     *
+     * @param string $domain_url Domain URL
+     * @return array Test result
+     */
+    public function test_domain_connection($domain_url) {
+        $test_url = rtrim($domain_url, '/') . '/wp-json/wp/v2/';
+        $start_time = microtime(true);
         
-        // Top performing codes
-        $top_codes = $wpdb->get_results(
-            "SELECT 
-                code,
-                COUNT(*) as total_uses,
-                SUM(CASE WHEN conversion = 1 THEN 1 ELSE 0 END) as conversions
-             FROM {$wpdb->prefix}affcd_usage_tracking 
-             WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-             GROUP BY code 
-             ORDER BY conversions DESC, total_uses DESC 
-             LIMIT 10"
-        );
+        $response = wp_remote_get($test_url, [
+            'timeout' => 30,
+            'headers' => [
+                'User-Agent' => 'AffiliateWP-Cross-Domain/' . AFFCD_VERSION
+            ]
+        ]);
         
-        // Domain performance
-        $domain_performance = $wpdb->get_results(
-            "SELECT 
-                domain,
-                COUNT(*) as total_requests,
-                SUM(CASE WHEN conversion = 1 THEN 1 ELSE 0 END) as conversions,
-                SUM(CASE WHEN conversion = 1 THEN conversion_value ELSE 0 END) as total_value
-             FROM {$wpdb->prefix}affcd_usage_tracking 
-             WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-             GROUP BY domain 
-             ORDER BY total_value DESC, conversions DESC 
-             LIMIT 10"
-        );
+        $response_time = round((microtime(true) - $start_time) * 1000, 2);
+        
+        if (is_wp_error($response)) {
+            return [
+                'success' => false,
+                'message' => $response->get_error_message(),
+                'response_time' => $response_time
+            ];
+        }
+        
+        $status_code = wp_remote_retrieve_response_code($response);
+        $success = $status_code === 200;
         
         return [
-            'top_codes' => $top_codes,
-            'domain_performance' => $domain_performance
+            'success' => $success,
+            'message' => $success 
+                ? sprintf(__('Connection successful (%sms)', 'affiliate-cross-domain-full'), $response_time)
+                : sprintf(__('HTTP %d response', 'affiliate-cross-domain-full'), $status_code),
+            'response_time' => $response_time,
+            'status_code' => $status_code
         ];
+    }
+
+    /**
+     * AJAX: Get domains
+     */
+    public function ajax_get_domains() {
+        check_ajax_referer('affcd_ajax_nonce', 'nonce');
+        
+        if (!current_user_can('manage_affiliates')) {
+            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain-full'));
+        }
+        
+        $args = [
+            'status' => sanitize_text_field($_POST['status'] ?? ''),
+            'search' => sanitize_text_field($_POST['search'] ?? ''),
+            'limit' => absint($_POST['length'] ?? 25),
+            'offset' => absint($_POST['start'] ?? 0)
+        ];
+        
+        $domains = $this->get_domains($args);
+        $total = $this->get_total_domains($args);
+        
+        $data = [];
+        foreach ($domains as $domain) {
+            $data[] = [
+                'checkbox' => '<input type="checkbox" name="domain_ids[]" value="' . $domain->id . '">',
+                'domain_url' => esc_html($domain->domain_url),
+                'domain_name' => esc_html($domain->domain_name ?: __('N/A', 'affiliate-cross-domain-full')),
+                'status' => $this->get_status_badge($domain->status),
+                'verification_status' => $this->get_verification_badge($domain->verification_status),
+                'last_activity' => $domain->last_activity_at ? affcd_time_ago($domain->last_activity_at) : __('Never', 'affiliate-cross-domain-full'),
+                'actions' => $this->get_domain_actions($domain)
+            ];
+        }
+        
+        wp_send_json_success([
+            'data' => $data,
+            'recordsTotal' => $total,
+            'recordsFiltered' => $total
+        ]);
+    }
+
+    /**
+     * AJAX: Add domain
+     */
+    public function ajax_add_domain() {
+        check_ajax_referer('affcd_ajax_nonce', 'nonce');
+        
+        if (!current_user_can('manage_affiliates')) {
+            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain-full'));
+        }
+        
+        $domain_data = [
+            'domain_url' => sanitize_text_field($_POST['domain_url'] ?? ''),
+            'domain_name' => sanitize_text_field($_POST['domain_name'] ?? ''),
+            'status' => sanitize_text_field($_POST['status'] ?? 'pending'),
+            'owner_email' => sanitize_email($_POST['owner_email'] ?? ''),
+            'owner_name' => sanitize_text_field($_POST['owner_name'] ?? ''),
+            'contact_email' => sanitize_email($_POST['contact_email'] ?? ''),
+            'notes' => sanitize_textarea_field($_POST['notes'] ?? '')
+        ];
+        
+        $result = $this->add_domain($domain_data);
+        
+        if (is_wp_error($result)) {
+            wp_send_json_error($result->get_error_message());
+        }
+        
+        wp_send_json_success([
+            'message' => __('Domain added successfully', 'affiliate-cross-domain-full'),
+            'domain_id' => $result
+        ]);
+    }
+
+    /**
+     * AJAX: Update domain
+     */
+    public function ajax_update_domain() {
+        check_ajax_referer('affcd_ajax_nonce', 'nonce');
+        
+        if (!current_user_can('manage_affiliates')) {
+            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain-full'));
+        }
+        
+        $domain_id = absint($_POST['domain_id'] ?? 0);
+        $domain_data = [
+            'domain_name' => sanitize_text_field($_POST['domain_name'] ?? ''),
+            'status' => sanitize_text_field($_POST['status'] ?? ''),
+            'owner_email' => sanitize_email($_POST['owner_email'] ?? ''),
+            'owner_name' => sanitize_text_field($_POST['owner_name'] ?? ''),
+            'contact_email' => sanitize_email($_POST['contact_email'] ?? ''),
+            'notes' => sanitize_textarea_field($_POST['notes'] ?? ''),
+            'webhook_url' => esc_url_raw($_POST['webhook_url'] ?? ''),
+            'webhook_secret' => sanitize_text_field($_POST['webhook_secret'] ?? '')
+        ];
+        
+        $result = $this->update_domain($domain_id, $domain_data);
+        
+        if (is_wp_error($result)) {
+            wp_send_json_error($result->get_error_message());
+        }
+        
+        wp_send_json_success([
+            'message' => __('Domain updated successfully', 'affiliate-cross-domain-full')
+        ]);
+    }
+
+    /**
+     * AJAX: Delete domain
+     */
+    public function ajax_delete_domain() {
+        check_ajax_referer('affcd_ajax_nonce', 'nonce');
+        
+        if (!current_user_can('manage_affiliates')) {
+            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain-full'));
+        }
+        
+        $domain_id = absint($_POST['domain_id'] ?? 0);
+        $result = $this->delete_domain($domain_id);
+        
+        if (is_wp_error($result)) {
+            wp_send_json_error($result->get_error_message());
+        }
+        
+        wp_send_json_success([
+            'message' => __('Domain deleted successfully', 'affiliate-cross-domain-full')
+        ]);
+    }
+
+    /**
+     * AJAX: Verify domain
+     */
+    public function ajax_verify_domain() {
+        check_ajax_referer('affcd_ajax_nonce', 'nonce');
+        
+        if (!current_user_can('manage_affiliates')) {
+            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain-full'));
+        }
+        
+        $domain_id = absint($_POST['domain_id'] ?? 0);
+        $result = $this->verify_domain($domain_id);
+        
+        if ($result['success']) {
+            wp_send_json_success($result);
+        } else {
+            wp_send_json_error($result);
+        }
+    }
+
+    /**
+     * AJAX: Toggle domain status
+     */
+    public function ajax_toggle_domain_status() {
+        check_ajax_referer('affcd_ajax_nonce', 'nonce');
+        
+        if (!current_user_can('manage_affiliates')) {
+            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain-full'));
+        }
+        
+        $domain_id = absint($_POST['domain_id'] ?? 0);
+        $status = sanitize_text_field($_POST['status'] ?? '');
+        
+        $result = $this->update_domain($domain_id, ['status' => $status]);
+        
+        if (is_wp_error($result)) {
+            wp_send_json_error($result->get_error_message());
+        }
+        
+        wp_send_json_success([
+            'message' => sprintf(__('Domain status changed to %s', 'affiliate-cross-domain-full'), $status)
+        ]);
+    }
+
+    /**
+     * AJAX: Get domain statistics
+     */
+    public function ajax_get_domain_stats() {
+        check_ajax_referer('affcd_ajax_nonce', 'nonce');
+        
+        if (!current_user_can('manage_affiliates')) {
+            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain-full'));
+        }
+        
+        $stats = $this->get_domain_statistics();
+        wp_send_json_success($stats);
+    }
+
+    /**
+     * AJAX: Generate API key
+     */
+    public function ajax_generate_api_key() {
+        check_ajax_referer('affcd_ajax_nonce', 'nonce');
+        
+        if (!current_user_can('manage_affiliates')) {
+            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain-full'));
+        }
+        
+        $api_key = affcd_generate_api_key();
+        
+        wp_send_json_success([
+            'api_key' => $api_key,
+            'message' => __('API key generated successfully', 'affiliate-cross-domain-full')
+        ]);
+    }
+
+    /**
+     * AJAX: Test domain connection
+     */
+    public function ajax_test_domain_connection() {
+        check_ajax_referer('affcd_ajax_nonce', 'nonce');
+        
+        if (!current_user_can('manage_affiliates')) {
+            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain-full'));
+        }
+        
+        $domain_id = absint($_POST['domain_id'] ?? 0);
+        if ($domain_id) {
+            $result = $this->verify_domain($domain_id);
+        } else {
+            $domain_url = esc_url_raw($_POST['domain_url'] ?? '');
+            $result = $this->test_domain_connection($domain_url);
+        }
+        
+        if ($result['success']) {
+            wp_send_json_success($result);
+        } else {
+            wp_send_json_error($result);
+        }
+    }
+
+    /**
+     * Get status badge HTML
+     *
+     * @param string $status Status
+     * @return string Badge HTML
+     */
+    private function get_status_badge($status) {
+        $badges = [
+            'active' => '<span class="status-badge status-active">' . __('Active', 'affiliate-cross-domain-full') . '</span>',
+            'inactive' => '<span class="status-badge status-inactive">' . __('Inactive', 'affiliate-cross-domain-full') . '</span>',
+            'suspended' => '<span class="status-badge status-suspended">' . __('Suspended', 'affiliate-cross-domain-full') . '</span>',
+            'pending' => '<span class="status-badge status-pending">' . __('Pending', 'affiliate-cross-domain-full') . '</span>'
+        ];
+        
+        return $badges[$status] ?? $status;
+    }
+
+    /**
+     * Get verification badge HTML
+     *
+     * @param string $status Verification status
+     * @return string Badge HTML
+     */
+    private function get_verification_badge($status) {
+        $badges = [
+            'verified' => '<span class="verification-badge verification-verified">' . __('Verified', 'affiliate-cross-domain-full') . '</span>',
+            'unverified' => '<span class="verification-badge verification-unverified">' . __('Unverified', 'affiliate-cross-domain-full') . '</span>',
+            'failed' => '<span class="verification-badge verification-failed">' . __('Failed', 'affiliate-cross-domain-full') . '</span>'
+        ];
+        
+        return $badges[$status] ?? $status;
+    }
+
+    /**
+     * Get domain actions HTML
+     *
+     * @param object $domain Domain object
+     * @return string Actions HTML
+     */
+    private function get_domain_actions($domain) {
+        $actions = [];
+        
+        $actions[] = '<button type="button" class="button button-small test-domain-connection" data-domain-id="' . $domain->id . '">' . __('Test', 'affiliate-cross-domain-full') . '</button>';
+        
+        $actions[] = '<button type="button" class="button button-small verify-domain" data-domain-id="' . $domain->id . '">' . __('Verify', 'affiliate-cross-domain-full') . '</button>';
+        
+        $actions[] = '<button type="button" class="button button-small edit-domain" data-domain-id="' . $domain->id . '">' . __('Edit', 'affiliate-cross-domain-full') . '</button>';
+        
+        $actions[] = '<button type="button" class="button button-small delete-domain" data-domain-id="' . $domain->id . '" data-domain-name="' . esc_attr($domain->domain_url) . '">' . __('Delete', 'affiliate-cross-domain-full') . '</button>';
+        
+        return implode(' ', $actions);
+    }
+
+    /**
+     * Get total domains count
+     *
+     * @param array $args Query arguments
+     * @return int Total count
+     */
+    private function get_total_domains($args = []) {
+        global $wpdb;
+        
+        $where_conditions = ['1=1'];
+        $where_values = [];
+        
+        if (!empty($args['status'])) {
+            $where_conditions[] = 'status = %s';
+            $where_values[] = $args['status'];
+        }
+        
+        if (!empty($args['verification_status'])) {
+            $where_conditions[] = 'verification_status = %s';
+            $where_values[] = $args['verification_status'];
+        }
+        
+        if (!empty($args['search'])) {
+            $where_conditions[] = '(domain_url LIKE %s OR domain_name LIKE %s OR owner_name LIKE %s)';
+            $search_term = '%' . $wpdb->esc_like($args['search']) . '%';
+            $where_values[] = $search_term;
+            $where_values[] = $search_term;
+            $where_values[] = $search_term;
+        }
+        
+        $where_clause = implode(' AND ', $where_conditions);
+        $query = "SELECT COUNT(*) FROM {$this->table_name} WHERE {$where_clause}";
+        
+        if (!empty($where_values)) {
+            $query = $wpdb->prepare($query, $where_values);
+        }
+        
+        return intval($wpdb->get_var($query));
     }
 }

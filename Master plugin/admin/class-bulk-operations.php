@@ -1423,19 +1423,7 @@ class AFFCD_Bulk_Operations {
         );
     }
 
-    /**
-     * Check if operation is cancelled
-     */
-    private function is_operation_cancelled($operation_id) {
-        global $wpdb;
-        
-        $status = $wpdb->get_var($wpdb->prepare(
-            "SELECT status FROM {$this->operations_log_table} WHERE id = %d",
-            $operation_id
-        ));
-        
-        return $status === 'cancelled';
-    }
+  
 
     /**
      * Cancel operation
@@ -1558,4 +1546,1199 @@ class AFFCD_Bulk_Operations {
     private function generate_api_key() {
         return 'affcd_' . wp_generate_password(32, false);
     }
+    <?php
+
+
+    /**
+     * Check if operation is cancelled
+     */
+    private function is_operation_cancelled($operation_id) {
+        global $wpdb;
+        
+        $status = $wpdb->get_var($wpdb->prepare(
+            "SELECT status FROM {$this->operations_log_table} WHERE id = %d",
+            $operation_id
+        ));
+        
+        return $status === 'cancelled';
+    }
+
+    
+
+    /**
+     * Rollback operation
+     */
+    private function rollback_operation($operation_id) {
+        global $wpdb;
+        
+        $operation = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$this->operations_log_table} WHERE id = %d",
+            $operation_id
+        ));
+
+        if (!$operation) {
+            return new WP_Error('not_found', __('Operation not found', 'affiliate-cross-domain'));
+        }
+
+        if (!$operation->can_rollback) {
+            return new WP_Error('cannot_rollback', __('Operation cannot be rolled back', 'affiliate-cross-domain'));
+        }
+
+        $rollback_data = json_decode($operation->rollback_data, true);
+        if (empty($rollback_data)) {
+            return new WP_Error('no_rollback_data', __('No rollback data available', 'affiliate-cross-domain'));
+        }
+
+        $errors = [];
+        foreach ($rollback_data as $item_id => $data) {
+            $result = $this->rollback_single_item($operation->operation_type, $operation->operation_name, $item_id, $data);
+            if (is_wp_error($result)) {
+                $errors[] = [
+                    'item_id' => $item_id,
+                    'error' => $result->get_error_message()
+                ];
+            }
+        }
+
+        // Update operation status
+        $wpdb->update(
+            $this->operations_log_table,
+            [
+                'status' => empty($errors) ? 'rolled_back' : 'rollback_failed',
+                'rollback_errors' => json_encode($errors),
+                'rolled_back_at' => current_time('mysql')
+            ],
+            ['id' => $operation_id],
+            ['%s', '%s', '%s'],
+            ['%d']
+        );
+
+        return empty($errors);
+    }
+
+    /**
+     * Rollback single item
+     */
+    private function rollback_single_item($operation_type, $operation, $item_id, $rollback_data) {
+        switch ($operation_type) {
+            case 'vanity_codes':
+                return $this->rollback_vanity_code_operation($operation, $item_id, $rollback_data);
+            case 'domains':
+                return $this->rollback_domain_operation($operation, $item_id, $rollback_data);
+            default:
+                return new WP_Error('invalid_type', 'Invalid operation type');
+        }
+    }
+
+    /**
+     * Process vanity code operation
+     */
+    private function process_vanity_code_operation($operation, $code_id, $options) {
+        global $wpdb;
+        
+        $vanity_table = $wpdb->prefix . 'affcd_vanity_codes';
+        $rollback_data = [];
+
+        // Get current state for rollback
+        $current_state = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$vanity_table} WHERE id = %d",
+            $code_id
+        ), ARRAY_A);
+
+        if (!$current_state) {
+            return new WP_Error('not_found', __('Vanity code not found', 'affiliate-cross-domain'));
+        }
+
+        $rollback_data['original_state'] = $current_state;
+
+        switch ($operation) {
+            case 'activate':
+                $result = $wpdb->update(
+                    $vanity_table,
+                    ['status' => 'active'],
+                    ['id' => $code_id],
+                    ['%s'],
+                    ['%d']
+                );
+                break;
+
+            case 'deactivate':
+                $result = $wpdb->update(
+                    $vanity_table,
+                    ['status' => 'inactive'],
+                    ['id' => $code_id],
+                    ['%s'],
+                    ['%d']
+                );
+                break;
+
+            case 'expire':
+                $result = $wpdb->update(
+                    $vanity_table,
+                    [
+                        'status' => 'expired',
+                        'expires_at' => current_time('mysql')
+                    ],
+                    ['id' => $code_id],
+                    ['%s', '%s'],
+                    ['%d']
+                );
+                break;
+
+            case 'delete':
+                // Soft delete by setting status
+                $result = $wpdb->update(
+                    $vanity_table,
+                    ['status' => 'deleted'],
+                    ['id' => $code_id],
+                    ['%s'],
+                    ['%d']
+                );
+                $rollback_data['deleted'] = true;
+                break;
+
+            case 'update_discount':
+                if (isset($options['discount_value']) && isset($options['discount_type'])) {
+                    $result = $wpdb->update(
+                        $vanity_table,
+                        [
+                            'discount_type' => $options['discount_type'],
+                            'discount_value' => floatval($options['discount_value'])
+                        ],
+                        ['id' => $code_id],
+                        ['%s', '%f'],
+                        ['%d']
+                    );
+                } else {
+                    return new WP_Error('missing_data', __('Missing discount data', 'affiliate-cross-domain'));
+                }
+                break;
+
+            default:
+                return new WP_Error('invalid_operation', __('Invalid operation', 'affiliate-cross-domain'));
+        }
+
+        if ($result === false) {
+            return new WP_Error('db_error', __('Database operation failed', 'affiliate-cross-domain'));
+        }
+
+        return ['rollback_data' => $rollback_data];
+    }
+
+    /**
+     * Process domain operation
+     */
+    private function process_domain_operation($operation, $domain_id, $options) {
+        global $wpdb;
+        
+        $domains_table = $wpdb->prefix . 'affcd_authorized_domains';
+        $rollback_data = [];
+
+        // Get current state for rollback
+        $current_state = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$domains_table} WHERE id = %d",
+            $domain_id
+        ), ARRAY_A);
+
+        if (!$current_state) {
+            return new WP_Error('not_found', __('Domain not found', 'affiliate-cross-domain'));
+        }
+
+        $rollback_data['original_state'] = $current_state;
+
+        switch ($operation) {
+            case 'activate':
+                $result = $wpdb->update(
+                    $domains_table,
+                    ['status' => 'active'],
+                    ['id' => $domain_id],
+                    ['%s'],
+                    ['%d']
+                );
+                break;
+
+            case 'suspend':
+                $result = $wpdb->update(
+                    $domains_table,
+                    [
+                        'status' => 'suspended',
+                        'suspended_at' => current_time('mysql'),
+                        'suspended_reason' => $options['reason'] ?? 'Bulk operation'
+                    ],
+                    ['id' => $domain_id],
+                    ['%s', '%s', '%s'],
+                    ['%d']
+                );
+                break;
+
+            case 'verify':
+                // Trigger domain verification
+                $domain_manager = new AFFCD_Domain_Manager();
+                $verification_result = $domain_manager->verify_domain($domain_id);
+                
+                if ($verification_result['success']) {
+                    $result = true;
+                } else {
+                    return new WP_Error('verification_failed', $verification_result['message']);
+                }
+                break;
+
+            case 'regenerate_api_key':
+                $new_api_key = affcd_generate_api_key();
+                $result = $wpdb->update(
+                    $domains_table,
+                    ['api_key' => $new_api_key],
+                    ['id' => $domain_id],
+                    ['%s'],
+                    ['%d']
+                );
+                $rollback_data['new_api_key'] = $new_api_key;
+                break;
+
+            default:
+                return new WP_Error('invalid_operation', __('Invalid operation', 'affiliate-cross-domain'));
+        }
+
+        if ($result === false) {
+            return new WP_Error('db_error', __('Database operation failed', 'affiliate-cross-domain'));
+        }
+
+        return ['rollback_data' => $rollback_data];
+    }
+
+    /**
+     * Rollback vanity code operation
+     */
+    private function rollback_vanity_code_operation($operation, $code_id, $rollback_data) {
+        global $wpdb;
+        
+        $vanity_table = $wpdb->prefix . 'affcd_vanity_codes';
+        $original_state = $rollback_data['original_state'];
+
+        if (isset($rollback_data['deleted']) && $rollback_data['deleted']) {
+            // Restore from soft delete
+            $result = $wpdb->update(
+                $vanity_table,
+                ['status' => $original_state['status']],
+                ['id' => $code_id],
+                ['%s'],
+                ['%d']
+            );
+        } else {
+            // Restore original values
+            $result = $wpdb->update(
+                $vanity_table,
+                [
+                    'status' => $original_state['status'],
+                    'discount_type' => $original_state['discount_type'],
+                    'discount_value' => $original_state['discount_value'],
+                    'expires_at' => $original_state['expires_at']
+                ],
+                ['id' => $code_id],
+                ['%s', '%s', '%f', '%s'],
+                ['%d']
+            );
+        }
+
+        return $result !== false;
+    }
+
+    /**
+     * Rollback domain operation
+     */
+    private function rollback_domain_operation($operation, $domain_id, $rollback_data) {
+        global $wpdb;
+        
+        $domains_table = $wpdb->prefix . 'affcd_authorized_domains';
+        $original_state = $rollback_data['original_state'];
+
+        $result = $wpdb->update(
+            $domains_table,
+            [
+                'status' => $original_state['status'],
+                'api_key' => $original_state['api_key'],
+                'suspended_at' => $original_state['suspended_at'],
+                'suspended_reason' => $original_state['suspended_reason']
+            ],
+            ['id' => $domain_id],
+            ['%s', '%s', '%s', '%s'],
+            ['%d']
+        );
+
+        return $result !== false;
+    }
+
+    /**
+     * Render tab content for vanity codes
+     */
+    private function render_vanity_codes_tab() {
+        ?>
+        <div class="affcd-operation-section">
+            <h3><?php _e('Vanity Code Operations', 'affiliate-cross-domain'); ?></h3>
+            
+            <form id="bulk-vanity-form" method="post">
+                <?php wp_nonce_field('affcd_bulk_nonce', 'affcd_bulk_nonce'); ?>
+                
+                <div class="form-group">
+                    <label for="vanity-operation"><?php _e('Operation', 'affiliate-cross-domain'); ?></label>
+                    <select id="vanity-operation" name="operation" required>
+                        <option value=""><?php _e('Select Operation', 'affiliate-cross-domain'); ?></option>
+                        <option value="activate"><?php _e('Activate', 'affiliate-cross-domain'); ?></option>
+                        <option value="deactivate"><?php _e('Deactivate', 'affiliate-cross-domain'); ?></option>
+                        <option value="expire"><?php _e('Expire', 'affiliate-cross-domain'); ?></option>
+                        <option value="delete"><?php _e('Delete', 'affiliate-cross-domain'); ?></option>
+                        <option value="update_discount"><?php _e('Update Discount', 'affiliate-cross-domain'); ?></option>
+                    </select>
+                </div>
+
+                <div id="discount-options" class="form-group" style="display: none;">
+                    <label for="discount-type"><?php _e('Discount Type', 'affiliate-cross-domain'); ?></label>
+                    <select id="discount-type" name="options[discount_type]">
+                        <option value="percentage"><?php _e('Percentage', 'affiliate-cross-domain'); ?></option>
+                        <option value="fixed"><?php _e('Fixed Amount', 'affiliate-cross-domain'); ?></option>
+                    </select>
+                    
+                    <label for="discount-value"><?php _e('Discount Value', 'affiliate-cross-domain'); ?></label>
+                    <input type="number" id="discount-value" name="options[discount_value]" step="0.01" min="0">
+                </div>
+
+                <div class="form-group">
+                    <label><?php _e('Select Codes', 'affiliate-cross-domain'); ?></label>
+                    <?php $this->render_vanity_codes_list(); ?>
+                </div>
+
+                <button type="submit" class="button button-primary">
+                    <?php _e('Execute Operation', 'affiliate-cross-domain'); ?>
+                </button>
+            </form>
+        </div>
+        <?php
+    }
+
+    /**
+     * Render tab content for domains
+     */
+    private function render_domains_tab() {
+        ?>
+        <div class="affcd-operation-section">
+            <h3><?php _e('Domain Operations', 'affiliate-cross-domain'); ?></h3>
+            
+            <form id="bulk-domain-form" method="post">
+                <?php wp_nonce_field('affcd_bulk_nonce', 'affcd_bulk_nonce'); ?>
+                
+                <div class="form-group">
+                    <label for="domain-operation"><?php _e('Operation', 'affiliate-cross-domain'); ?></label>
+                    <select id="domain-operation" name="operation" required>
+                        <option value=""><?php _e('Select Operation', 'affiliate-cross-domain'); ?></option>
+                        <option value="activate"><?php _e('Activate', 'affiliate-cross-domain'); ?></option>
+                        <option value="suspend"><?php _e('Suspend', 'affiliate-cross-domain'); ?></option>
+                        <option value="verify"><?php _e('Verify Connection', 'affiliate-cross-domain'); ?></option>
+                        <option value="regenerate_api_key"><?php _e('Regenerate API Key', 'affiliate-cross-domain'); ?></option>
+                    </select>
+                </div>
+
+                <div id="suspend-options" class="form-group" style="display: none;">
+                    <label for="suspend-reason"><?php _e('Suspension Reason', 'affiliate-cross-domain'); ?></label>
+                    <textarea id="suspend-reason" name="options[reason]" placeholder="<?php _e('Enter reason for suspension', 'affiliate-cross-domain'); ?>"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label><?php _e('Select Domains', 'affiliate-cross-domain'); ?></label>
+                    <?php $this->render_domains_list(); ?>
+                </div>
+
+                <button type="submit" class="button button-primary">
+                    <?php _e('Execute Operation', 'affiliate-cross-domain'); ?>
+                </button>
+            </form>
+        </div>
+        <?php
+    }
+
+    /**
+     * Render import/export tab
+     */
+    private function render_import_export_tab() {
+        ?>
+        <div class="affcd-operation-section">
+            <h3><?php _e('Export Data', 'affiliate-cross-domain'); ?></h3>
+            
+            <form id="export-form" method="post">
+                <?php wp_nonce_field('affcd_bulk_nonce', 'affcd_bulk_nonce'); ?>
+                
+                <div class="form-group">
+                    <label for="export-type"><?php _e('Export Type', 'affiliate-cross-domain'); ?></label>
+                    <select id="export-type" name="export_type" required>
+                        <option value=""><?php _e('Select Export Type', 'affiliate-cross-domain'); ?></option>
+                        <option value="vanity_codes"><?php _e('Vanity Codes', 'affiliate-cross-domain'); ?></option>
+                        <option value="domains"><?php _e('Authorized Domains', 'affiliate-cross-domain'); ?></option>
+                        <option value="analytics"><?php _e('Analytics Data', 'affiliate-cross-domain'); ?></option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="export-format"><?php _e('Format', 'affiliate-cross-domain'); ?></label>
+                    <select id="export-format" name="export_format">
+                        <option value="csv"><?php _e('CSV', 'affiliate-cross-domain'); ?></option>
+                        <option value="json"><?php _e('JSON', 'affiliate-cross-domain'); ?></option>
+                        <option value="xml"><?php _e('XML', 'affiliate-cross-domain'); ?></option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="date-range"><?php _e('Date Range', 'affiliate-cross-domain'); ?></label>
+                    <input type="date" id="date-from" name="date_from" placeholder="<?php _e('From', 'affiliate-cross-domain'); ?>">
+                    <input type="date" id="date-to" name="date_to" placeholder="<?php _e('To', 'affiliate-cross-domain'); ?>">
+                </div>
+
+                <button type="button" id="execute-export" class="button button-primary">
+                    <?php _e('Export Data', 'affiliate-cross-domain'); ?>
+                </button>
+            </form>
+        </div>
+
+        <div class="affcd-operation-section">
+            <h3><?php _e('Import Data', 'affiliate-cross-domain'); ?></h3>
+            
+            <form id="import-form" method="post" enctype="multipart/form-data">
+                <?php wp_nonce_field('affcd_bulk_nonce', 'affcd_bulk_nonce'); ?>
+                
+                <div class="form-group">
+                    <label for="import-type"><?php _e('Import Type', 'affiliate-cross-domain'); ?></label>
+                    <select id="import-type" name="import_type" required>
+                        <option value=""><?php _e('Select Import Type', 'affiliate-cross-domain'); ?></option>
+                        <option value="vanity_codes"><?php _e('Vanity Codes', 'affiliate-cross-domain'); ?></option>
+                        <option value="domains"><?php _e('Authorized Domains', 'affiliate-cross-domain'); ?></option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="import-file"><?php _e('File', 'affiliate-cross-domain'); ?></label>
+                    <input type="file" id="import-file" name="import_file" accept=".csv,.json,.xml" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="import-update-existing" name="update_existing" value="1">
+                        <?php _e('Update existing records', 'affiliate-cross-domain'); ?>
+                    </label>
+                </div>
+                
+                <button type="button" id="execute-import" class="button button-primary">
+                    <?php _e('Import Data', 'affiliate-cross-domain'); ?>
+                </button>
+            </form>
+
+            <div id="import-preview" style="display: none; margin-top: 20px;">
+                <h4><?php _e('Import Preview', 'affiliate-cross-domain'); ?></h4>
+                <div id="import-preview-content"></div>
+                <div style="margin-top: 15px;">
+                    <button type="button" id="confirm-import" class="button button-primary">
+                        <?php _e('Confirm Import', 'affiliate-cross-domain'); ?>
+                    </button>
+                    <button type="button" id="cancel-import" class="button">
+                        <?php _e('Cancel', 'affiliate-cross-domain'); ?>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Downloads -->
+        <div class="affcd-operation-section">
+            <h3><?php _e('Recent Downloads', 'affiliate-cross-domain'); ?></h3>
+            <div id="recent-downloads">
+                <?php $this->render_recent_downloads(); ?>
+            </div>
+        </div>
+        <?php
+    }
+
+    /**
+     * Render operations log tab
+     */
+    private function render_operations_log_tab() {
+        $operations = $this->get_recent_operations();
+        ?>
+        <div class="operations-log-tab">
+            <div class="affcd-operation-section">
+                <h3><?php _e('Recent Operations', 'affiliate-cross-domain'); ?></h3>
+                
+                <div class="affcd-operations-table">
+                    <table class="wp-list-table widefat fixed striped">
+                        <thead>
+                            <tr>
+                                <th><?php _e('Operation', 'affiliate-cross-domain'); ?></th>
+                                <th><?php _e('Type', 'affiliate-cross-domain'); ?></th>
+                                <th><?php _e('Status', 'affiliate-cross-domain'); ?></th>
+                                <th><?php _e('Progress', 'affiliate-cross-domain'); ?></th>
+                                <th><?php _e('Started', 'affiliate-cross-domain'); ?></th>
+                                <th><?php _e('Actions', 'affiliate-cross-domain'); ?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (empty($operations)): ?>
+                                <tr>
+                                    <td colspan="6"><?php _e('No operations found.', 'affiliate-cross-domain'); ?></td>
+                                </tr>
+                            <?php else: ?>
+                                <?php foreach ($operations as $operation): ?>
+                                    <tr>
+                                        <td><strong><?php echo esc_html(ucwords(str_replace('_', ' ', $operation->operation_name))); ?></strong></td>
+                                        <td><?php echo esc_html(ucwords(str_replace('_', ' ', $operation->operation_type))); ?></td>
+                                        <td>
+                                            <span class="status-badge status-<?php echo esc_attr($operation->status); ?>">
+                                                <?php echo esc_html(ucwords($operation->status)); ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <?php if ($operation->total_items > 0): ?>
+                                                <div class="progress-bar">
+                                                    <div class="progress-fill" style="width: <?php echo esc_attr($operation->progress_percentage ?? 0); ?>%"></div>
+                                                </div>
+                                                <span class="progress-text">
+                                                    <?php echo intval($operation->processed_items ?? 0); ?>/<?php echo intval($operation->total_items); ?>
+                                                    (<?php echo number_format($operation->progress_percentage ?? 0, 1); ?>%)
+                                                </span>
+                                            <?php else: ?>
+                                                <?php _e('N/A', 'affiliate-cross-domain'); ?>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td><?php echo esc_html(mysql2date('Y-m-d H:i:s', $operation->started_at)); ?></td>
+                                        <td>
+                                            <?php if (in_array($operation->status, ['pending', 'running'])): ?>
+                                                <button type="button" class="button button-small cancel-operation" data-operation-id="<?php echo esc_attr($operation->id); ?>">
+                                                    <?php _e('Cancel', 'affiliate-cross-domain'); ?>
+                                                </button>
+                                            <?php endif; ?>
+                                            
+                                            <?php if ($operation->can_rollback): ?>
+                                                <button type="button" class="button button-small rollback-operation" data-operation-id="<?php echo esc_attr($operation->id); ?>">
+                                                    <?php _e('Rollback', 'affiliate-cross-domain'); ?>
+                                                </button>
+                                            <?php endif; ?>
+                                            
+                                            <button type="button" class="button button-small view-operation-details" data-operation-id="<?php echo esc_attr($operation->id); ?>">
+                                                <?php _e('Details', 'affiliate-cross-domain'); ?>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <?php
+    }
+
+    /**
+     * Render vanity codes list for selection
+     */
+    private function render_vanity_codes_list() {
+        global $wpdb;
+        
+        $vanity_table = $wpdb->prefix . 'affcd_vanity_codes';
+        $codes = $wpdb->get_results(
+            "SELECT id, vanity_code, status, affiliate_id, usage_count 
+             FROM {$vanity_table} 
+             WHERE status != 'deleted' 
+             ORDER BY created_at DESC 
+             LIMIT 100"
+        );
+
+        if (empty($codes)) {
+            echo '<p>' . __('No vanity codes found.', 'affiliate-cross-domain') . '</p>';
+            return;
+        }
+
+        echo '<div class="codes-selection-list">';
+        echo '<label><input type="checkbox" id="select-all-codes"> ' . __('Select All', 'affiliate-cross-domain') . '</label>';
+        
+        foreach ($codes as $code) {
+            echo '<div class="code-item">';
+            echo '<label>';
+            echo '<input type="checkbox" name="codes[]" value="' . esc_attr($code->id) . '">';
+            echo '<strong>' . esc_html($code->vanity_code) . '</strong> ';
+            echo '<span class="status-' . esc_attr($code->status) . '">' . esc_html(ucwords($code->status)) . '</span> ';
+            echo '<small>(' . sprintf(__('Used %d times', 'affiliate-cross-domain'), $code->usage_count) . ')</small>';
+            echo '</label>';
+            echo '</div>';
+        }
+        
+        echo '</div>';
+    }
+
+    /**
+     * Render domains list for selection
+     */
+    private function render_domains_list() {
+        global $wpdb;
+        
+        $domains_table = $wpdb->prefix . 'affcd_authorized_domains';
+        $domains = $wpdb->get_results(
+            "SELECT id, domain_url, domain_name, status, verification_status 
+             FROM {$domains_table} 
+             ORDER BY created_at DESC"
+        );
+
+        if (empty($domains)) {
+            echo '<p>' . __('No domains found.', 'affiliate-cross-domain') . '</p>';
+            return;
+        }
+
+        echo '<div class="domains-selection-list">';
+        echo '<label><input type="checkbox" id="select-all-domains"> ' . __('Select All', 'affiliate-cross-domain') . '</label>';
+        
+        foreach ($domains as $domain) {
+            echo '<div class="domain-item">';
+            echo '<label>';
+            echo '<input type="checkbox" name="domains[]" value="' . esc_attr($domain->id) . '">';
+            echo '<strong>' . esc_html($domain->domain_url) . '</strong> ';
+            if ($domain->domain_name) {
+                echo '(' . esc_html($domain->domain_name) . ') ';
+            }
+            echo '<span class="status-' . esc_attr($domain->status) . '">' . esc_html(ucwords($domain->status)) . '</span> ';
+            echo '<span class="verification-' . esc_attr($domain->verification_status) . '">' . esc_html(ucwords($domain->verification_status)) . '</span>';
+            echo '</label>';
+            echo '</div>';
+        }
+        
+        echo '</div>';
+    }
+
+    /**
+     * Get recent operations
+     */
+    private function get_recent_operations($limit = 20) {
+        global $wpdb;
+        
+        $this->maybe_create_operations_log_table();
+        
+        return $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$this->operations_log_table} 
+             ORDER BY started_at DESC 
+             LIMIT %d",
+            $limit
+        ));
+    }
+
+    /**
+     * Maybe create operations log table
+     */
+    private function maybe_create_operations_log_table() {
+        global $wpdb;
+        
+        if ($wpdb->get_var("SHOW TABLES LIKE '{$this->operations_log_table}'") !== $this->operations_log_table) {
+            $charset_collate = $wpdb->get_charset_collate();
+            
+            $sql = "CREATE TABLE {$this->operations_log_table} (
+                id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+                operation_type varchar(50) NOT NULL,
+                operation_name varchar(100) NOT NULL,
+                total_items int unsigned NOT NULL DEFAULT 0,
+                processed_items int unsigned NOT NULL DEFAULT 0,
+                progress_percentage decimal(5,2) NOT NULL DEFAULT 0.00,
+                items_data longtext,
+                options_data longtext,
+                status enum('pending','running','completed','failed','cancelled','rolled_back','rollback_failed') NOT NULL DEFAULT 'pending',
+                errors_data longtext,
+                rollback_data longtext,
+                rollback_errors longtext,
+                can_rollback tinyint(1) NOT NULL DEFAULT 0,
+                user_id bigint(20) unsigned NOT NULL,
+                started_at datetime NOT NULL,
+                completed_at datetime DEFAULT NULL,
+                rolled_back_at datetime DEFAULT NULL,
+                PRIMARY KEY (id),
+                KEY idx_status (status),
+                KEY idx_user_id (user_id),
+                KEY idx_started_at (started_at),
+                KEY idx_operation_type (operation_type),
+                KEY idx_can_rollback (can_rollback)
+            ) {$charset_collate};";
+
+            require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+            dbDelta($sql);
+        }
+    }
+
+    /**
+     * Cleanup old operations
+     */
+    public function cleanup_old_operations() {
+        global $wpdb;
+        
+        // Clean operations older than 30 days
+        $cutoff_date = date('Y-m-d H:i:s', strtotime('-30 days'));
+        
+        $deleted = $wpdb->query($wpdb->prepare(
+            "DELETE FROM {$this->operations_log_table} 
+             WHERE status IN ('completed', 'failed', 'cancelled', 'rolled_back') 
+             AND started_at < %s",
+            $cutoff_date
+        ));
+
+        if ($deleted > 0) {
+            affcd_log_activity('bulk_operations_cleanup', [
+                'deleted_operations' => $deleted,
+                'cutoff_date' => $cutoff_date
+            ]);
+        }
+    }
+
+    /**
+     * Export data
+     */
+    public function export_data($export_type, $format = 'csv', $options = []) {
+        global $wpdb;
+        
+        $data = [];
+        $filename = '';
+        
+        switch ($export_type) {
+            case 'vanity_codes':
+                $filename = 'vanity-codes-' . date('Y-m-d');
+                $table = $wpdb->prefix . 'affcd_vanity_codes';
+                $data = $wpdb->get_results("SELECT * FROM {$table} WHERE status != 'deleted'", ARRAY_A);
+                break;
+                
+            case 'domains':
+                $filename = 'authorized-domains-' . date('Y-m-d');
+                $table = $wpdb->prefix . 'affcd_authorized_domains';
+                $data = $wpdb->get_results("SELECT * FROM {$table}", ARRAY_A);
+                
+                // Remove sensitive data
+                foreach ($data as &$row) {
+                    unset($row['api_secret']);
+                    $row['api_key'] = substr($row['api_key'], 0, 8) . '...';
+                }
+                break;
+                
+            case 'analytics':
+                $filename = 'analytics-data-' . date('Y-m-d');
+                $table = $wpdb->prefix . 'affcd_analytics';
+                $where_clause = '';
+                
+                if (!empty($options['date_from'])) {
+                    $where_clause .= $wpdb->prepare(" AND created_at >= %s", $options['date_from']);
+                }
+                
+                if (!empty($options['date_to'])) {
+                    $where_clause .= $wpdb->prepare(" AND created_at <= %s", $options['date_to'] . ' 23:59:59');
+                }
+                
+                $data = $wpdb->get_results("SELECT * FROM {$table} WHERE 1=1 {$where_clause} ORDER BY created_at DESC", ARRAY_A);
+                break;
+                
+            default:
+                return new WP_Error('invalid_export_type', __('Invalid export type', 'affiliate-cross-domain'));
+        }
+
+        if (empty($data)) {
+            return new WP_Error('no_data', __('No data available for export', 'affiliate-cross-domain'));
+        }
+
+        $upload_dir = wp_upload_dir();
+        $export_dir = $upload_dir['basedir'] . '/affcd-exports/';
+        
+        if (!file_exists($export_dir)) {
+            wp_mkdir_p($export_dir);
+        }
+
+        $file_path = $export_dir . $filename . '.' . $format;
+        
+        switch ($format) {
+            case 'csv':
+                $result = $this->export_to_csv($data, $file_path);
+                break;
+                
+            case 'json':
+                $result = $this->export_to_json($data, $file_path);
+                break;
+                
+            case 'xml':
+                $result = $this->export_to_xml($data, $file_path, $export_type);
+                break;
+                
+            default:
+                return new WP_Error('invalid_format', __('Invalid export format', 'affiliate-cross-domain'));
+        }
+
+        if (is_wp_error($result)) {
+            return $result;
+        }
+
+        $file_url = $upload_dir['baseurl'] . '/affcd-exports/' . basename($file_path);
+        
+        return [
+            'file_path' => $file_path,
+            'file_url' => $file_url,
+            'filename' => basename($file_path),
+            'records_exported' => count($data)
+        ];
+    }
+
+    /**
+     * Export to CSV
+     */
+    private function export_to_csv($data, $file_path) {
+        $fp = fopen($file_path, 'w');
+        
+        if (!$fp) {
+            return new WP_Error('file_error', __('Could not create export file', 'affiliate-cross-domain'));
+        }
+        
+        // Write headers
+        if (!empty($data)) {
+            fputcsv($fp, array_keys($data[0]));
+            
+            // Write data
+            foreach ($data as $row) {
+                fputcsv($fp, $row);
+            }
+        }
+        
+        fclose($fp);
+        return true;
+    }
+
+    /**
+     * Export to JSON
+     */
+    private function export_to_json($data, $file_path) {
+        $json = wp_json_encode($data, JSON_PRETTY_PRINT);
+        
+        if (file_put_contents($file_path, $json) === false) {
+            return new WP_Error('file_error', __('Could not create export file', 'affiliate-cross-domain'));
+        }
+        
+        return true;
+    }
+
+    /**
+     * Export to XML
+     */
+    private function export_to_xml($data, $file_path, $root_element) {
+        $xml = new SimpleXMLElement('<?xml version="1.0" encoding="UTF-8"?><' . $root_element . '></' . $root_element . '>');
+        
+        foreach ($data as $row) {
+            $item = $xml->addChild('item');
+            foreach ($row as $key => $value) {
+                $item->addChild(htmlspecialchars($key), htmlspecialchars($value));
+            }
+        }
+        
+        if ($xml->asXML($file_path) === false) {
+            return new WP_Error('file_error', __('Could not create export file', 'affiliate-cross-domain'));
+        }
+        
+        return true;
+    }
+
+    /**
+     * Import data from file
+     */
+    public function import_data($import_type, $file_path, $options = []) {
+        if (!file_exists($file_path)) {
+            return new WP_Error('file_not_found', __('Import file not found', 'affiliate-cross-domain'));
+        }
+
+        $extension = pathinfo($file_path, PATHINFO_EXTENSION);
+        $data = [];
+        
+        switch ($extension) {
+            case 'csv':
+                $data = $this->parse_csv_file($file_path);
+                break;
+                
+            case 'json':
+                $data = $this->parse_json_file($file_path);
+                break;
+                
+            case 'xml':
+                $data = $this->parse_xml_file($file_path);
+                break;
+                
+            default:
+                return new WP_Error('invalid_format', __('Unsupported file format', 'affiliate-cross-domain'));
+        }
+
+        if (is_wp_error($data)) {
+            return $data;
+        }
+
+        if (empty($data)) {
+            return new WP_Error('no_data', __('No data found in import file', 'affiliate-cross-domain'));
+        }
+
+        // Validate and process data based on import type
+        return $this->process_import_data($import_type, $data, $options);
+    }
+
+    /**
+     * Parse CSV file
+     */
+    private function parse_csv_file($file_path) {
+        $data = [];
+        $headers = [];
+        
+        if (($handle = fopen($file_path, 'r')) !== false) {
+            $row_count = 0;
+            while (($row = fgetcsv($handle)) !== false) {
+                if ($row_count === 0) {
+                    $headers = $row;
+                } else {
+                    $data[] = array_combine($headers, $row);
+                }
+                $row_count++;
+            }
+            fclose($handle);
+        } else {
+            return new WP_Error('file_error', __('Could not read import file', 'affiliate-cross-domain'));
+        }
+        
+        return $data;
+    }
+
+    /**
+     * Parse JSON file
+     */
+    private function parse_json_file($file_path) {
+        $content = file_get_contents($file_path);
+        $data = json_decode($content, true);
+        
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return new WP_Error('json_error', __('Invalid JSON format', 'affiliate-cross-domain'));
+        }
+        
+        return $data;
+    }
+
+    /**
+     * Parse XML file
+     */
+    private function parse_xml_file($file_path) {
+        $xml = simplexml_load_file($file_path);
+        
+        if ($xml === false) {
+            return new WP_Error('xml_error', __('Invalid XML format', 'affiliate-cross-domain'));
+        }
+        
+        $data = [];
+        foreach ($xml->item as $item) {
+            $row = [];
+            foreach ($item as $key => $value) {
+                $row[$key] = (string) $value;
+            }
+            $data[] = $row;
+        }
+        
+        return $data;
+    }
+
+    /**
+     * Process import data
+     */
+    private function process_import_data($import_type, $data, $options = []) {
+        $imported = 0;
+        $updated = 0;
+        $errors = [];
+        $update_existing = !empty($options['update_existing']);
+
+        foreach ($data as $index => $row) {
+            $result = $this->import_single_record($import_type, $row, $update_existing);
+            
+            if (is_wp_error($result)) {
+                $errors[] = [
+                    'row' => $index + 1,
+                    'error' => $result->get_error_message(),
+                    'data' => $row
+                ];
+            } else {
+                if ($result['action'] === 'created') {
+                    $imported++;
+                } else {
+                    $updated++;
+                }
+            }
+        }
+
+        return [
+            'imported' => $imported,
+            'updated' => $updated,
+            'errors' => $errors,
+            'total_processed' => count($data)
+        ];
+    }
+
+    /**
+     * Import single record
+     */
+    private function import_single_record($import_type, $data, $update_existing) {
+        global $wpdb;
+        
+        switch ($import_type) {
+            case 'vanity_codes':
+                return $this->import_vanity_code($data, $update_existing);
+                
+            case 'domains':
+                return $this->import_domain($data, $update_existing);
+                
+            default:
+                return new WP_Error('invalid_type', __('Invalid import type', 'affiliate-cross-domain'));
+        }
+    }
+
+    /**
+     * Import vanity code
+     */
+    private function import_vanity_code($data, $update_existing) {
+        global $wpdb;
+        
+        $table = $wpdb->prefix . 'affcd_vanity_codes';
+        
+        // Required fields
+        if (empty($data['vanity_code']) || empty($data['affiliate_id'])) {
+            return new WP_Error('missing_data', __('Missing required fields: vanity_code, affiliate_id', 'affiliate-cross-domain'));
+        }
+
+        // Check if code exists
+        $existing = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM {$table} WHERE vanity_code = %s",
+            $data['vanity_code']
+        ));
+
+        if ($existing) {
+            if (!$update_existing) {
+                return new WP_Error('duplicate', __('Vanity code already exists', 'affiliate-cross-domain'));
+            }
+            
+            // Update existing
+            $result = $wpdb->update(
+                $table,
+                [
+                    'affiliate_id' => $data['affiliate_id'],
+                    'description' => $data['description'] ?? '',
+                    'discount_type' => $data['discount_type'] ?? 'percentage',
+                    'discount_value' => $data['discount_value'] ?? 0,
+                    'status' => $data['status'] ?? 'active'
+                ],
+                ['id' => $existing],
+                ['%d', '%s', '%s', '%f', '%s'],
+                ['%d']
+            );
+            
+            return $result !== false ? ['action' => 'updated'] : new WP_Error('update_failed', __('Failed to update record', 'affiliate-cross-domain'));
+        } else {
+            // Insert new
+            $result = $wpdb->insert(
+                $table,
+                [
+                    'vanity_code' => $data['vanity_code'],
+                    'affiliate_id' => $data['affiliate_id'],
+                    'affiliate_code' => $data['affiliate_code'] ?? $data['vanity_code'],
+                    'description' => $data['description'] ?? '',
+                    'discount_type' => $data['discount_type'] ?? 'percentage',
+                    'discount_value' => $data['discount_value'] ?? 0,
+                    'status' => $data['status'] ?? 'active',
+                    'created_by' => get_current_user_id()
+                ],
+                ['%s', '%d', '%s', '%s', '%s', '%f', '%s', '%d']
+            );
+            
+            return $result !== false ? ['action' => 'created'] : new WP_Error('insert_failed', __('Failed to create record', 'affiliate-cross-domain'));
+        }
+    }
+
+    /**
+     * Import domain
+     */
+    private function import_domain($data, $update_existing) {
+        global $wpdb;
+        
+        $table = $wpdb->prefix . 'affcd_authorized_domains';
+        
+        // Required fields
+        if (empty($data['domain_url'])) {
+            return new WP_Error('missing_data', __('Missing required field: domain_url', 'affiliate-cross-domain'));
+        }
+
+        // Check if domain exists
+        $existing = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM {$table} WHERE domain_url = %s",
+            $data['domain_url']
+        ));
+
+        if ($existing) {
+            if (!$update_existing) {
+                return new WP_Error('duplicate', __('Domain already exists', 'affiliate-cross-domain'));
+            }
+            
+            // Update existing (don't overwrite API credentials)
+            $result = $wpdb->update(
+                $table,
+                [
+                    'domain_name' => $data['domain_name'] ?? '',
+                    'status' => $data['status'] ?? 'active',
+                    'owner_email' => $data['owner_email'] ?? '',
+                    'owner_name' => $data['owner_name'] ?? ''
+                ],
+                ['id' => $existing],
+                ['%s', '%s', '%s', '%s'],
+                ['%d']
+            );
+            
+            return $result !== false ? ['action' => 'updated'] : new WP_Error('update_failed', __('Failed to update record', 'affiliate-cross-domain'));
+        } else {
+            // Insert new
+            $result = $wpdb->insert(
+                $table,
+                [
+                    'domain_url' => $data['domain_url'],
+                    'domain_name' => $data['domain_name'] ?? '',
+                    'api_key' => affcd_generate_api_key(),
+                    'api_secret' => affcd_hash_api_secret(affcd_generate_api_secret()),
+                    'status' => $data['status'] ?? 'pending',
+                    'owner_email' => $data['owner_email'] ?? '',
+                    'owner_name' => $data['owner_name'] ?? '',
+                    'created_by' => get_current_user_id()
+                ],
+                ['%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d']
+            );
+            
+            return $result !== false ? ['action' => 'created'] : new WP_Error('insert_failed', __('Failed to create record', 'affiliate-cross-domain'));
+        }
+    }
+
+    /**
+     * Get dashboard statistics
+     */
+    private function get_dashboard_statistics() {
+        global $wpdb;
+        
+        $stats = [];
+        
+        // Vanity codes stats
+        $vanity_table = $wpdb->prefix . 'affcd_vanity_codes';
+        $stats['vanity_codes'] = [
+            'total' => $this->count_vanity_codes_by_status('all'),
+            'active' => $this->count_vanity_codes_by_status('active'),
+            'inactive' => $this->count_vanity_codes_by_status('inactive'),
+            'expired' => $this->count_expired_vanity_codes()
+        ];
+        
+        // Domains stats
+        $domains_table = $wpdb->prefix . 'affcd_authorized_domains';
+        $stats['domains'] = [
+            'total' => $this->count_domains_by_status('all'),
+            'active' => $this->count_domains_by_status('active'),
+            'inactive' => $this->count_domains_by_status('inactive'),
+            'unverified' => $this->count_unverified_domains()
+        ];
+        
+        return $stats;
+    }
+
+
 }

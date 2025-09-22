@@ -1,484 +1,958 @@
-<?php
 /**
- * Admin menu class referenced in main plugin but not implemented
+ * Domain Management JavaScript
+ *
+ * Handles all client-side interactions for the domain management interface
+ * including AJAX requests, form validation, and real-time testing.
+ *
+ * @package AffiliateWP_Cross_Domain_Full
+ * @version 1.0.0
  */
 
-if (!defined('ABSPATH')) {
-    exit;
-}
+jQuery(document).ready(function ($) {
+  "use strict";
 
-class AFFCD_Admin_Menu {
-    
-    public function __construct() {
-        add_action('admin_menu', [$this, 'add_admin_menu']);
-        add_action('admin_init', [$this, 'admin_init']);
-    }
-    
-    public function add_admin_menu() {
-        // Check if AffiliateWP exists, if not create our own menu
-        if (function_exists('affiliate_wp')) {
-            $parent_slug = 'affiliate-wp';
+  const DomainManagement = {
+    /**
+     * Initialize domain management
+     */
+    init: function () {
+      this.bindEvents();
+      this.initDataTables();
+      this.setupFormValidation();
+    },
+
+    /**
+     * Bind event handlers
+     */
+    bindEvents: function () {
+      // Test domain connection
+      $(document).on(
+        "click",
+        ".test-domain-connection",
+        this.testDomainConnection
+      );
+
+      // Generate API key
+      $(document).on("click", ".generate-api-key", this.generateApiKey);
+
+      // Test webhook
+      $(document).on("click", ".test-webhook", this.testWebhook);
+
+      // Add new domain
+      $(document).on("submit", "#add-domain-form", this.addDomain);
+
+      // Update domain
+      $(document).on("submit", ".edit-domain-form", this.updateDomain);
+
+      // Delete domain
+      $(document).on("click", ".delete-domain", this.deleteDomain);
+
+      // Verify domain
+      $(document).on("click", ".verify-domain", this.verifyDomain);
+
+      // Toggle domain status
+      $(document).on(
+        "change",
+        ".domain-status-toggle",
+        this.toggleDomainStatus
+      );
+
+      // Bulk actions
+      $(document).on("click", "#bulk-action-apply", this.applyBulkAction);
+
+      // Domain search
+      $(document).on(
+        "input",
+        "#domain-search",
+        this.debounce(this.searchDomains, 300)
+      );
+
+      // Refresh domain list
+      $(document).on("click", ".refresh-domains", this.refreshDomainList);
+
+      // Export domains
+      $(document).on("click", ".export-domains", this.exportDomains);
+    },
+
+    /**
+     * Initialize DataTables
+     */
+    initDataTables: function () {
+      if ($("#domains-table").length) {
+        $("#domains-table").DataTable({
+          ajax: {
+            url: ajaxurl,
+            type: "POST",
+            data: {
+              action: "affcd_get_domains",
+              nonce: affcdAjax.nonce,
+            },
+          },
+          columns: [
+            { data: "checkbox", orderable: false, searchable: false },
+            { data: "domain_url" },
+            { data: "domain_name" },
+            { data: "status" },
+            { data: "verification_status" },
+            { data: "last_activity" },
+            { data: "actions", orderable: false, searchable: false },
+          ],
+          order: [[5, "desc"]],
+          pageLength: 25,
+          responsive: true,
+          processing: true,
+          serverSide: false,
+        });
+      }
+    },
+
+    /**
+     * Setup form validation
+     */
+    setupFormValidation: function () {
+      // Domain URL validation
+      $(document).on("input", ".domain-url-input", function () {
+        const $input = $(this);
+        const url = $input.val().trim();
+
+        if (url && !DomainManagement.isValidUrl(url)) {
+          $input.addClass("error");
+          $input.next(".validation-message").text(affcdAjax.strings.invalidUrl);
         } else {
-            // Create main menu
-            add_menu_page(
-                __('Affiliate System', 'affiliate-cross-domain'),
-                __('Affiliate System', 'affiliate-cross-domain'),
-                'manage_options',
-                'affcd-main',
-                [$this, 'render_main_page'],
-                'dashicons-networking',
-                30
+          $input.removeClass("error");
+          $input.next(".validation-message").text("");
+        }
+      });
+
+      // API key validation
+      $(document).on("input", ".api-key-input", function () {
+        const $input = $(this);
+        const key = $input.val().trim();
+
+        if (key && key.length < 20) {
+          $input.addClass("error");
+          $input
+            .next(".validation-message")
+            .text(affcdAjax.strings.apiKeyTooShort);
+        } else {
+          $input.removeClass("error");
+          $input.next(".validation-message").text("");
+        }
+      });
+    },
+
+    /**
+     * Test domain connection
+     */
+    testDomainConnection: function (e) {
+      e.preventDefault();
+
+      const $button = $(this);
+      const domainId = $button.data("domain-id");
+      const $status = $button.next(".test-status");
+
+      if (!domainId) {
+        DomainManagement.showNotice("error", affcdAjax.strings.invalidDomain);
+        return;
+      }
+
+      $button.prop("disabled", true).text(affcdAjax.strings.testing);
+      $status.removeClass("success error").addClass("testing").text("");
+
+      $.ajax({
+        url: ajaxurl,
+        type: "POST",
+        data: {
+          action: "affcd_test_domain_connection",
+          domain_id: domainId,
+          nonce: affcdAjax.nonce,
+        },
+        success: function (response) {
+          if (response.success) {
+            $status
+              .removeClass("testing")
+              .addClass("success")
+              .text(
+                affcdAjax.strings.success +
+                  " (" +
+                  response.data.response_time +
+                  "ms)"
+              );
+            DomainManagement.showNotice("success", response.data.message);
+          } else {
+            $status
+              .removeClass("testing")
+              .addClass("error")
+              .text(affcdAjax.strings.error);
+            DomainManagement.showNotice(
+              "error",
+              response.data.message || affcdAjax.strings.connectionFailed
             );
-            $parent_slug = 'affcd-main';
-        }
-        
-        // Add submenu pages
-        add_submenu_page(
-            $parent_slug,
-            __('Vanity Codes', 'affiliate-cross-domain'),
-            __('Vanity Codes', 'affiliate-cross-domain'),
-            'manage_affiliates',
-            'affcd-vanity-codes',
-            [$this, 'render_vanity_codes_page']
+          }
+        },
+        error: function (xhr, status, error) {
+          $status
+            .removeClass("testing")
+            .addClass("error")
+            .text(affcdAjax.strings.error);
+          DomainManagement.showNotice(
+            "error",
+            affcdAjax.strings.connectionError
+          );
+        },
+        complete: function () {
+          $button
+            .prop("disabled", false)
+            .text(affcdAjax.strings.testConnection);
+        },
+      });
+    },
+
+    /**
+     * Generate API key
+     */
+    generateApiKey: function (e) {
+      e.preventDefault();
+
+      const $button = $(this);
+      const $input = $button.siblings(".api-key-input");
+
+      if (!confirm(affcdAjax.strings.confirmGenerateKey)) {
+        return;
+      }
+
+      $button.prop("disabled", true).text(affcdAjax.strings.generating);
+
+      $.ajax({
+        url: ajaxurl,
+        type: "POST",
+        data: {
+          action: "affcd_generate_api_key",
+          nonce: affcdAjax.nonce,
+        },
+        success: function (response) {
+          if (response.success && response.data.api_key) {
+            $input.val(response.data.api_key);
+            DomainManagement.showNotice(
+              "success",
+              affcdAjax.strings.keyGenerated
+            );
+          } else {
+            DomainManagement.showNotice(
+              "error",
+              response.data.message || affcdAjax.strings.keyGenerationFailed
+            );
+          }
+        },
+        error: function () {
+          DomainManagement.showNotice(
+            "error",
+            affcdAjax.strings.keyGenerationError
+          );
+        },
+        complete: function () {
+          $button.prop("disabled", false).text(affcdAjax.strings.generate);
+        },
+      });
+    },
+
+    /**
+     * Test webhook
+     */
+    testWebhook: function (e) {
+      e.preventDefault();
+
+      const $button = $(this);
+      const webhookUrl = $button.siblings(".webhook-url-input").val();
+      const webhookSecret = $button.siblings(".webhook-secret-input").val();
+      const $status = $button.next(".webhook-status");
+
+      if (!webhookUrl) {
+        DomainManagement.showNotice(
+          "error",
+          affcdAjax.strings.webhookUrlRequired
         );
-        
-        add_submenu_page(
-            $parent_slug,
-            __('Analytics', 'affiliate-cross-domain'),
-            __('Analytics', 'affiliate-cross-domain'),
-            'manage_affiliates',
-            'affcd-analytics',
-            [$this, 'render_analytics_page']
+        return;
+      }
+
+      $button.prop("disabled", true).text(affcdAjax.strings.testing);
+      $status.removeClass("success error").addClass("testing").text("");
+
+      $.ajax({
+        url: ajaxurl,
+        type: "POST",
+        data: {
+          action: "affcd_test_webhook",
+          webhook_url: webhookUrl,
+          secret: webhookSecret,
+          nonce: affcdAjax.nonce,
+        },
+        success: function (response) {
+          if (response.success) {
+            $status
+              .removeClass("testing")
+              .addClass("success")
+              .text(
+                affcdAjax.strings.success +
+                  " (" +
+                  response.data.response_time +
+                  "ms)"
+              );
+            DomainManagement.showNotice(
+              "success",
+              affcdAjax.strings.webhookTestSuccess
+            );
+          } else {
+            $status
+              .removeClass("testing")
+              .addClass("error")
+              .text(affcdAjax.strings.error);
+            DomainManagement.showNotice(
+              "error",
+              response.data.error || affcdAjax.strings.webhookTestFailed
+            );
+          }
+        },
+        error: function () {
+          $status
+            .removeClass("testing")
+            .addClass("error")
+            .text(affcdAjax.strings.error);
+          DomainManagement.showNotice(
+            "error",
+            affcdAjax.strings.webhookTestError
+          );
+        },
+        complete: function () {
+          $button.prop("disabled", false).text(affcdAjax.strings.testWebhook);
+        },
+      });
+    },
+
+    /**
+     * Add new domain
+     */
+    addDomain: function (e) {
+      e.preventDefault();
+
+      const $form = $(this);
+      const formData = $form.serialize();
+      const $submitButton = $form.find('button[type="submit"]');
+
+      if (!DomainManagement.validateForm($form)) {
+        return;
+      }
+
+      $submitButton.prop("disabled", true).text(affcdAjax.strings.adding);
+
+      $.ajax({
+        url: ajaxurl,
+        type: "POST",
+        data: formData + "&action=affcd_add_domain&nonce=" + affcdAjax.nonce,
+        success: function (response) {
+          if (response.success) {
+            DomainManagement.showNotice("success", response.data.message);
+            $form[0].reset();
+            DomainManagement.refreshDomainList();
+
+            // Close modal if present
+            $(".domain-modal").hide();
+          } else {
+            DomainManagement.showNotice(
+              "error",
+              response.data.message || affcdAjax.strings.addDomainFailed
+            );
+          }
+        },
+        error: function () {
+          DomainManagement.showNotice(
+            "error",
+            affcdAjax.strings.addDomainError
+          );
+        },
+        complete: function () {
+          $submitButton
+            .prop("disabled", false)
+            .text(affcdAjax.strings.addDomain);
+        },
+      });
+    },
+
+    /**
+     * Update domain
+     */
+    updateDomain: function (e) {
+      e.preventDefault();
+
+      const $form = $(this);
+      const formData = $form.serialize();
+      const $submitButton = $form.find('button[type="submit"]');
+
+      if (!DomainManagement.validateForm($form)) {
+        return;
+      }
+
+      $submitButton.prop("disabled", true).text(affcdAjax.strings.updating);
+
+      $.ajax({
+        url: ajaxurl,
+        type: "POST",
+        data: formData + "&action=affcd_update_domain&nonce=" + affcdAjax.nonce,
+        success: function (response) {
+          if (response.success) {
+            DomainManagement.showNotice("success", response.data.message);
+            DomainManagement.refreshDomainList();
+
+            // Close modal if present
+            $(".domain-modal").hide();
+          } else {
+            DomainManagement.showNotice(
+              "error",
+              response.data.message || affcdAjax.strings.updateDomainFailed
+            );
+          }
+        },
+        error: function () {
+          DomainManagement.showNotice(
+            "error",
+            affcdAjax.strings.updateDomainError
+          );
+        },
+        complete: function () {
+          $submitButton
+            .prop("disabled", false)
+            .text(affcdAjax.strings.updateDomain);
+        },
+      });
+    },
+
+    /**
+     * Delete domain
+     */
+    deleteDomain: function (e) {
+      e.preventDefault();
+
+      const $button = $(this);
+      const domainId = $button.data("domain-id");
+      const domainName = $button.data("domain-name") || "this domain";
+
+      if (!confirm(affcdAjax.strings.confirmRemove.replace("%s", domainName))) {
+        return;
+      }
+
+      $button.prop("disabled", true).text(affcdAjax.strings.deleting);
+
+      $.ajax({
+        url: ajaxurl,
+        type: "POST",
+        data: {
+          action: "affcd_delete_domain",
+          domain_id: domainId,
+          nonce: affcdAjax.nonce,
+        },
+        success: function (response) {
+          if (response.success) {
+            DomainManagement.showNotice("success", response.data.message);
+            DomainManagement.refreshDomainList();
+          } else {
+            DomainManagement.showNotice(
+              "error",
+              response.data.message || affcdAjax.strings.deleteDomainFailed
+            );
+            $button.prop("disabled", false).text(affcdAjax.strings.delete);
+          }
+        },
+        error: function () {
+          DomainManagement.showNotice(
+            "error",
+            affcdAjax.strings.deleteDomainError
+          );
+          $button.prop("disabled", false).text(affcdAjax.strings.delete);
+        },
+      });
+    },
+
+    /**
+     * Verify domain
+     */
+    verifyDomain: function (e) {
+      e.preventDefault();
+
+      const $button = $(this);
+      const domainId = $button.data("domain-id");
+      const $status = $button.next(".verification-status");
+
+      $button.prop("disabled", true).text(affcdAjax.strings.verifying);
+      $status
+        .removeClass("verified unverified")
+        .addClass("verifying")
+        .text(affcdAjax.strings.verifying);
+
+      $.ajax({
+        url: ajaxurl,
+        type: "POST",
+        data: {
+          action: "affcd_verify_domain",
+          domain_id: domainId,
+          nonce: affcdAjax.nonce,
+        },
+        success: function (response) {
+          if (response.success) {
+            $status
+              .removeClass("verifying")
+              .addClass("verified")
+              .text(affcdAjax.strings.verified);
+            DomainManagement.showNotice("success", response.data.message);
+            DomainManagement.refreshDomainList();
+          } else {
+            $status
+              .removeClass("verifying")
+              .addClass("unverified")
+              .text(affcdAjax.strings.verificationFailed);
+            DomainManagement.showNotice(
+              "error",
+              response.data.message || affcdAjax.strings.verificationFailed
+            );
+          }
+        },
+        error: function () {
+          $status
+            .removeClass("verifying")
+            .addClass("unverified")
+            .text(affcdAjax.strings.verificationError);
+          DomainManagement.showNotice(
+            "error",
+            affcdAjax.strings.verificationError
+          );
+        },
+        complete: function () {
+          $button.prop("disabled", false).text(affcdAjax.strings.verify);
+        },
+      });
+    },
+
+    /**
+     * Toggle domain status
+     */
+    toggleDomainStatus: function (e) {
+      const $toggle = $(this);
+      const domainId = $toggle.data("domain-id");
+      const newStatus = $toggle.is(":checked") ? "active" : "inactive";
+
+      $toggle.prop("disabled", true);
+
+      $.ajax({
+        url: ajaxurl,
+        type: "POST",
+        data: {
+          action: "affcd_toggle_domain_status",
+          domain_id: domainId,
+          status: newStatus,
+          nonce: affcdAjax.nonce,
+        },
+        success: function (response) {
+          if (response.success) {
+            DomainManagement.showNotice("success", response.data.message);
+          } else {
+            // Revert toggle state
+            $toggle.prop("checked", !$toggle.is(":checked"));
+            DomainManagement.showNotice(
+              "error",
+              response.data.message || affcdAjax.strings.statusUpdateFailed
+            );
+          }
+        },
+        error: function () {
+          // Revert toggle state
+          $toggle.prop("checked", !$toggle.is(":checked"));
+          DomainManagement.showNotice(
+            "error",
+            affcdAjax.strings.statusUpdateError
+          );
+        },
+        complete: function () {
+          $toggle.prop("disabled", false);
+        },
+      });
+    },
+
+    /**
+     * Apply bulk action
+     */
+    applyBulkAction: function (e) {
+      e.preventDefault();
+
+      const action = $("#bulk-actions").val();
+      const selectedDomains = $('input[name="domain_ids[]"]:checked')
+        .map(function () {
+          return $(this).val();
+        })
+        .get();
+
+      if (!action || action === "-1") {
+        DomainManagement.showNotice(
+          "error",
+          affcdAjax.strings.selectBulkAction
         );
-        
-        add_submenu_page(
-            $parent_slug,
-            __('Settings', 'affiliate-cross-domain'),
-            __('Settings', 'affiliate-cross-domain'),
-            'manage_options',
-            'affcd-settings',
-            [$this, 'render_settings_page']
-        );
+        return;
+      }
+
+      if (selectedDomains.length === 0) {
+        DomainManagement.showNotice("error", affcdAjax.strings.selectDomains);
+        return;
+      }
+
+      const actionText = $("#bulk-actions option:selected").text();
+      if (
+        !confirm(
+          affcdAjax.strings.confirmBulkAction
+            .replace("%s", actionText)
+            .replace("%d", selectedDomains.length)
+        )
+      ) {
+        return;
+      }
+
+      const $button = $(this);
+      $button.prop("disabled", true).text(affcdAjax.strings.processing);
+
+      $.ajax({
+        url: ajaxurl,
+        type: "POST",
+        data: {
+          action: "affcd_bulk_domain_action",
+          bulk_action: action,
+          domain_ids: selectedDomains,
+          nonce: affcdAjax.nonce,
+        },
+        success: function (response) {
+          if (response.success) {
+            DomainManagement.showNotice("success", response.data.message);
+            DomainManagement.refreshDomainList();
+            $("#select-all-domains").prop("checked", false);
+          } else {
+            DomainManagement.showNotice(
+              "error",
+              response.data.message || affcdAjax.strings.bulkActionFailed
+            );
+          }
+        },
+        error: function () {
+          DomainManagement.showNotice(
+            "error",
+            affcdAjax.strings.bulkActionError
+          );
+        },
+        complete: function () {
+          $button.prop("disabled", false).text(affcdAjax.strings.apply);
+        },
+      });
+    },
+
+    /**
+     * Search domains
+     */
+    searchDomains: function () {
+      const searchTerm = $("#domain-search").val().trim();
+
+      if (
+        $("#domains-table").length &&
+        $.fn.DataTable.isDataTable("#domains-table")
+      ) {
+        $("#domains-table").DataTable().search(searchTerm).draw();
+      }
+    },
+
+    /**
+     * Refresh domain list
+     */
+    refreshDomainList: function () {
+      if (
+        $("#domains-table").length &&
+        $.fn.DataTable.isDataTable("#domains-table")
+      ) {
+        $("#domains-table").DataTable().ajax.reload();
+      } else {
+        location.reload();
+      }
+    },
+
+    /**
+     * Export domains
+     */
+    exportDomains: function (e) {
+      e.preventDefault();
+
+      const format = $(this).data("format") || "csv";
+      const $button = $(this);
+
+      $button.prop("disabled", true).text(affcdAjax.strings.exporting);
+
+      $.ajax({
+        url: ajaxurl,
+        type: "POST",
+        data: {
+          action: "affcd_export_domains",
+          format: format,
+          nonce: affcdAjax.nonce,
+        },
+        success: function (response) {
+          if (response.success && response.data.download_url) {
+            // Create temporary download link
+            const link = document.createElement("a");
+            link.href = response.data.download_url;
+            link.download = response.data.filename || "domains." + format;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            DomainManagement.showNotice("success", response.data.message);
+          } else {
+            DomainManagement.showNotice(
+              "error",
+              response.data.message || affcdAjax.strings.exportFailed
+            );
+          }
+        },
+        error: function () {
+          DomainManagement.showNotice("error", affcdAjax.strings.exportError);
+        },
+        complete: function () {
+          $button.prop("disabled", false).text(affcdAjax.strings.export);
+        },
+      });
+    },
+
+    /**
+     * Validate form
+     */
+    validateForm: function ($form) {
+      let isValid = true;
+
+      $form.find(".required").each(function () {
+        const $field = $(this);
+        const value = $field.val().trim();
+
+        if (!value) {
+          $field.addClass("error");
+          $field
+            .next(".validation-message")
+            .text(affcdAjax.strings.fieldRequired);
+          isValid = false;
+        } else {
+          $field.removeClass("error");
+          $field.next(".validation-message").text("");
+        }
+      });
+
+      // Validate domain URL format
+      $form.find(".domain-url-input").each(function () {
+        const $input = $(this);
+        const url = $input.val().trim();
+
+        if (url && !DomainManagement.isValidUrl(url)) {
+          $input.addClass("error");
+          $input.next(".validation-message").text(affcdAjax.strings.invalidUrl);
+          isValid = false;
+        }
+      });
+
+      return isValid;
+    },
+
+    /**
+     * Check if URL is valid
+     */
+    isValidUrl: function (url) {
+      try {
+        // Add protocol if missing
+        if (!/^https?:\/\//i.test(url)) {
+          url = "https://" + url;
+        }
+
+        const urlObj = new URL(url);
+        return urlObj.protocol === "http:" || urlObj.protocol === "https:";
+      } catch (e) {
+        return false;
+      }
+    },
+
+    /**
+     * Show notice
+     */
+    showNotice: function (type, message) {
+      // Remove existing notices
+      $(".affcd-notice").remove();
+
+      const notice = $(
+        '<div class="notice notice-' +
+          type +
+          ' affcd-notice is-dismissible"><p>' +
+          message +
+          "</p></div>"
+      );
+      $(".wrap h1").after(notice);
+
+      // Auto-hide after 5 seconds
+      setTimeout(function () {
+        notice.fadeOut(function () {
+          $(this).remove();
+        });
+      }, 5000);
+
+      // Handle dismiss button
+      notice.on("click", ".notice-dismiss", function () {
+        notice.fadeOut(function () {
+          $(this).remove();
+        });
+      });
+    },
+
+    /**
+     * Debounce function
+     */
+    debounce: function (func, wait, immediate) {
+      let timeout;
+      return function () {
+        const context = this;
+        const args = arguments;
+        const later = function () {
+          timeout = null;
+          if (!immediate) func.apply(context, args);
+        };
+        const callNow = immediate && !timeout;
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+        if (callNow) func.apply(context, args);
+      };
+    },
+
+    /**
+     * Format bytes
+     */
+    formatBytes: function (bytes, decimals = 2) {
+      if (bytes === 0) return "0 Bytes";
+
+      const k = 1024;
+      const dm = decimals < 0 ? 0 : decimals;
+      const sizes = ["Bytes", "KB", "MB", "GB"];
+
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
+    },
+  };
+
+  // Global functions for backward compatibility
+  window.testAllConnections = function () {
+    if (!confirm(affcdAjax.strings.confirmTestAll)) {
+      return;
     }
-    
-    public function admin_init() {
-        // Register settings
-        register_setting('affcd_settings', 'affcd_api_settings');
-        register_setting('affcd_settings', 'affcd_security_settings');
-        register_setting('affcd_settings', 'affcd_webhook_settings');
-        register_setting('affcd_settings', 'affcd_cache_settings');
+
+    $(".test-domain-connection").each(function () {
+      const $button = $(this);
+      setTimeout(function () {
+        $button.trigger("click");
+      }, Math.random() * 2000); // Stagger requests
+    });
+  };
+
+  window.refreshDomainStats = function () {
+    $.ajax({
+      url: ajaxurl,
+      type: "POST",
+      data: {
+        action: "affcd_get_domain_stats",
+        nonce: affcdAjax.nonce,
+      },
+      success: function (response) {
+        if (response.success && response.data) {
+          $(".total-domains").text(response.data.total);
+          $(".active-domains").text(response.data.active);
+          $(".verified-domains").text(response.data.verified);
+          $(".failed-domains").text(response.data.failed);
+        }
+      },
+    });
+  };
+
+  // Initialize on document ready
+  DomainManagement.init();
+
+  // Auto-refresh stats every 30 seconds
+  setInterval(window.refreshDomainStats, 30000);
+
+  // Handle select all checkbox
+  $(document).on("change", "#select-all-domains", function () {
+    $('input[name="domain_ids[]"]').prop("checked", $(this).prop("checked"));
+  });
+
+  // Handle individual checkboxes
+  $(document).on("change", 'input[name="domain_ids[]"]', function () {
+    const totalCheckboxes = $('input[name="domain_ids[]"]').length;
+    const checkedCheckboxes = $('input[name="domain_ids[]"]:checked').length;
+
+    $("#select-all-domains").prop(
+      "checked",
+      totalCheckboxes === checkedCheckboxes
+    );
+  });
+
+  // Modal handling
+  $(document).on("click", ".open-domain-modal", function (e) {
+    e.preventDefault();
+    const modalId = $(this).data("modal");
+    $("#" + modalId).show();
+  });
+
+  $(document).on("click", ".close-modal, .modal-overlay", function (e) {
+    if (e.target === this) {
+      $(".domain-modal").hide();
     }
-    
-    public function render_main_page() {
-        if (function_exists('affiliate_wp')) {
-            // Redirect to AffiliateWP if it exists
-            wp_redirect(admin_url('admin.php?page=affiliate-wp'));
-            exit;
-        }
-        
-        ?>
-        <div class="wrap">
-            <h1><?php _e('Affiliate Cross-Domain System', 'affiliate-cross-domain'); ?></h1>
-            
-            <div class="affcd-dashboard">
-                <div class="affcd-dashboard-widgets">
-                    <?php $this->render_dashboard_widget_stats(); ?>
-                    <?php $this->render_dashboard_widget_recent_activity(); ?>
-                    <?php $this->render_dashboard_widget_quick_actions(); ?>
-                </div>
-            </div>
-        </div>
-        
-        <style>
-        .affcd-dashboard-widgets {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
-        .affcd-widget {
-            background: #fff;
-            border: 1px solid #ccd0d4;
-            border-radius: 4px;
-            padding: 20px;
-        }
-        .affcd-widget h3 {
-            margin-top: 0;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 10px;
-        }
-        </style>
-        <?php
+  });
+
+  // Escape key to close modals
+  $(document).on("keyup", function (e) {
+    if (e.keyCode === 27) {
+      // Escape key
+      $(".domain-modal").hide();
     }
-    
-    public function render_vanity_codes_page() {
-        ?>
-        <div class="wrap">
-            <h1><?php _e('Vanity Codes', 'affiliate-cross-domain'); ?></h1>
-            <p><?php _e('Manage discount codes for cross-domain affiliate system.', 'affiliate-cross-domain'); ?></p>
-            
-            <?php
-            // Include WP_List_Table for codes
-            if (!class_exists('AFFCD_Vanity_Codes_List_Table')) {
-                require_once AFFCD_ADMIN_DIR . 'class-vanity-codes-list-table.php';
-            }
-            
-            $list_table = new AFFCD_Vanity_Codes_List_Table();
-            $list_table->prepare_items();
-            $list_table->display();
-            ?>
-        </div>
-        <?php
-    }
-    
-    public function render_analytics_page() {
-        ?>
-        <div class="wrap">
-            <h1><?php _e('Analytics', 'affiliate-cross-domain'); ?></h1>
-            <p><?php _e('View usage statistics and performance metrics.', 'affiliate-cross-domain'); ?></p>
-            
-            <?php $this->render_analytics_dashboard(); ?>
-        </div>
-        <?php
-    }
-    
-    public function render_settings_page() {
-        ?>
-        <div class="wrap">
-            <h1><?php _e('Settings', 'affiliate-cross-domain'); ?></h1>
-            
-            <form method="post" action="options.php">
-                <?php settings_fields('affcd_settings'); ?>
-                
-                <table class="form-table">
-                    <tbody>
-                        <tr>
-                            <th scope="row">
-                                <label for="master_api_key"><?php _e('Master API Key', 'affiliate-cross-domain'); ?></label>
-                            </th>
-                            <td>
-                                <?php $api_settings = get_option('affcd_api_settings', []); ?>
-                                <input type="text" 
-                                       id="master_api_key" 
-                                       name="affcd_api_settings[master_api_key]" 
-                                       value="<?php echo esc_attr($api_settings['master_api_key'] ?? ''); ?>" 
-                                       class="regular-text" 
-                                       readonly>
-                                <button type="button" class="button" onclick="generateApiKey()">
-                                    <?php _e('Generate New', 'affiliate-cross-domain'); ?>
-                                </button>
-                                <p class="description">
-                                    <?php _e('Used by client sites to authenticate API requests.', 'affiliate-cross-domain'); ?>
-                                </p>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-                
-                <?php submit_button(); ?>
-            </form>
-        </div>
-        
-        <script>
-        function generateApiKey() {
-            if (confirm('Generate a new API key? This will invalidate the current key.')) {
-                var newKey = 'affcd_' + Math.random().toString(36).substr(2, 32);
-                document.getElementById('master_api_key').value = newKey;
-            }
-        }
-        </script>
-        <?php
-    }
-    
-    private function render_dashboard_widget_stats() {
-        $stats = $this->get_dashboard_stats();
-        ?>
-        <div class="affcd-widget">
-            <h3><?php _e('System Statistics', 'affiliate-cross-domain'); ?></h3>
-            <div class="affcd-stats-grid">
-                <div class="affcd-stat">
-                    <span class="affcd-stat-number"><?php echo number_format($stats['total_codes']); ?></span>
-                    <span class="affcd-stat-label"><?php _e('Active Codes', 'affiliate-cross-domain'); ?></span>
-                </div>
-                <div class="affcd-stat">
-                    <span class="affcd-stat-number"><?php echo number_format($stats['total_domains']); ?></span>
-                    <span class="affcd-stat-label"><?php _e('Authorized Domains', 'affiliate-cross-domain'); ?></span>
-                </div>
-                <div class="affcd-stat">
-                    <span class="affcd-stat-number"><?php echo number_format($stats['total_requests']); ?></span>
-                    <span class="affcd-stat-label"><?php _e('API Requests (30d)', 'affiliate-cross-domain'); ?></span>
-                </div>
-                <div class="affcd-stat">
-                    <span class="affcd-stat-number"><?php echo number_format($stats['total_conversions']); ?></span>
-                    <span class="affcd-stat-label"><?php _e('Conversions (30d)', 'affiliate-cross-domain'); ?></span>
-                </div>
-            </div>
-        </div>
-        
-        <style>
-        .affcd-stats-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-        .affcd-stat {
-            text-align: center;
-            padding: 10px;
-            background: #f9f9f9;
-            border-radius: 4px;
-        }
-        .affcd-stat-number {
-            display: block;
-            font-size: 24px;
-            font-weight: bold;
-            color: #0073aa;
-        }
-        .affcd-stat-label {
-            font-size: 12px;
-            color: #666;
-        }
-        </style>
-        <?php
-    }
-    
-    private function render_dashboard_widget_recent_activity() {
-        $recent_activity = $this->get_recent_activity();
-        ?>
-        <div class="affcd-widget">
-            <h3><?php _e('Recent Activity', 'affiliate-cross-domain'); ?></h3>
-            <div class="affcd-activity-list">
-                <?php if (empty($recent_activity)): ?>
-                    <p><?php _e('No recent activity.', 'affiliate-cross-domain'); ?></p>
-                <?php else: ?>
-                    <?php foreach ($recent_activity as $activity): ?>
-                        <div class="affcd-activity-item">
-                            <span class="affcd-activity-time"><?php echo human_time_diff(strtotime($activity->created_at)); ?> ago</span>
-                            <span class="affcd-activity-text">
-                                Code <strong><?php echo esc_html($activity->code); ?></strong> 
-                                <?php if ($activity->conversion): ?>
-                                    converted on <?php echo esc_html($activity->domain); ?>
-                                <?php else: ?>
-                                    validated on <?php echo esc_html($activity->domain); ?>
-                                <?php endif; ?>
-                            </span>
-                        </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
-        </div>
-        
-        <style>
-        .affcd-activity-item {
-            padding: 8px 0;
-            border-bottom: 1px solid #eee;
-        }
-        .affcd-activity-item:last-child {
-            border-bottom: none;
-        }
-        .affcd-activity-time {
-            color: #666;
-            font-size: 11px;
-            display: block;
-        }
-        .affcd-activity-text {
-            font-size: 13px;
-        }
-        </style>
-        <?php
-    }
-    
-    private function render_dashboard_widget_quick_actions() {
-        ?>
-        <div class="affcd-widget">
-            <h3><?php _e('Quick Actions', 'affiliate-cross-domain'); ?></h3>
-            <div class="affcd-quick-actions">
-                <p>
-                    <a href="<?php echo admin_url('admin.php?page=affcd-domain-management'); ?>" class="button button-primary">
-                        <?php _e('Manage Domains', 'affiliate-cross-domain'); ?>
-                    </a>
-                </p>
-                <p>
-                    <a href="<?php echo admin_url('admin.php?page=affcd-vanity-codes'); ?>" class="button">
-                        <?php _e('Add New Code', 'affiliate-cross-domain'); ?>
-                    </a>
-                </p>
-                <p>
-                    <a href="<?php echo admin_url('admin.php?page=affcd-analytics'); ?>" class="button">
-                        <?php _e('View Analytics', 'affiliate-cross-domain'); ?>
-                    </a>
-                </p>
-                <p>
-                    <button type="button" class="button" onclick="testAllConnections()">
-                        <?php _e('Test All Connections', 'affiliate-cross-domain'); ?>
-                    </button>
-                </p>
-            </div>
-        </div>
-        
-        <script>
-        function testAllConnections() {
-            if (confirm('Test connections to all authorized domains?')) {
-                window.location.href = '<?php echo admin_url('admin.php?page=affcd-domain-management&action=test_all'); ?>';
-            }
-        }
-        </script>
-        <?php
-    }
-    
-    private function render_analytics_dashboard() {
-        $analytics = $this->get_analytics_data();
-        ?>
-        <div class="affcd-analytics-dashboard">
-            <div class="affcd-analytics-section">
-                <h3><?php _e('Usage Over Time', 'affiliate-cross-domain'); ?></h3>
-                <canvas id="usageChart" width="400" height="200"></canvas>
-            </div>
-            
-            <div class="affcd-analytics-section">
-                <h3><?php _e('Top Performing Codes', 'affiliate-cross-domain'); ?></h3>
-                <table class="wp-list-table widefat fixed striped">
-                    <thead>
-                        <tr>
-                            <th><?php _e('Code', 'affiliate-cross-domain'); ?></th>
-                            <th><?php _e('Uses', 'affiliate-cross-domain'); ?></th>
-                            <th><?php _e('Conversions', 'affiliate-cross-domain'); ?></th>
-                            <th><?php _e('Conversion Rate', 'affiliate-cross-domain'); ?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($analytics['top_codes'] as $code): ?>
-                            <tr>
-                                <td><strong><?php echo esc_html($code->code); ?></strong></td>
-                                <td><?php echo number_format($code->total_uses); ?></td>
-                                <td><?php echo number_format($code->conversions); ?></td>
-                                <td><?php echo $code->total_uses > 0 ? round(($code->conversions / $code->total_uses) * 100, 1) : 0; ?>%</td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-            
-            <div class="affcd-analytics-section">
-                <h3><?php _e('Domain Performance', 'affiliate-cross-domain'); ?></h3>
-                <table class="wp-list-table widefat fixed striped">
-                    <thead>
-                        <tr>
-                            <th><?php _e('Domain', 'affiliate-cross-domain'); ?></th>
-                            <th><?php _e('Requests', 'affiliate-cross-domain'); ?></th>
-                            <th><?php _e('Conversions', 'affiliate-cross-domain'); ?></th>
-                            <th><?php _e('Total Value', 'affiliate-cross-domain'); ?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($analytics['domain_performance'] as $domain): ?>
-                            <tr>
-                                <td><?php echo esc_html($domain->domain); ?></td>
-                                <td><?php echo number_format($domain->total_requests); ?></td>
-                                <td><?php echo number_format($domain->conversions); ?></td>
-                                <td>$<?php echo number_format($domain->total_value, 2); ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        
-        <style>
-        .affcd-analytics-dashboard {
-            display: grid;
-            gap: 20px;
-        }
-        .affcd-analytics-section {
-            background: #fff;
-            border: 1px solid #ccd0d4;
-            border-radius: 4px;
-            padding: 20px;
-        }
-        .affcd-analytics-section h3 {
-            margin-top: 0;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 10px;
-        }
-        </style>
-        <?php
-    }
-    
-    private function get_dashboard_stats() {
-        global $wpdb;
-        
-        // Get total active codes
-        $total_codes = $wpdb->get_var(
-            "SELECT COUNT(*) FROM {$wpdb->prefix}affcd_vanity_codes WHERE is_active = 1"
-        );
-        
-        // Get total domains
-        $domains = get_option('affcd_allowed_domains', []);
-        $total_domains = count($domains);
-        
-        // Get recent requests (30 days)
-        $total_requests = $wpdb->get_var(
-            "SELECT COUNT(*) FROM {$wpdb->prefix}affcd_usage_tracking 
-             WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)"
-        );
-        
-        // Get recent conversions (30 days)
-        $total_conversions = $wpdb->get_var(
-            "SELECT COUNT(*) FROM {$wpdb->prefix}affcd_usage_tracking 
-             WHERE conversion = 1 AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)"
-        );
-        
-        return [
-            'total_codes' => (int) $total_codes,
-            'total_domains' => (int) $total_domains,
-            'total_requests' => (int) $total_requests,
-            'total_conversions' => (int) $total_conversions
-        ];
-    }
-    
-    private function get_recent_activity() {
-        global $wpdb;
-        
-        return $wpdb->get_results(
-            "SELECT code, domain, conversion, created_at 
-             FROM {$wpdb->prefix}affcd_usage_tracking 
-             ORDER BY created_at DESC 
-             LIMIT 10"
-        );
-    }
-    
-    private function get_analytics_data() {
-        global $wpdb;
-        
-        // Top performing codes
-        $top_codes = $wpdb->get_results(
-            "SELECT 
-                code,
-                COUNT(*) as total_uses,
-                SUM(CASE WHEN conversion = 1 THEN 1 ELSE 0 END) as conversions
-             FROM {$wpdb->prefix}affcd_usage_tracking 
-             WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-             GROUP BY code 
-             ORDER BY conversions DESC, total_uses DESC 
-             LIMIT 10"
-        );
-        
-        // Domain performance
-        $domain_performance = $wpdb->get_results(
-            "SELECT 
-                domain,
-                COUNT(*) as total_requests,
-                SUM(CASE WHEN conversion = 1 THEN 1 ELSE 0 END) as conversions,
-                SUM(CASE WHEN conversion = 1 THEN conversion_value ELSE 0 END) as total_value
-             FROM {$wpdb->prefix}affcd_usage_tracking 
-             WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-             GROUP BY domain 
-             ORDER BY total_value DESC, conversions DESC 
-             LIMIT 10"
-        );
-        
-        return [
-            'top_codes' => $top_codes,
-            'domain_performance' => $domain_performance
-        ];
-    }
-}
+  });
+
+  // Copy to clipboard functionality
+  $(document).on("click", ".copy-to-clipboard", function (e) {
+    e.preventDefault();
+
+    const $button = $(this);
+    const textToCopy = $button.data("text") || $button.prev("input").val();
+
+    if (!textToCopy) return;
+
+    navigator.clipboard
+      .writeText(textToCopy)
+      .then(function () {
+        const originalText = $button.text();
+        $button.text(affcdAjax.strings.copied);
+
+        setTimeout(function () {
+          $button.text(originalText);
+        }, 2000);
+      })
+      .catch(function () {
+        // Fallback for older browsers
+        const textArea = document.createElement("textarea");
+        textArea.value = textToCopy;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+
+        const originalText = $button.text();
+        $button.text(affcdAjax.strings.copied);
+
+        setTimeout(function () {
+          $button.text(originalText);
+        }, 2000);
+      });
+  });
+});
