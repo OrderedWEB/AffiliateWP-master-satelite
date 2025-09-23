@@ -74,7 +74,7 @@ class ACI_Session_Manager {
         // Check cookie first
         $cookie_name = $this->get_cookie_name();
         if (isset($_COOKIE[$cookie_name])) {
-            $session_id = sanitize_text_field($_COOKIE[$cookie_name]);
+            $session_id = Sanitise_text_field($_COOKIE[$cookie_name]);
             if ($this->validate_session_id($session_id)) {
                 return $session_id;
             }

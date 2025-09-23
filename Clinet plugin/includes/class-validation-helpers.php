@@ -214,7 +214,7 @@ class ACI_Validation_Helpers {
         // Make API request
         $response = wp_remote_post($master_domain . '/wp-json/affcd/v1/validate', [
             'headers' => [
-                'Authorization' => 'Bearer ' . $api_key,
+                'authorisation' => 'Bearer ' . $api_key,
                 'Content-Type' => 'application/json',
                 'X-Domain' => home_url()
             ],
@@ -430,7 +430,7 @@ class ACI_Validation_Helpers {
     public static function ajax_validate_affiliate() {
         check_ajax_referer('aci_validate_affiliate', 'nonce');
 
-        $affiliate_code = sanitize_text_field($_POST['affiliate_code'] ?? '');
+        $affiliate_code = Sanitise_text_field($_POST['affiliate_code'] ?? '');
         
         if (empty($affiliate_code)) {
             wp_send_json_error(__('Affiliate code is required', 'affiliate-client-integration'));
@@ -480,9 +480,9 @@ class ACI_Validation_Helpers {
     public static function ajax_validate_field() {
         check_ajax_referer('aci_validate_field', 'nonce');
 
-        $field_name = sanitize_text_field($_POST['field_name'] ?? '');
+        $field_name = Sanitise_text_field($_POST['field_name'] ?? '');
         $field_value = $_POST['field_value'] ?? '';
-        $validation_rules = sanitize_text_field($_POST['rules'] ?? '');
+        $validation_rules = Sanitise_text_field($_POST['rules'] ?? '');
 
         if (empty($field_name) || empty($validation_rules)) {
             wp_send_json_error('Missing required parameters');
@@ -525,26 +525,26 @@ class ACI_Validation_Helpers {
     }
 
     /**
-     * Sanitize and validate form data
+     * Sanitise and validate form data
      */
-    public static function sanitize_and_validate($data, $rules, $sanitize_rules = []) {
-        $sanitized_data = [];
+    public static function Sanitise_and_validate($data, $rules, $Sanitise_rules = []) {
+        $Sanitised_data = [];
         $validation_results = [];
         
         foreach ($data as $field_name => $value) {
-            // Sanitize first
-            if (isset($sanitize_rules[$field_name])) {
-                $sanitize_function = $sanitize_rules[$field_name];
-                $sanitized_data[$field_name] = call_user_func($sanitize_function, $value);
+            // Sanitise first
+            if (isset($Sanitise_rules[$field_name])) {
+                $Sanitise_function = $Sanitise_rules[$field_name];
+                $Sanitised_data[$field_name] = call_user_func($Sanitise_function, $value);
             } else {
                 // Default sanitization
-                $sanitized_data[$field_name] = sanitize_text_field($value);
+                $Sanitised_data[$field_name] = Sanitise_text_field($value);
             }
             
             // Then validate
             if (isset($rules[$field_name])) {
                 $validation_results[$field_name] = self::validate_field(
-                    $sanitized_data[$field_name], 
+                    $Sanitised_data[$field_name], 
                     $rules[$field_name], 
                     $field_name
                 );
@@ -561,7 +561,7 @@ class ACI_Validation_Helpers {
         
         return [
             'valid' => $all_valid,
-            'data' => $sanitized_data,
+            'data' => $Sanitised_data,
             'validation' => $validation_results
         ];
     }

@@ -79,8 +79,8 @@ class AFFILIATE_CLIENT_Discount_Form {
             'id' => '',
         ], $atts, 'affiliate_discount_form');
 
-        // Sanitize attributes
-        $atts = array_map('sanitize_text_field', $atts);
+        // Sanitise attributes
+        $atts = array_map('Sanitise_text_field', $atts);
         $atts['show_validation'] = filter_var($atts['show_validation'], FILTER_VALIDATE_BOOLEAN);
         $atts['auto_validate'] = filter_var($atts['auto_validate'], FILTER_VALIDATE_BOOLEAN);
         $atts['track_usage'] = filter_var($atts['track_usage'], FILTER_VALIDATE_BOOLEAN);
@@ -349,7 +349,7 @@ class AFFILIATE_CLIENT_Discount_Form {
             wp_send_json_error('Invalid nonce');
         }
 
-        $code = strtoupper(sanitize_text_field($_POST['code']));
+        $code = strtoupper(Sanitise_text_field($_POST['code']));
         $result = $this->validate_discount_code($code);
         
         wp_send_json($result);
@@ -363,7 +363,7 @@ class AFFILIATE_CLIENT_Discount_Form {
             wp_send_json_error('Invalid nonce');
         }
 
-        $code = strtoupper(sanitize_text_field($_POST['code']));
+        $code = strtoupper(Sanitise_text_field($_POST['code']));
         $result = $this->apply_user_discount($code);
         
         wp_send_json($result);
@@ -373,7 +373,7 @@ class AFFILIATE_CLIENT_Discount_Form {
      * REST API handler for validating discount
      */
     public function rest_validate_discount($request) {
-        $code = strtoupper(sanitize_text_field($request->get_param('code')));
+        $code = strtoupper(Sanitise_text_field($request->get_param('code')));
         $result = $this->validate_discount_code($code);
         
         return rest_ensure_response($result);
@@ -383,7 +383,7 @@ class AFFILIATE_CLIENT_Discount_Form {
      * REST API handler for applying user discount
      */
     public function rest_apply_user_discount($request) {
-        $code = strtoupper(sanitize_text_field($request->get_param('code')));
+        $code = strtoupper(Sanitise_text_field($request->get_param('code')));
         $result = $this->apply_user_discount($code);
         
         return rest_ensure_response($result);

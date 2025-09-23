@@ -80,15 +80,15 @@ class AFFCD_Security_Logs {
     public function log_event($event_type, $severity = 'medium', $data = [], $user_id = null) {
         global $wpdb;
 
-        // Sanitize inputs
-        $event_type = sanitize_text_field($event_type);
+        // Sanitise inputs
+        $event_type = Sanitise_text_field($event_type);
         $severity = in_array($severity, ['low', 'medium', 'high', 'critical']) ? $severity : 'medium';
         
         // Get client information
         $ip_address = $this->get_client_ip();
-        $user_agent = sanitize_text_field($_SERVER['HTTP_USER_AGENT'] ?? '');
-        $domain = sanitize_text_field($_SERVER['HTTP_HOST'] ?? '');
-        $endpoint = sanitize_text_field($_SERVER['REQUEST_URI'] ?? '');
+        $user_agent = Sanitise_text_field($_SERVER['HTTP_USER_AGENT'] ?? '');
+        $domain = Sanitise_text_field($_SERVER['HTTP_HOST'] ?? '');
+        $endpoint = Sanitise_text_field($_SERVER['REQUEST_URI'] ?? '');
         
         // Prepare event data
         $event_data = wp_json_encode([
@@ -146,10 +146,10 @@ class AFFCD_Security_Logs {
                 'event_type' => 'api_access',
                 'severity' => $severity,
                 'ip_address' => $this->get_client_ip(),
-                'user_agent' => sanitize_text_field($_SERVER['HTTP_USER_AGENT'] ?? ''),
+                'user_agent' => Sanitise_text_field($_SERVER['HTTP_USER_AGENT'] ?? ''),
                 'event_data' => wp_json_encode($data),
-                'domain' => sanitize_text_field($_SERVER['HTTP_HOST'] ?? ''),
-                'endpoint' => sanitize_text_field($endpoint),
+                'domain' => Sanitise_text_field($_SERVER['HTTP_HOST'] ?? ''),
+                'endpoint' => Sanitise_text_field($endpoint),
                 'status_code' => intval($status_code),
                 'response_time' => floatval($response_time),
                 'created_at' => current_time('mysql')
@@ -163,7 +163,7 @@ class AFFCD_Security_Logs {
      */
     public function log_failed_login($username) {
         $this->log_event('login_failed', 'medium', [
-            'username' => sanitize_text_field($username),
+            'username' => Sanitise_text_field($username),
             'attempt_count' => $this->get_recent_failed_attempts()
         ]);
     }
@@ -173,7 +173,7 @@ class AFFCD_Security_Logs {
      */
     public function log_successful_login($user_login, $user) {
         $this->log_event('login_success', 'low', [
-            'username' => sanitize_text_field($user_login),
+            'username' => Sanitise_text_field($user_login),
             'user_id' => $user->ID
         ], $user->ID);
     }
@@ -183,7 +183,7 @@ class AFFCD_Security_Logs {
      */
     public function log_suspicious_activity($activity_type, $details = []) {
         $this->log_event('suspicious_activity', 'high', [
-            'activity_type' => sanitize_text_field($activity_type),
+            'activity_type' => Sanitise_text_field($activity_type),
             'details' => $details
         ]);
     }
@@ -193,8 +193,8 @@ class AFFCD_Security_Logs {
      */
     public function log_rate_limit_violation($endpoint, $limit_type, $current_count, $limit) {
         $this->log_event('rate_limit_violation', 'medium', [
-            'endpoint' => sanitize_text_field($endpoint),
-            'limit_type' => sanitize_text_field($limit_type),
+            'endpoint' => Sanitise_text_field($endpoint),
+            'limit_type' => Sanitise_text_field($limit_type),
             'current_count' => intval($current_count),
             'limit' => intval($limit)
         ]);
@@ -212,27 +212,27 @@ class AFFCD_Security_Logs {
         // Apply filters
         if (!empty($filters['event_type'])) {
             $where_conditions[] = 'event_type = %s';
-            $where_values[] = sanitize_text_field($filters['event_type']);
+            $where_values[] = Sanitise_text_field($filters['event_type']);
         }
 
         if (!empty($filters['severity'])) {
             $where_conditions[] = 'severity = %s';
-            $where_values[] = sanitize_text_field($filters['severity']);
+            $where_values[] = Sanitise_text_field($filters['severity']);
         }
 
         if (!empty($filters['ip_address'])) {
             $where_conditions[] = 'ip_address = %s';
-            $where_values[] = sanitize_text_field($filters['ip_address']);
+            $where_values[] = Sanitise_text_field($filters['ip_address']);
         }
 
         if (!empty($filters['date_from'])) {
             $where_conditions[] = 'created_at >= %s';
-            $where_values[] = sanitize_text_field($filters['date_from']);
+            $where_values[] = Sanitise_text_field($filters['date_from']);
         }
 
         if (!empty($filters['date_to'])) {
             $where_conditions[] = 'created_at <= %s';
-            $where_values[] = sanitize_text_field($filters['date_to']);
+            $where_values[] = Sanitise_text_field($filters['date_to']);
         }
 
         $where_clause = implode(' AND ', $where_conditions);
@@ -500,12 +500,12 @@ class AFFCD_Security_Logs {
         $admin_email = get_option('admin_email');
         
         // Prepare alert message
-        $subject = sprintf(__('[Security Alert] %s - %s', 'affiliate-cross-domain'), 
+        $subject = sprintf(__('[Security Alert] %s - %s', 'affiliatewp-cross-domain-plugin-suite'), 
                           get_site_url(), 
                           ucwords(str_replace('_', ' ', $event_type)));
         
         $message = sprintf(
-            __("A critical security event has been detected on your affiliate system:\n\nEvent Type: %s\nIP Address: %s\nTime: %s\nDetails: %s\n\nPlease review your security logs immediately.", 'affiliate-cross-domain'),
+            __("A critical security event has been detected on your affiliate system:\n\nEvent Type: %s\nIP Address: %s\nTime: %s\nDetails: %s\n\nPlease review your security logs immediately.", 'affiliatewp-cross-domain-plugin-suite'),
             $event_type,
             $this->get_client_ip(),
             current_time('mysql'),

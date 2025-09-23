@@ -22,9 +22,9 @@ $element_id = 'aci-url-param-' . wp_generate_uuid4();
 // Get URL parameter value
 $param_value = '';
 if (isset($_GET[$param_name])) {
-    $param_value = sanitize_text_field($_GET[$param_name]);
+    $param_value = Sanitise_text_field($_GET[$param_name]);
 } elseif (isset($_POST[$param_name])) {
-    $param_value = sanitize_text_field($_POST[$param_name]);
+    $param_value = Sanitise_text_field($_POST[$param_name]);
 }
 
 // Use default if no value found

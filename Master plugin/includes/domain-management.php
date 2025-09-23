@@ -55,8 +55,8 @@ class AFFCD_Domain_Management {
     public function add_admin_menu() {
         add_submenu_page(
             'affiliate-wp',
-            __('Domain Management', 'affiliate-cross-domain'),
-            __('Domain Management', 'affiliate-cross-domain'),
+            __('Domain Management', 'affiliatewp-cross-domain-plugin-suite'),
+            __('Domain Management', 'affiliatewp-cross-domain-plugin-suite'),
             'manage_affiliates',
             'affcd-domain-management',
             [$this, 'render_domain_management_page']
@@ -91,34 +91,34 @@ class AFFCD_Domain_Management {
             'ajaxurl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('affcd_ajax_nonce'),
             'strings' => [
-                'testing' => __('Testing...', 'affiliate-cross-domain'),
-                'success' => __('Success!', 'affiliate-cross-domain'),
-                'error' => __('Error', 'affiliate-cross-domain'),
-                'confirmRemove' => __('Are you sure you want to remove this domain?', 'affiliate-cross-domain'),
-                'confirmBulkAction' => __('Are you sure you want to apply "%s" to %d selected domains?', 'affiliate-cross-domain'),
-                'selectBulkAction' => __('Please select a bulk action.', 'affiliate-cross-domain'),
-                'selectDomains' => __('Please select at least one domain.', 'affiliate-cross-domain'),
-                'processing' => __('Processing...', 'affiliate-cross-domain'),
-                'verifying' => __('Verifying...', 'affiliate-cross-domain'),
-                'verified' => __('Verified', 'affiliate-cross-domain'),
-                'verificationFailed' => __('Verification failed', 'affiliate-cross-domain'),
-                'verificationError' => __('Verification error occurred', 'affiliate-cross-domain'),
-                'addDomain' => __('Add Domain', 'affiliate-cross-domain'),
-                'updateDomain' => __('Update Domain', 'affiliate-cross-domain'),
-                'updating' => __('Updating...', 'affiliate-cross-domain'),
-                'deleting' => __('Deleting...', 'affiliate-cross-domain'),
-                'delete' => __('Delete', 'affiliate-cross-domain'),
-                'verify' => __('Verify', 'affiliate-cross-domain'),
-                'statusUpdateFailed' => __('Failed to update domain status', 'affiliate-cross-domain'),
-                'statusUpdateError' => __('Error updating domain status', 'affiliate-cross-domain'),
-                'bulkActionFailed' => __('Bulk action failed', 'affiliate-cross-domain'),
-                'bulkActionError' => __('Error performing bulk action', 'affiliate-cross-domain'),
-                'addDomainFailed' => __('Failed to add domain', 'affiliate-cross-domain'),
-                'addDomainError' => __('Error adding domain', 'affiliate-cross-domain'),
-                'updateDomainFailed' => __('Failed to update domain', 'affiliate-cross-domain'),
-                'updateDomainError' => __('Error updating domain', 'affiliate-cross-domain'),
-                'deleteDomainFailed' => __('Failed to delete domain', 'affiliate-cross-domain'),
-                'deleteDomainError' => __('Error deleting domain', 'affiliate-cross-domain'),
+                'testing' => __('Testing...', 'affiliatewp-cross-domain-plugin-suite'),
+                'success' => __('Success!', 'affiliatewp-cross-domain-plugin-suite'),
+                'error' => __('Error', 'affiliatewp-cross-domain-plugin-suite'),
+                'confirmRemove' => __('Are you sure you want to remove this domain?', 'affiliatewp-cross-domain-plugin-suite'),
+                'confirmBulkAction' => __('Are you sure you want to apply "%s" to %d selected domains?', 'affiliatewp-cross-domain-plugin-suite'),
+                'selectBulkAction' => __('Please select a bulk action.', 'affiliatewp-cross-domain-plugin-suite'),
+                'selectDomains' => __('Please select at least one domain.', 'affiliatewp-cross-domain-plugin-suite'),
+                'processing' => __('Processing...', 'affiliatewp-cross-domain-plugin-suite'),
+                'verifying' => __('Verifying...', 'affiliatewp-cross-domain-plugin-suite'),
+                'verified' => __('Verified', 'affiliatewp-cross-domain-plugin-suite'),
+                'verificationFailed' => __('Verification failed', 'affiliatewp-cross-domain-plugin-suite'),
+                'verificationError' => __('Verification error occurred', 'affiliatewp-cross-domain-plugin-suite'),
+                'addDomain' => __('Add Domain', 'affiliatewp-cross-domain-plugin-suite'),
+                'updateDomain' => __('Update Domain', 'affiliatewp-cross-domain-plugin-suite'),
+                'updating' => __('Updating...', 'affiliatewp-cross-domain-plugin-suite'),
+                'deleting' => __('Deleting...', 'affiliatewp-cross-domain-plugin-suite'),
+                'delete' => __('Delete', 'affiliatewp-cross-domain-plugin-suite'),
+                'verify' => __('Verify', 'affiliatewp-cross-domain-plugin-suite'),
+                'statusUpdateFailed' => __('Failed to update domain status', 'affiliatewp-cross-domain-plugin-suite'),
+                'statusUpdateError' => __('Error updating domain status', 'affiliatewp-cross-domain-plugin-suite'),
+                'bulkActionFailed' => __('Bulk action failed', 'affiliatewp-cross-domain-plugin-suite'),
+                'bulkActionError' => __('Error performing bulk action', 'affiliatewp-cross-domain-plugin-suite'),
+                'addDomainFailed' => __('Failed to add domain', 'affiliatewp-cross-domain-plugin-suite'),
+                'addDomainError' => __('Error adding domain', 'affiliatewp-cross-domain-plugin-suite'),
+                'updateDomainFailed' => __('Failed to update domain', 'affiliatewp-cross-domain-plugin-suite'),
+                'updateDomainError' => __('Error updating domain', 'affiliatewp-cross-domain-plugin-suite'),
+                'deleteDomainFailed' => __('Failed to delete domain', 'affiliatewp-cross-domain-plugin-suite'),
+                'deleteDomainError' => __('Error deleting domain', 'affiliatewp-cross-domain-plugin-suite'),
             ]
         ]);
     }
@@ -140,19 +140,19 @@ class AFFCD_Domain_Management {
             <nav class="nav-tab-wrapper">
                 <a href="<?php echo esc_url(admin_url('admin.php?page=affcd-domain-management&tab=domains')); ?>" 
                    class="nav-tab <?php echo $active_tab === 'domains' ? 'nav-tab-active' : ''; ?>">
-                    <?php _e('Domains', 'affiliate-cross-domain'); ?>
+                    <?php _e('Domains', 'affiliatewp-cross-domain-plugin-suite'); ?>
                 </a>
                 <a href="<?php echo esc_url(admin_url('admin.php?page=affcd-domain-management&tab=settings')); ?>" 
                    class="nav-tab <?php echo $active_tab === 'settings' ? 'nav-tab-active' : ''; ?>">
-                    <?php _e('Settings', 'affiliate-cross-domain'); ?>
+                    <?php _e('Settings', 'affiliatewp-cross-domain-plugin-suite'); ?>
                 </a>
                 <a href="<?php echo esc_url(admin_url('admin.php?page=affcd-domain-management&tab=security')); ?>" 
                    class="nav-tab <?php echo $active_tab === 'security' ? 'nav-tab-active' : ''; ?>">
-                    <?php _e('Security', 'affiliate-cross-domain'); ?>
+                    <?php _e('Security', 'affiliatewp-cross-domain-plugin-suite'); ?>
                 </a>
                 <a href="<?php echo esc_url(admin_url('admin.php?page=affcd-domain-management&tab=analytics')); ?>" 
                    class="nav-tab <?php echo $active_tab === 'analytics' ? 'nav-tab-active' : ''; ?>">
-                    <?php _e('Analytics', 'affiliate-cross-domain'); ?>
+                    <?php _e('Analytics', 'affiliatewp-cross-domain-plugin-suite'); ?>
                 </a>
             </nav>
             
@@ -187,22 +187,22 @@ class AFFCD_Domain_Management {
         
         switch ($message) {
             case 'domain_added':
-                echo '<div class="notice notice-success is-dismissible"><p>' . __('Domain added successfully.', 'affiliate-cross-domain') . '</p></div>';
+                echo '<div class="notice notice-success is-dismissible"><p>' . __('Domain added successfully.', 'affiliatewp-cross-domain-plugin-suite') . '</p></div>';
                 break;
             case 'domain_updated':
-                echo '<div class="notice notice-success is-dismissible"><p>' . __('Domain updated successfully.', 'affiliate-cross-domain') . '</p></div>';
+                echo '<div class="notice notice-success is-dismissible"><p>' . __('Domain updated successfully.', 'affiliatewp-cross-domain-plugin-suite') . '</p></div>';
                 break;
             case 'domain_removed':
-                echo '<div class="notice notice-success is-dismissible"><p>' . __('Domain removed successfully.', 'affiliate-cross-domain') . '</p></div>';
+                echo '<div class="notice notice-success is-dismissible"><p>' . __('Domain removed successfully.', 'affiliatewp-cross-domain-plugin-suite') . '</p></div>';
                 break;
             case 'invalid_domain':
-                echo '<div class="notice notice-error is-dismissible"><p>' . __('Invalid domain URL provided.', 'affiliate-cross-domain') . '</p></div>';
+                echo '<div class="notice notice-error is-dismissible"><p>' . __('Invalid domain URL provided.', 'affiliatewp-cross-domain-plugin-suite') . '</p></div>';
                 break;
             case 'domain_exists':
-                echo '<div class="notice notice-error is-dismissible"><p>' . __('Domain already exists.', 'affiliate-cross-domain') . '</p></div>';
+                echo '<div class="notice notice-error is-dismissible"><p>' . __('Domain already exists.', 'affiliatewp-cross-domain-plugin-suite') . '</p></div>';
                 break;
             case 'settings_saved':
-                echo '<div class="notice notice-success is-dismissible"><p>' . __('Settings saved successfully.', 'affiliate-cross-domain') . '</p></div>';
+                echo '<div class="notice notice-success is-dismissible"><p>' . __('Settings saved successfully.', 'affiliatewp-cross-domain-plugin-suite') . '</p></div>';
                 break;
         }
     }
@@ -217,21 +217,21 @@ class AFFCD_Domain_Management {
                 <div class="stats-grid">
                     <div class="stat-item">
                         <span class="stat-number"><?php echo count($domains); ?></span>
-                        <span class="stat-label"><?php _e('Total Domains', 'affiliate-cross-domain'); ?></span>
+                        <span class="stat-label"><?php _e('Total Domains', 'affiliatewp-cross-domain-plugin-suite'); ?></span>
                     </div>
                     <div class="stat-item">
                         <span class="stat-number"><?php echo count(array_filter($domains, function($d) { return $d->status === 'active'; })); ?></span>
-                        <span class="stat-label"><?php _e('Active Domains', 'affiliate-cross-domain'); ?></span>
+                        <span class="stat-label"><?php _e('Active Domains', 'affiliatewp-cross-domain-plugin-suite'); ?></span>
                     </div>
                     <div class="stat-item">
                         <span class="stat-number"><?php echo count(array_filter($domains, function($d) { return $d->verification_status === 'verified'; })); ?></span>
-                        <span class="stat-label"><?php _e('Verified Domains', 'affiliate-cross-domain'); ?></span>
+                        <span class="stat-label"><?php _e('Verified Domains', 'affiliatewp-cross-domain-plugin-suite'); ?></span>
                     </div>
                 </div>
             </div>
 
             <div class="domain-management-section">
-                <h2><?php _e('Add New Domain', 'affiliate-cross-domain'); ?></h2>
+                <h2><?php _e('Add New Domain', 'affiliatewp-cross-domain-plugin-suite'); ?></h2>
                 
                 <form id="add-domain-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                     <?php wp_nonce_field('affcd_add_domain', 'affcd_nonce'); ?>
@@ -240,7 +240,7 @@ class AFFCD_Domain_Management {
                     <table class="form-table">
                         <tr>
                             <th scope="row">
-                                <label for="domain_url"><?php _e('Domain URL', 'affiliate-cross-domain'); ?></label>
+                                <label for="domain_url"><?php _e('Domain URL', 'affiliatewp-cross-domain-plugin-suite'); ?></label>
                             </th>
                             <td>
                                 <input type="url" 
@@ -249,13 +249,13 @@ class AFFCD_Domain_Management {
                                        class="regular-text" 
                                        placeholder="https://example.com"
                                        required>
-                                <p class="description"><?php _e('Enter the full domain URL including https://', 'affiliate-cross-domain'); ?></p>
+                                <p class="description"><?php _e('Enter the full domain URL including https://', 'affiliatewp-cross-domain-plugin-suite'); ?></p>
                             </td>
                         </tr>
                         
                         <tr>
                             <th scope="row">
-                                <label for="domain_name"><?php _e('Domain Name', 'affiliate-cross-domain'); ?></label>
+                                <label for="domain_name"><?php _e('Domain Name', 'affiliatewp-cross-domain-plugin-suite'); ?></label>
                             </th>
                             <td>
                                 <input type="text" 
@@ -263,13 +263,13 @@ class AFFCD_Domain_Management {
                                        name="domain_name" 
                                        class="regular-text" 
                                        placeholder="Example Site">
-                                <p class="description"><?php _e('Friendly name for this domain', 'affiliate-cross-domain'); ?></p>
+                                <p class="description"><?php _e('Friendly name for this domain', 'affiliatewp-cross-domain-plugin-suite'); ?></p>
                             </td>
                         </tr>
                         
                         <tr>
                             <th scope="row">
-                                <label for="owner_email"><?php _e('Owner Email', 'affiliate-cross-domain'); ?></label>
+                                <label for="owner_email"><?php _e('Owner Email', 'affiliatewp-cross-domain-plugin-suite'); ?></label>
                             </th>
                             <td>
                                 <input type="email" 
@@ -282,7 +282,7 @@ class AFFCD_Domain_Management {
                         
                         <tr>
                             <th scope="row">
-                                <label for="owner_name"><?php _e('Owner Name', 'affiliate-cross-domain'); ?></label>
+                                <label for="owner_name"><?php _e('Owner Name', 'affiliatewp-cross-domain-plugin-suite'); ?></label>
                             </th>
                             <td>
                                 <input type="text" 
@@ -295,43 +295,43 @@ class AFFCD_Domain_Management {
                         
                         <tr>
                             <th scope="row">
-                                <label for="status"><?php _e('Initial Status', 'affiliate-cross-domain'); ?></label>
+                                <label for="status"><?php _e('Initial Status', 'affiliatewp-cross-domain-plugin-suite'); ?></label>
                             </th>
                             <td>
                                 <select id="status" name="status">
-                                    <option value="pending"><?php _e('Pending', 'affiliate-cross-domain'); ?></option>
-                                    <option value="active"><?php _e('Active', 'affiliate-cross-domain'); ?></option>
-                                    <option value="inactive"><?php _e('Inactive', 'affiliate-cross-domain'); ?></option>
+                                    <option value="pending"><?php _e('Pending', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
+                                    <option value="active"><?php _e('Active', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
+                                    <option value="inactive"><?php _e('Inactive', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
                                 </select>
                             </td>
                         </tr>
                     </table>
                     
-                    <?php submit_button(__('Add Domain', 'affiliate-cross-domain')); ?>
+                    <?php submit_button(__('Add Domain', 'affiliatewp-cross-domain-plugin-suite')); ?>
                 </form>
             </div>
 
             <div class="domain-management-section">
-                <h2><?php _e('authorised Domains', 'affiliate-cross-domain'); ?></h2>
+                <h2><?php _e('authorised Domains', 'affiliatewp-cross-domain-plugin-suite'); ?></h2>
                 
                 <?php if (empty($domains)): ?>
-                    <p><?php _e('No domains configured yet. Add your first domain above.', 'affiliate-cross-domain'); ?></p>
+                    <p><?php _e('No domains configured yet. Add your first domain above.', 'affiliatewp-cross-domain-plugin-suite'); ?></p>
                 <?php else: ?>
                     <div class="tablenav top">
                         <div class="alignleft actions bulkactions">
                             <select id="bulk-actions" name="action">
-                                <option value="-1"><?php _e('Bulk Actions', 'affiliate-cross-domain'); ?></option>
-                                <option value="activate"><?php _e('Activate', 'affiliate-cross-domain'); ?></option>
-                                <option value="deactivate"><?php _e('Deactivate', 'affiliate-cross-domain'); ?></option>
-                                <option value="verify"><?php _e('Verify', 'affiliate-cross-domain'); ?></option>
-                                <option value="delete"><?php _e('Delete', 'affiliate-cross-domain'); ?></option>
+                                <option value="-1"><?php _e('Bulk Actions', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
+                                <option value="activate"><?php _e('Activate', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
+                                <option value="deactivate"><?php _e('Deactivate', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
+                                <option value="verify"><?php _e('Verify', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
+                                <option value="delete"><?php _e('Delete', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
                             </select>
                             <button type="button" id="apply-bulk-action" class="button action">
-                                <?php _e('Apply', 'affiliate-cross-domain'); ?>
+                                <?php _e('Apply', 'affiliatewp-cross-domain-plugin-suite'); ?>
                             </button>
                         </div>
                         <div class="tablenav-pages">
-                            <span class="displaying-num"><?php printf(_n('%s item', '%s items', count($domains), 'affiliate-cross-domain'), count($domains)); ?></span>
+                            <span class="displaying-num"><?php printf(_n('%s item', '%s items', count($domains), 'affiliatewp-cross-domain-plugin-suite'), count($domains)); ?></span>
                         </div>
                     </div>
                     
@@ -341,12 +341,12 @@ class AFFCD_Domain_Management {
                                 <td class="manage-column column-cb check-column">
                                     <input type="checkbox" id="select-all-domains">
                                 </td>
-                                <th class="manage-column"><?php _e('Domain', 'affiliate-cross-domain'); ?></th>
-                                <th class="manage-column"><?php _e('Status', 'affiliate-cross-domain'); ?></th>
-                                <th class="manage-column"><?php _e('Verification', 'affiliate-cross-domain'); ?></th>
-                                <th class="manage-column"><?php _e('API Key', 'affiliate-cross-domain'); ?></th>
-                                <th class="manage-column"><?php _e('Last Activity', 'affiliate-cross-domain'); ?></th>
-                                <th class="manage-column"><?php _e('Actions', 'affiliate-cross-domain'); ?></th>
+                                <th class="manage-column"><?php _e('Domain', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                <th class="manage-column"><?php _e('Status', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                <th class="manage-column"><?php _e('Verification', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                <th class="manage-column"><?php _e('API Key', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                <th class="manage-column"><?php _e('Last Activity', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                <th class="manage-column"><?php _e('Actions', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -379,7 +379,7 @@ class AFFCD_Domain_Management {
                                             <?php echo esc_html(substr($domain->api_key, 0, 8) . '...'); ?>
                                         </code>
                                         <button type="button" class="button-link copy-api-key" data-api-key="<?php echo esc_attr($domain->api_key); ?>">
-                                            <?php _e('Copy Full Key', 'affiliate-cross-domain'); ?>
+                                            <?php _e('Copy Full Key', 'affiliatewp-cross-domain-plugin-suite'); ?>
                                         </button>
                                     </td>
                                     <td>
@@ -387,7 +387,7 @@ class AFFCD_Domain_Management {
                                         if ($domain->last_activity_at) {
                                             echo esc_html(affcd_time_ago($domain->last_activity_at));
                                         } else {
-                                            _e('Never', 'affiliate-cross-domain');
+                                            _e('Never', 'affiliatewp-cross-domain-plugin-suite');
                                         }
                                         ?>
                                     </td>
@@ -395,31 +395,31 @@ class AFFCD_Domain_Management {
                                         <div class="domain-actions">
                                             <button type="button" class="button button-small test-domain-connection" 
                                                     data-domain-id="<?php echo esc_attr($domain->id); ?>">
-                                                <?php _e('Test', 'affiliate-cross-domain'); ?>
+                                                <?php _e('Test', 'affiliatewp-cross-domain-plugin-suite'); ?>
                                             </button>
                                             <button type="button" class="button button-small verify-domain" 
                                                     data-domain-id="<?php echo esc_attr($domain->id); ?>">
-                                                <?php _e('Verify', 'affiliate-cross-domain'); ?>
+                                                <?php _e('Verify', 'affiliatewp-cross-domain-plugin-suite'); ?>
                                             </button>
                                             <button type="button" class="button button-small edit-domain" 
                                                     data-domain-id="<?php echo esc_attr($domain->id); ?>">
-                                                <?php _e('Edit', 'affiliate-cross-domain'); ?>
+                                                <?php _e('Edit', 'affiliatewp-cross-domain-plugin-suite'); ?>
                                             </button>
                                             <?php if ($domain->status !== 'active'): ?>
                                                 <button type="button" class="button button-small activate-domain" 
                                                         data-domain-id="<?php echo esc_attr($domain->id); ?>">
-                                                    <?php _e('Activate', 'affiliate-cross-domain'); ?>
+                                                    <?php _e('Activate', 'affiliatewp-cross-domain-plugin-suite'); ?>
                                                 </button>
                                             <?php else: ?>
                                                 <button type="button" class="button button-small deactivate-domain" 
                                                         data-domain-id="<?php echo esc_attr($domain->id); ?>">
-                                                    <?php _e('Deactivate', 'affiliate-cross-domain'); ?>
+                                                    <?php _e('Deactivate', 'affiliatewp-cross-domain-plugin-suite'); ?>
                                                 </button>
                                             <?php endif; ?>
                                             <button type="button" class="button button-small button-link-delete delete-domain" 
                                                     data-domain-id="<?php echo esc_attr($domain->id); ?>"
                                                     data-domain-name="<?php echo esc_attr($domain->domain_name ?: $domain->domain_url); ?>">
-                                                <?php _e('Delete', 'affiliate-cross-domain'); ?>
+                                                <?php _e('Delete', 'affiliatewp-cross-domain-plugin-suite'); ?>
                                             </button>
                                         </div>
                                     </td>
@@ -435,14 +435,14 @@ class AFFCD_Domain_Management {
         <div id="edit-domain-modal" class="domain-modal" style="display: none;">
             <div class="domain-modal-content">
                 <span class="domain-modal-close">&times;</span>
-                <h2><?php _e('Edit Domain', 'affiliate-cross-domain'); ?></h2>
+                <h2><?php _e('Edit Domain', 'affiliatewp-cross-domain-plugin-suite'); ?></h2>
                 <form id="edit-domain-form">
                     <input type="hidden" id="edit-domain-id" name="domain_id">
                     
                     <table class="form-table">
                         <tr>
                             <th scope="row">
-                                <label for="edit-domain-name"><?php _e('Domain Name', 'affiliate-cross-domain'); ?></label>
+                                <label for="edit-domain-name"><?php _e('Domain Name', 'affiliatewp-cross-domain-plugin-suite'); ?></label>
                             </th>
                             <td>
                                 <input type="text" id="edit-domain-name" name="domain_name" class="regular-text">
@@ -451,7 +451,7 @@ class AFFCD_Domain_Management {
                         
                         <tr>
                             <th scope="row">
-                                <label for="edit-owner-email"><?php _e('Owner Email', 'affiliate-cross-domain'); ?></label>
+                                <label for="edit-owner-email"><?php _e('Owner Email', 'affiliatewp-cross-domain-plugin-suite'); ?></label>
                             </th>
                             <td>
                                 <input type="email" id="edit-owner-email" name="owner_email" class="regular-text">
@@ -460,7 +460,7 @@ class AFFCD_Domain_Management {
                         
                         <tr>
                             <th scope="row">
-                                <label for="edit-owner-name"><?php _e('Owner Name', 'affiliate-cross-domain'); ?></label>
+                                <label for="edit-owner-name"><?php _e('Owner Name', 'affiliatewp-cross-domain-plugin-suite'); ?></label>
                             </th>
                             <td>
                                 <input type="text" id="edit-owner-name" name="owner_name" class="regular-text">
@@ -469,22 +469,22 @@ class AFFCD_Domain_Management {
                         
                         <tr>
                             <th scope="row">
-                                <label for="edit-status"><?php _e('Status', 'affiliate-cross-domain'); ?></label>
+                                <label for="edit-status"><?php _e('Status', 'affiliatewp-cross-domain-plugin-suite'); ?></label>
                             </th>
                             <td>
                                 <select id="edit-status" name="status">
-                                    <option value="active"><?php _e('Active', 'affiliate-cross-domain'); ?></option>
-                                    <option value="inactive"><?php _e('Inactive', 'affiliate-cross-domain'); ?></option>
-                                    <option value="suspended"><?php _e('Suspended', 'affiliate-cross-domain'); ?></option>
-                                    <option value="pending"><?php _e('Pending', 'affiliate-cross-domain'); ?></option>
+                                    <option value="active"><?php _e('Active', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
+                                    <option value="inactive"><?php _e('Inactive', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
+                                    <option value="suspended"><?php _e('Suspended', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
+                                    <option value="pending"><?php _e('Pending', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
                                 </select>
                             </td>
                         </tr>
                     </table>
                     
                     <p class="submit">
-                        <button type="submit" class="button button-primary"><?php _e('Update Domain', 'affiliate-cross-domain'); ?></button>
-                        <button type="button" class="button" onclick="closeDomainModal()"><?php _e('Cancel', 'affiliate-cross-domain'); ?></button>
+                        <button type="submit" class="button button-primary"><?php _e('Update Domain', 'affiliatewp-cross-domain-plugin-suite'); ?></button>
+                        <button type="button" class="button" onclick="closeDomainModal()"><?php _e('Cancel', 'affiliatewp-cross-domain-plugin-suite'); ?></button>
                     </p>
                 </form>
             </div>
@@ -503,72 +503,72 @@ class AFFCD_Domain_Management {
                 <?php wp_nonce_field('affcd_save_domain_settings', 'affcd_nonce'); ?>
                 <input type="hidden" name="action" value="affcd_save_domain_settings">
                 
-                <h2><?php _e('Global Domain Settings', 'affiliate-cross-domain'); ?></h2>
+                <h2><?php _e('Global Domain Settings', 'affiliatewp-cross-domain-plugin-suite'); ?></h2>
                 
                 <table class="form-table">
                     <tr>
-                        <th scope="row"><?php _e('Default Rate Limits', 'affiliate-cross-domain'); ?></th>
+                        <th scope="row"><?php _e('Default Rate Limits', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
                         <td>
                             <fieldset>
                                 <label>
                                     <input type="number" name="default_rate_limit_minute" value="<?php echo esc_attr($settings['default_rate_limit_minute'] ?? 60); ?>" min="1" max="1000">
-                                    <?php _e('Requests per minute', 'affiliate-cross-domain'); ?>
+                                    <?php _e('Requests per minute', 'affiliatewp-cross-domain-plugin-suite'); ?>
                                 </label>
                                 <br>
                                 <label>
                                     <input type="number" name="default_rate_limit_hour" value="<?php echo esc_attr($settings['default_rate_limit_hour'] ?? 1000); ?>" min="1" max="10000">
-                                    <?php _e('Requests per hour', 'affiliate-cross-domain'); ?>
+                                    <?php _e('Requests per hour', 'affiliatewp-cross-domain-plugin-suite'); ?>
                                 </label>
                                 <br>
                                 <label>
                                     <input type="number" name="default_rate_limit_daily" value="<?php echo esc_attr($settings['default_rate_limit_daily'] ?? 10000); ?>" min="1" max="100000">
-                                    <?php _e('Requests per day', 'affiliate-cross-domain'); ?>
+                                    <?php _e('Requests per day', 'affiliatewp-cross-domain-plugin-suite'); ?>
                                 </label>
                             </fieldset>
                         </td>
                     </tr>
                     
                     <tr>
-                        <th scope="row"><?php _e('Security Settings', 'affiliate-cross-domain'); ?></th>
+                        <th scope="row"><?php _e('Security Settings', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
                         <td>
                             <fieldset>
                                 <label>
                                     <input type="checkbox" name="require_https" value="1" <?php checked(!empty($settings['require_https'])); ?>>
-                                    <?php _e('Require HTTPS for all API requests', 'affiliate-cross-domain'); ?>
+                                    <?php _e('Require HTTPS for all API requests', 'affiliatewp-cross-domain-plugin-suite'); ?>
                                 </label>
                                 <br>
                                 <label>
                                     <input type="checkbox" name="enable_ip_whitelist" value="1" <?php checked(!empty($settings['enable_ip_whitelist'])); ?>>
-                                    <?php _e('Enable IP address whitelisting', 'affiliate-cross-domain'); ?>
+                                    <?php _e('Enable IP address whitelisting', 'affiliatewp-cross-domain-plugin-suite'); ?>
                                 </label>
                                 <br>
                                 <label>
                                     <input type="checkbox" name="log_all_requests" value="1" <?php checked(!empty($settings['log_all_requests'])); ?>>
-                                    <?php _e('Log all API requests', 'affiliate-cross-domain'); ?>
+                                    <?php _e('Log all API requests', 'affiliatewp-cross-domain-plugin-suite'); ?>
                                 </label>
                             </fieldset>
                         </td>
                     </tr>
                     
                     <tr>
-                        <th scope="row"><?php _e('Webhook Settings', 'affiliate-cross-domain'); ?></th>
+                        <th scope="row"><?php _e('Webhook Settings', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
                         <td>
                             <fieldset>
                                 <label>
                                     <input type="number" name="webhook_timeout" value="<?php echo esc_attr($settings['webhook_timeout'] ?? 30); ?>" min="5" max="120">
-                                    <?php _e('Webhook timeout (seconds)', 'affiliate-cross-domain'); ?>
+                                    <?php _e('Webhook timeout (seconds)', 'affiliatewp-cross-domain-plugin-suite'); ?>
                                 </label>
                                 <br>
                                 <label>
                                     <input type="number" name="webhook_retry_attempts" value="<?php echo esc_attr($settings['webhook_retry_attempts'] ?? 3); ?>" min="1" max="10">
-                                    <?php _e('Retry attempts on failure', 'affiliate-cross-domain'); ?>
+                                    <?php _e('Retry attempts on failure', 'affiliatewp-cross-domain-plugin-suite'); ?>
                                 </label>
                             </fieldset>
                         </td>
                     </tr>
                 </table>
                 
-                <?php submit_button(__('Save Settings', 'affiliate-cross-domain')); ?>
+                <?php submit_button(__('Save Settings', 'affiliatewp-cross-domain-plugin-suite')); ?>
             </form>
         </div>
         <?php
@@ -582,50 +582,50 @@ class AFFCD_Domain_Management {
         $blocked_ips = get_option('affcd_blocked_ips', []);
         ?>
         <div class="security-content">
-            <h2><?php _e('Security Dashboard', 'affiliate-cross-domain'); ?></h2>
+            <h2><?php _e('Security Dashboard', 'affiliatewp-cross-domain-plugin-suite'); ?></h2>
             
             <div class="security-stats">
                 <div class="stats-grid">
                     <div class="stat-item">
                         <span class="stat-number"><?php echo count($security_logs); ?></span>
-                        <span class="stat-label"><?php _e('Security Events (24h)', 'affiliate-cross-domain'); ?></span>
+                        <span class="stat-label"><?php _e('Security Events (24h)', 'affiliatewp-cross-domain-plugin-suite'); ?></span>
                     </div>
                     <div class="stat-item">
                         <span class="stat-number"><?php echo count($blocked_ips); ?></span>
-                        <span class="stat-label"><?php _e('Blocked IPs', 'affiliate-cross-domain'); ?></span>
+                        <span class="stat-label"><?php _e('Blocked IPs', 'affiliatewp-cross-domain-plugin-suite'); ?></span>
                     </div>
                     <div class="stat-item">
                         <span class="stat-number"><?php echo $this->get_failed_requests_count(); ?></span>
-                        <span class="stat-label"><?php _e('Failed Requests', 'affiliate-cross-domain'); ?></span>
+                        <span class="stat-label"><?php _e('Failed Requests', 'affiliatewp-cross-domain-plugin-suite'); ?></span>
                     </div>
                 </div>
             </div>
             
             <div class="security-section">
-                <h3><?php _e('IP Whitelist Management', 'affiliate-cross-domain'); ?></h3>
+                <h3><?php _e('IP Whitelist Management', 'affiliatewp-cross-domain-plugin-suite'); ?></h3>
                 <form id="ip-whitelist-form">
                     <?php wp_nonce_field('affcd_manage_ips', 'affcd_nonce'); ?>
                     <table class="form-table">
                         <tr>
                             <th scope="row">
-                                <label for="new-ip-address"><?php _e('Add IP Address', 'affiliate-cross-domain'); ?></label>
+                                <label for="new-ip-address"><?php _e('Add IP Address', 'affiliatewp-cross-domain-plugin-suite'); ?></label>
                             </th>
                             <td>
                                 <input type="text" id="new-ip-address" name="ip_address" class="regular-text" 
                                        pattern="^(\d{1,3}\.){3}\d{1,3}$" placeholder="192.168.1.1">
-                                <button type="button" id="add-ip-address" class="button"><?php _e('Add', 'affiliate-cross-domain'); ?></button>
+                                <button type="button" id="add-ip-address" class="button"><?php _e('Add', 'affiliatewp-cross-domain-plugin-suite'); ?></button>
                             </td>
                         </tr>
                     </table>
                     
                     <?php if (!empty($blocked_ips)): ?>
-                        <h4><?php _e('Current IP Whitelist', 'affiliate-cross-domain'); ?></h4>
+                        <h4><?php _e('Current IP Whitelist', 'affiliatewp-cross-domain-plugin-suite'); ?></h4>
                         <table class="wp-list-table widefat">
                             <thead>
                                 <tr>
-                                    <th><?php _e('IP Address', 'affiliate-cross-domain'); ?></th>
-                                    <th><?php _e('Added', 'affiliate-cross-domain'); ?></th>
-                                    <th><?php _e('Actions', 'affiliate-cross-domain'); ?></th>
+                                    <th><?php _e('IP Address', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                    <th><?php _e('Added', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                    <th><?php _e('Actions', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -635,7 +635,7 @@ class AFFCD_Domain_Management {
                                         <td><?php echo esc_html(date_i18n(get_option('date_format'), $data['added'])); ?></td>
                                         <td>
                                             <button type="button" class="button button-small remove-ip" data-ip="<?php echo esc_attr($ip); ?>">
-                                                <?php _e('Remove', 'affiliate-cross-domain'); ?>
+                                                <?php _e('Remove', 'affiliatewp-cross-domain-plugin-suite'); ?>
                                             </button>
                                         </td>
                                     </tr>
@@ -647,21 +647,21 @@ class AFFCD_Domain_Management {
             </div>
             
             <div class="security-section">
-                <h3><?php _e('Security Event Log', 'affiliate-cross-domain'); ?></h3>
+                <h3><?php _e('Security Event Log', 'affiliatewp-cross-domain-plugin-suite'); ?></h3>
                 <table class="wp-list-table widefat striped">
                     <thead>
                         <tr>
-                            <th><?php _e('Timestamp', 'affiliate-cross-domain'); ?></th>
-                            <th><?php _e('Event Type', 'affiliate-cross-domain'); ?></th>
-                            <th><?php _e('Domain', 'affiliate-cross-domain'); ?></th>
-                            <th><?php _e('IP Address', 'affiliate-cross-domain'); ?></th>
-                            <th><?php _e('Status', 'affiliate-cross-domain'); ?></th>
+                            <th><?php _e('Timestamp', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                            <th><?php _e('Event Type', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                            <th><?php _e('Domain', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                            <th><?php _e('IP Address', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                            <th><?php _e('Status', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($security_logs)): ?>
                             <tr>
-                                <td colspan="5"><?php _e('No security events recorded', 'affiliate-cross-domain'); ?></td>
+                                <td colspan="5"><?php _e('No security events recorded', 'affiliatewp-cross-domain-plugin-suite'); ?></td>
                             </tr>
                         <?php else: ?>
                             <?php foreach ($security_logs as $log): ?>
@@ -684,10 +684,10 @@ class AFFCD_Domain_Management {
                 <?php if (!empty($security_logs)): ?>
                     <p style="margin-top: 15px;">
                         <button type="button" class="button" onclick="affcdClearSecurityLogs()">
-                            <?php _e('Clear Logs', 'affiliate-cross-domain'); ?>
+                            <?php _e('Clear Logs', 'affiliatewp-cross-domain-plugin-suite'); ?>
                         </button>
                         <button type="button" class="button" onclick="affcdExportSecurityLogs()">
-                            <?php _e('Export Logs', 'affiliate-cross-domain'); ?>
+                            <?php _e('Export Logs', 'affiliatewp-cross-domain-plugin-suite'); ?>
                         </button>
                     </p>
                 <?php endif; ?>
@@ -702,21 +702,21 @@ class AFFCD_Domain_Management {
     private function render_analytics_tab($stats) {
         ?>
         <div class="analytics-content">
-            <h2><?php _e('Domain Analytics', 'affiliate-cross-domain'); ?></h2>
+            <h2><?php _e('Domain Analytics', 'affiliatewp-cross-domain-plugin-suite'); ?></h2>
             
             <div class="analytics-filters">
                 <form id="analytics-filter-form">
-                    <label for="date-range"><?php _e('Date Range:', 'affiliate-cross-domain'); ?></label>
+                    <label for="date-range"><?php _e('Date Range:', 'affiliatewp-cross-domain-plugin-suite'); ?></label>
                     <select id="date-range" name="date_range">
-                        <option value="7"><?php _e('Last 7 days', 'affiliate-cross-domain'); ?></option>
-                        <option value="30" selected><?php _e('Last 30 days', 'affiliate-cross-domain'); ?></option>
-                        <option value="90"><?php _e('Last 90 days', 'affiliate-cross-domain'); ?></option>
-                        <option value="365"><?php _e('Last year', 'affiliate-cross-domain'); ?></option>
+                        <option value="7"><?php _e('Last 7 days', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
+                        <option value="30" selected><?php _e('Last 30 days', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
+                        <option value="90"><?php _e('Last 90 days', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
+                        <option value="365"><?php _e('Last year', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
                     </select>
                     
-                    <label for="domain-filter"><?php _e('Domain:', 'affiliate-cross-domain'); ?></label>
+                    <label for="domain-filter"><?php _e('Domain:', 'affiliatewp-cross-domain-plugin-suite'); ?></label>
                     <select id="domain-filter" name="domain">
-                        <option value=""><?php _e('All Domains', 'affiliate-cross-domain'); ?></option>
+                        <option value=""><?php _e('All Domains', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
                         <?php
                         $domains = $this->domain_manager->get_all_domains();
                         foreach ($domains as $domain): ?>
@@ -726,49 +726,49 @@ class AFFCD_Domain_Management {
                         <?php endforeach; ?>
                     </select>
                     
-                    <button type="button" id="update-analytics" class="button"><?php _e('Update', 'affiliate-cross-domain'); ?></button>
+                    <button type="button" id="update-analytics" class="button"><?php _e('Update', 'affiliatewp-cross-domain-plugin-suite'); ?></button>
                 </form>
             </div>
             
             <div class="analytics-dashboard">
                 <div class="analytics-grid">
                     <div class="analytics-card">
-                        <h3><?php _e('API Requests', 'affiliate-cross-domain'); ?></h3>
+                        <h3><?php _e('API Requests', 'affiliatewp-cross-domain-plugin-suite'); ?></h3>
                         <div class="metric-value"><?php echo number_format($stats['total_requests'] ?? 0); ?></div>
-                        <div class="metric-change positive">+12.5% <?php _e('from last period', 'affiliate-cross-domain'); ?></div>
+                        <div class="metric-change positive">+12.5% <?php _e('from last period', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
                     </div>
                     
                     <div class="analytics-card">
-                        <h3><?php _e('Successful Validations', 'affiliate-cross-domain'); ?></h3>
+                        <h3><?php _e('Successful Validations', 'affiliatewp-cross-domain-plugin-suite'); ?></h3>
                         <div class="metric-value"><?php echo number_format($stats['successful_validations'] ?? 0); ?></div>
-                        <div class="metric-change positive">+8.3% <?php _e('from last period', 'affiliate-cross-domain'); ?></div>
+                        <div class="metric-change positive">+8.3% <?php _e('from last period', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
                     </div>
                     
                     <div class="analytics-card">
-                        <h3><?php _e('Error Rate', 'affiliate-cross-domain'); ?></h3>
+                        <h3><?php _e('Error Rate', 'affiliatewp-cross-domain-plugin-suite'); ?></h3>
                         <div class="metric-value"><?php echo number_format(($stats['error_rate'] ?? 0) * 100, 2); ?>%</div>
-                        <div class="metric-change negative">-2.1% <?php _e('from last period', 'affiliate-cross-domain'); ?></div>
+                        <div class="metric-change negative">-2.1% <?php _e('from last period', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
                     </div>
                     
                     <div class="analytics-card">
-                        <h3><?php _e('Avg Response Time', 'affiliate-cross-domain'); ?></h3>
+                        <h3><?php _e('Avg Response Time', 'affiliatewp-cross-domain-plugin-suite'); ?></h3>
                         <div class="metric-value"><?php echo number_format($stats['avg_response_time'] ?? 0); ?>ms</div>
-                        <div class="metric-change positive">-15ms <?php _e('from last period', 'affiliate-cross-domain'); ?></div>
+                        <div class="metric-change positive">-15ms <?php _e('from last period', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
                     </div>
                 </div>
                 
                 <div class="analytics-charts">
                     <div class="chart-container">
-                        <h4><?php _e('Request Volume Over Time', 'affiliate-cross-domain'); ?></h4>
+                        <h4><?php _e('Request Volume Over Time', 'affiliatewp-cross-domain-plugin-suite'); ?></h4>
                         <div id="requests-chart" style="height: 300px; background: #f9f9f9; display: flex; align-items: center; justify-content: center;">
-                            <p><?php _e('Chart will be rendered here via JavaScript', 'affiliate-cross-domain'); ?></p>
+                            <p><?php _e('Chart will be rendered here via JavaScript', 'affiliatewp-cross-domain-plugin-suite'); ?></p>
                         </div>
                     </div>
                     
                     <div class="chart-container">
-                        <h4><?php _e('Top Performing Domains', 'affiliate-cross-domain'); ?></h4>
+                        <h4><?php _e('Top Performing Domains', 'affiliatewp-cross-domain-plugin-suite'); ?></h4>
                         <div id="domains-chart" style="height: 300px; background: #f9f9f9; display: flex; align-items: center; justify-content: center;">
-                            <p><?php _e('Chart will be rendered here via JavaScript', 'affiliate-cross-domain'); ?></p>
+                            <p><?php _e('Chart will be rendered here via JavaScript', 'affiliatewp-cross-domain-plugin-suite'); ?></p>
                         </div>
                     </div>
                 </div>
@@ -782,14 +782,14 @@ class AFFCD_Domain_Management {
      */
     public function add_domain() {
         if (!current_user_can('manage_affiliates') || !wp_verify_nonce($_POST['affcd_nonce'], 'affcd_add_domain')) {
-            wp_die(__('Permission denied.', 'affiliate-cross-domain'));
+            wp_die(__('Permission denied.', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
-        $domain_url = sanitize_url($_POST['domain_url']);
-        $domain_name = sanitize_text_field($_POST['domain_name']);
-        $owner_email = sanitize_email($_POST['owner_email']);
-        $owner_name = sanitize_text_field($_POST['owner_name']);
-        $status = sanitize_text_field($_POST['status']);
+        $domain_url = Sanitise_url($_POST['domain_url']);
+        $domain_name = Sanitise_text_field($_POST['domain_name']);
+        $owner_email = Sanitise_email($_POST['owner_email']);
+        $owner_name = Sanitise_text_field($_POST['owner_name']);
+        $status = Sanitise_text_field($_POST['status']);
 
         if (!filter_var($domain_url, FILTER_VALIDATE_URL)) {
             wp_redirect(add_query_arg('message', 'invalid_domain', wp_get_referer()));
@@ -826,7 +826,7 @@ class AFFCD_Domain_Management {
      */
     public function remove_domain() {
         if (!current_user_can('manage_affiliates') || !wp_verify_nonce($_POST['affcd_nonce'], 'affcd_remove_domain')) {
-            wp_die(__('Permission denied.', 'affiliate-cross-domain'));
+            wp_die(__('Permission denied.', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         $domain_id = absint($_POST['domain_id']);
@@ -845,7 +845,7 @@ class AFFCD_Domain_Management {
      */
     public function save_domain_settings() {
         if (!current_user_can('manage_affiliates') || !wp_verify_nonce($_POST['affcd_nonce'], 'affcd_save_domain_settings')) {
-            wp_die(__('Permission denied.', 'affiliate-cross-domain'));
+            wp_die(__('Permission denied.', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         $settings = [
@@ -871,14 +871,14 @@ class AFFCD_Domain_Management {
         check_ajax_referer('affcd_ajax_nonce', 'nonce');
 
         if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain'));
+            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         $domain_id = absint($_POST['domain_id'] ?? 0);
         $domain = $this->domain_manager->get_domain($domain_id);
 
         if (!$domain) {
-            wp_send_json_error(__('Domain not found', 'affiliate-cross-domain'));
+            wp_send_json_error(__('Domain not found', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         $test_result = $this->test_domain_connection($domain);
@@ -897,7 +897,7 @@ class AFFCD_Domain_Management {
         check_ajax_referer('affcd_ajax_nonce', 'nonce');
 
         if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain'));
+            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         $domain_id = absint($_POST['domain_id'] ?? 0);
@@ -909,7 +909,7 @@ class AFFCD_Domain_Management {
 
         wp_send_json_success([
             'api_key' => $new_api_key,
-            'message' => __('API key regenerated successfully', 'affiliate-cross-domain')
+            'message' => __('API key regenerated successfully', 'affiliatewp-cross-domain-plugin-suite')
         ]);
     }
 
@@ -920,14 +920,14 @@ class AFFCD_Domain_Management {
         check_ajax_referer('affcd_ajax_nonce', 'nonce');
 
         if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain'));
+            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         $domain_id = absint($_POST['domain_id'] ?? 0);
         $domain = $this->domain_manager->get_domain($domain_id);
 
         if (!$domain || !$domain->webhook_url) {
-            wp_send_json_error(__('Domain or webhook URL not found', 'affiliate-cross-domain'));
+            wp_send_json_error(__('Domain or webhook URL not found', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         $test_payload = [
@@ -941,7 +941,7 @@ class AFFCD_Domain_Management {
         
         if ($result['success']) {
             wp_send_json_success([
-                'message' => __('Test webhook sent successfully', 'affiliate-cross-domain'),
+                'message' => __('Test webhook sent successfully', 'affiliatewp-cross-domain-plugin-suite'),
                 'response_code' => $result['response_code']
             ]);
         } else {
@@ -959,7 +959,7 @@ class AFFCD_Domain_Management {
         check_ajax_referer('affcd_ajax_nonce', 'nonce');
 
         if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain'));
+            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         $domain_id = absint($_POST['domain_id'] ?? 0);
@@ -979,14 +979,14 @@ class AFFCD_Domain_Management {
         check_ajax_referer('affcd_ajax_nonce', 'nonce');
 
         if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain'));
+            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         $domain_id = absint($_POST['domain_id'] ?? 0);
-        $status = sanitize_text_field($_POST['status'] ?? '');
+        $status = Sanitise_text_field($_POST['status'] ?? '');
 
         if (!in_array($status, ['active', 'inactive'])) {
-            wp_send_json_error(__('Invalid status', 'affiliate-cross-domain'));
+            wp_send_json_error(__('Invalid status', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         $result = $this->domain_manager->update_domain($domain_id, ['status' => $status]);
@@ -996,7 +996,7 @@ class AFFCD_Domain_Management {
         }
 
         wp_send_json_success([
-            'message' => sprintf(__('Domain status updated to %s', 'affiliate-cross-domain'), $status)
+            'message' => sprintf(__('Domain status updated to %s', 'affiliatewp-cross-domain-plugin-suite'), $status)
         ]);
     }
 
@@ -1007,7 +1007,7 @@ class AFFCD_Domain_Management {
         check_ajax_referer('affcd_ajax_nonce', 'nonce');
 
         if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain'));
+            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         $domain_id = absint($_POST['domain_id'] ?? 0);
@@ -1018,7 +1018,7 @@ class AFFCD_Domain_Management {
         }
 
         wp_send_json_success([
-            'message' => __('Domain deleted successfully', 'affiliate-cross-domain')
+            'message' => __('Domain deleted successfully', 'affiliatewp-cross-domain-plugin-suite')
         ]);
     }
 
@@ -1029,14 +1029,14 @@ class AFFCD_Domain_Management {
         check_ajax_referer('affcd_ajax_nonce', 'nonce');
 
         if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain'));
+            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
-        $action = sanitize_text_field($_POST['bulk_action'] ?? '');
+        $action = Sanitise_text_field($_POST['bulk_action'] ?? '');
         $domain_ids = array_map('absint', $_POST['domain_ids'] ?? []);
 
         if (empty($action) || empty($domain_ids)) {
-            wp_send_json_error(__('Invalid action or no domains selected', 'affiliate-cross-domain'));
+            wp_send_json_error(__('Invalid action or no domains selected', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         $success_count = 0;
@@ -1068,11 +1068,11 @@ class AFFCD_Domain_Management {
 
         if ($success_count === $total_count) {
             wp_send_json_success([
-                'message' => sprintf(__('Bulk action completed successfully on %d domains', 'affiliate-cross-domain'), $success_count)
+                'message' => sprintf(__('Bulk action completed successfully on %d domains', 'affiliatewp-cross-domain-plugin-suite'), $success_count)
             ]);
         } else {
             wp_send_json_success([
-                'message' => sprintf(__('Bulk action completed on %d of %d domains', 'affiliate-cross-domain'), $success_count, $total_count)
+                'message' => sprintf(__('Bulk action completed on %d of %d domains', 'affiliatewp-cross-domain-plugin-suite'), $success_count, $total_count)
             ]);
         }
     }
@@ -1084,7 +1084,7 @@ class AFFCD_Domain_Management {
         check_ajax_referer('affcd_ajax_nonce', 'nonce');
 
         if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliate-cross-domain'));
+            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         $domains = $this->domain_manager->get_all_domains();
@@ -1113,7 +1113,7 @@ class AFFCD_Domain_Management {
         $response = wp_remote_get($test_url, [
             'timeout' => 15,
             'headers' => [
-                'Authorization' => 'Bearer ' . $domain->api_key,
+                'authorisation' => 'Bearer ' . $domain->api_key,
                 'User-Agent' => 'AffiliateWP-CrossDomain/' . AFFCD_VERSION
             ]
         ]);
@@ -1121,7 +1121,7 @@ class AFFCD_Domain_Management {
         if (is_wp_error($response)) {
             return [
                 'success' => false,
-                'message' => __('Connection failed: ', 'affiliate-cross-domain') . $response->get_error_message(),
+                'message' => __('Connection failed: ', 'affiliatewp-cross-domain-plugin-suite') . $response->get_error_message(),
                 'details' => $response->get_error_code()
             ];
         }
@@ -1134,7 +1134,7 @@ class AFFCD_Domain_Management {
             if (isset($data['status']) && $data['status'] === 'ok') {
                 return [
                     'success' => true,
-                    'message' => __('Connection successful', 'affiliate-cross-domain'),
+                    'message' => __('Connection successful', 'affiliatewp-cross-domain-plugin-suite'),
                     'response_time' => $data['response_time'] ?? null,
                     'plugin_version' => $data['plugin_version'] ?? null
                 ];
@@ -1143,7 +1143,7 @@ class AFFCD_Domain_Management {
 
         return [
             'success' => false,
-            'message' => sprintf(__('Connection failed with response code: %d', 'affiliate-cross-domain'), $response_code),
+            'message' => sprintf(__('Connection failed with response code: %d', 'affiliatewp-cross-domain-plugin-suite'), $response_code),
             'response_code' => $response_code
         ];
     }
@@ -1182,8 +1182,8 @@ class AFFCD_Domain_Management {
             'success' => $response_code >= 200 && $response_code < 300,
             'response_code' => $response_code,
             'message' => $response_code >= 200 && $response_code < 300 
-                ? __('Webhook sent successfully', 'affiliate-cross-domain')
-                : sprintf(__('Webhook failed with code: %d', 'affiliate-cross-domain'), $response_code)
+                ? __('Webhook sent successfully', 'affiliatewp-cross-domain-plugin-suite')
+                : sprintf(__('Webhook failed with code: %d', 'affiliatewp-cross-domain-plugin-suite'), $response_code)
         ];
     }
 

@@ -53,31 +53,31 @@ class ACI_Settings_Page {
     public function init_settings() {
         // Register settings
         register_setting('aci_settings', 'aci_master_domain', [
-            'sanitize_callback' => 'esc_url_raw'
+            'Sanitise_callback' => 'esc_url_raw'
         ]);
         register_setting('aci_settings', 'aci_api_key', [
-            'sanitize_callback' => 'sanitize_text_field'
+            'Sanitise_callback' => 'Sanitise_text_field'
         ]);
         register_setting('aci_settings', 'aci_api_secret', [
-            'sanitize_callback' => 'sanitize_text_field'
+            'Sanitise_callback' => 'Sanitise_text_field'
         ]);
         register_setting('aci_settings', 'aci_cache_duration', [
-            'sanitize_callback' => 'intval'
+            'Sanitise_callback' => 'intval'
         ]);
         register_setting('aci_settings', 'aci_enable_logging', [
-            'sanitize_callback' => 'rest_sanitize_boolean'
+            'Sanitise_callback' => 'rest_Sanitise_boolean'
         ]);
         register_setting('aci_settings', 'aci_auto_apply_discounts', [
-            'sanitize_callback' => 'rest_sanitize_boolean'
+            'Sanitise_callback' => 'rest_Sanitise_boolean'
         ]);
         register_setting('aci_settings', 'aci_popup_settings', [
-            'sanitize_callback' => [$this, 'sanitize_popup_settings']
+            'Sanitise_callback' => [$this, 'Sanitise_popup_settings']
         ]);
         register_setting('aci_settings', 'aci_display_settings', [
-            'sanitize_callback' => [$this, 'sanitize_display_settings']
+            'Sanitise_callback' => [$this, 'Sanitise_display_settings']
         ]);
         register_setting('aci_settings', 'aci_zoho_settings', [
-            'sanitize_callback' => [$this, 'sanitize_zoho_settings']
+            'Sanitise_callback' => [$this, 'Sanitise_zoho_settings']
         ]);
 
         // Define sections
@@ -730,7 +730,7 @@ class ACI_Settings_Page {
 
         $response = wp_remote_get($master_domain . '/wp-json/affcd/v1/status', [
             'headers' => [
-                'Authorization' => 'Bearer ' . $api_key,
+                'authorisation' => 'Bearer ' . $api_key,
                 'X-Domain' => home_url()
             ],
             'timeout' => 10
@@ -810,49 +810,49 @@ class ACI_Settings_Page {
     }
 
     /**
-     * Sanitize popup settings
+     * Sanitise popup settings
      */
-    public function sanitize_popup_settings($input) {
-        $sanitized = [];
+    public function Sanitise_popup_settings($input) {
+        $Sanitised = [];
         
-        $sanitized['enabled'] = !empty($input['enabled']);
-        $sanitized['trigger'] = sanitize_text_field($input['trigger'] ?? 'exit_intent');
-        $sanitized['delay'] = intval($input['delay'] ?? 5);
-        $sanitized['show_once'] = !empty($input['show_once']);
-        $sanitized['popup_title'] = sanitize_text_field($input['popup_title'] ?? '');
-        $sanitized['popup_message'] = sanitize_textarea_field($input['popup_message'] ?? '');
-        $sanitized['popup_style'] = sanitize_text_field($input['popup_style'] ?? 'default');
+        $Sanitised['enabled'] = !empty($input['enabled']);
+        $Sanitised['trigger'] = Sanitise_text_field($input['trigger'] ?? 'exit_intent');
+        $Sanitised['delay'] = intval($input['delay'] ?? 5);
+        $Sanitised['show_once'] = !empty($input['show_once']);
+        $Sanitised['popup_title'] = Sanitise_text_field($input['popup_title'] ?? '');
+        $Sanitised['popup_message'] = Sanitise_textarea_field($input['popup_message'] ?? '');
+        $Sanitised['popup_style'] = Sanitise_text_field($input['popup_style'] ?? 'default');
 
-        return $sanitized;
+        return $Sanitised;
     }
 
     /**
-     * Sanitize display settings
+     * Sanitise display settings
      */
-    public function sanitize_display_settings($input) {
-        $sanitized = [];
+    public function Sanitise_display_settings($input) {
+        $Sanitised = [];
         
-        $sanitized['show_affiliate_notice'] = !empty($input['show_affiliate_notice']);
-        $sanitized['show_discount_amount'] = !empty($input['show_discount_amount']);
-        $sanitized['affiliate_notice_position'] = sanitize_text_field($input['affiliate_notice_position'] ?? 'top');
-        $sanitized['custom_css_class'] = sanitize_text_field($input['custom_css_class'] ?? '');
+        $Sanitised['show_affiliate_notice'] = !empty($input['show_affiliate_notice']);
+        $Sanitised['show_discount_amount'] = !empty($input['show_discount_amount']);
+        $Sanitised['affiliate_notice_position'] = Sanitise_text_field($input['affiliate_notice_position'] ?? 'top');
+        $Sanitised['custom_css_class'] = Sanitise_text_field($input['custom_css_class'] ?? '');
 
-        return $sanitized;
+        return $Sanitised;
     }
 
     /**
-     * Sanitize Zoho settings
+     * Sanitise Zoho settings
      */
-    public function sanitize_zoho_settings($input) {
-        $sanitized = [];
+    public function Sanitise_zoho_settings($input) {
+        $Sanitised = [];
         
-        $sanitized['enabled'] = !empty($input['enabled']);
-        $sanitized['client_id'] = sanitize_text_field($input['client_id'] ?? '');
-        $sanitized['client_secret'] = sanitize_text_field($input['client_secret'] ?? '');
-        $sanitized['refresh_token'] = sanitize_text_field($input['refresh_token'] ?? '');
-        $sanitized['api_domain'] = esc_url_raw($input['api_domain'] ?? 'https://www.zohoapis.com');
-        $sanitized['books_org_id'] = sanitize_text_field($input['books_org_id'] ?? '');
+        $Sanitised['enabled'] = !empty($input['enabled']);
+        $Sanitised['client_id'] = Sanitise_text_field($input['client_id'] ?? '');
+        $Sanitised['client_secret'] = Sanitise_text_field($input['client_secret'] ?? '');
+        $Sanitised['refresh_token'] = Sanitise_text_field($input['refresh_token'] ?? '');
+        $Sanitised['api_domain'] = esc_url_raw($input['api_domain'] ?? 'https://www.zohoapis.com');
+        $Sanitised['books_org_id'] = Sanitise_text_field($input['books_org_id'] ?? '');
 
-        return $sanitized;
+        return $Sanitised;
     }
 }

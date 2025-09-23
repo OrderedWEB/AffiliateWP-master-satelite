@@ -6,7 +6,7 @@
  * File: /wp-content/plugins/affiliate-cross-domain-system/includes/class-security-manager.php
  * 
  * Handles advanced security features including rate limiting, fraud detection,
- * domain authorization, and comprehensive security logging.
+ * domain authorisation, and comprehensive security logging.
  */
 
 // Prevent direct access
@@ -329,12 +329,12 @@ class AFFCD_Security_Manager {
         global $wpdb;
         
         if (!current_user_can('manage_affiliates')) {
-            return new WP_Error('insufficient_permissions', __('Insufficient permissions.', 'affiliate-cross-domain'));
+            return new WP_Error('insufficient_permissions', __('Insufficient permissions.', 'affiliatewp-cross-domain-plugin-suite'));
         }
         
         $clean_domain = $this->clean_domain($domain);
         if (!$clean_domain) {
-            return new WP_Error('invalid_domain', __('Invalid domain format.', 'affiliate-cross-domain'));
+            return new WP_Error('invalid_domain', __('Invalid domain format.', 'affiliatewp-cross-domain-plugin-suite'));
         }
         
         $domain_hash = hash('sha256', $clean_domain);
@@ -354,14 +354,14 @@ class AFFCD_Security_Manager {
         );
         
         if ($result === false) {
-            return new WP_Error('db_error', __('Failed to authorize domain.', 'affiliate-cross-domain'));
+            return new WP_Error('db_error', __('Failed to authorize domain.', 'affiliatewp-cross-domain-plugin-suite'));
         }
         
         // Clear cache
         $cache_key = $this->cache_prefix . 'domain_' . md5($clean_domain);
         wp_cache_delete($cache_key, 'affcd_security');
         
-        // Log authorization
+        // Log authorisation
         $this->log_security_event('domain_authorised', 'low', [
             'domain' => $clean_domain,
             'api_key' => substr($api_key, 0, 8) . '...'
@@ -937,12 +937,12 @@ class AFFCD_Security_Manager {
         $admin_emails = get_option('affcd_security_admin_emails', [get_option('admin_email')]);
         
         $subject = sprintf(
-            __('[SECURITY ALERT] High Risk Fraud Detection - %s', 'affiliate-cross-domain'),
+            __('[SECURITY ALERT] High Risk Fraud Detection - %s', 'affiliatewp-cross-domain-plugin-suite'),
             $pattern_type
         );
         
         $message = sprintf(
-            __("High risk fraud pattern detected:\n\nIdentifier: %s\nPattern: %s\nRisk Score: %d\nData: %s\n\nPlease review immediately.", 'affiliate-cross-domain'),
+            __("High risk fraud pattern detected:\n\nIdentifier: %s\nPattern: %s\nRisk Score: %d\nData: %s\n\nPlease review immediately.", 'affiliatewp-cross-domain-plugin-suite'),
             $identifier,
             $pattern_type,
             $risk_score,
@@ -1086,11 +1086,11 @@ class AFFCD_Security_Manager {
         check_ajax_referer('affcd_security_nonce', 'nonce');
         
         if (!current_user_can('manage_affiliates')) {
-            wp_die(__('Insufficient permissions.', 'affiliate-cross-domain'));
+            wp_die(__('Insufficient permissions.', 'affiliatewp-cross-domain-plugin-suite'));
         }
         
-        $test_type = sanitize_text_field($_POST['test_type'] ?? '');
-        $test_target = sanitize_text_field($_POST['test_target'] ?? '');
+        $test_type = Sanitise_text_field($_POST['test_type'] ?? '');
+        $test_target = Sanitise_text_field($_POST['test_target'] ?? '');
         
         $results = [];
         
@@ -1108,7 +1108,7 @@ class AFFCD_Security_Manager {
                 $results = $this->test_fraud_detection($test_target);
                 break;
             default:
-                $results = ['error' => __('Invalid test type.', 'affiliate-cross-domain')];
+                $results = ['error' => __('Invalid test type.', 'affiliatewp-cross-domain-plugin-suite')];
         }
         
         wp_send_json_success($results);
@@ -1123,7 +1123,7 @@ class AFFCD_Security_Manager {
         if (!$clean_domain) {
             return [
                 'status' => 'error',
-                'message' => __('Invalid domain format.', 'affiliate-cross-domain')
+                'message' => __('Invalid domain format.', 'affiliatewp-cross-domain-plugin-suite')
             ];
         }
         
@@ -1132,8 +1132,8 @@ class AFFCD_Security_Manager {
         return [
             'status' => $is_authorised ? 'success' : 'failed',
             'message' => $is_authorised ? 
-                __('Domain is authorised.', 'affiliate-cross-domain') : 
-                __('Domain is not authorised.', 'affiliate-cross-domain'),
+                __('Domain is authorised.', 'affiliatewp-cross-domain-plugin-suite') : 
+                __('Domain is not authorised.', 'affiliatewp-cross-domain-plugin-suite'),
             'domain' => $clean_domain,
             'authorised' => $is_authorised
         ];
@@ -1148,8 +1148,8 @@ class AFFCD_Security_Manager {
         return [
             'status' => $validation_result ? 'success' : 'failed',
             'message' => $validation_result ? 
-                __('API key is valid.', 'affiliate-cross-domain') : 
-                __('API key is invalid.', 'affiliate-cross-domain'),
+                __('API key is valid.', 'affiliatewp-cross-domain-plugin-suite') : 
+                __('API key is invalid.', 'affiliatewp-cross-domain-plugin-suite'),
             'api_key' => substr($api_key, 0, 8) . '...',
             'valid' => (bool) $validation_result,
             'domain' => $validation_result->domain ?? null
@@ -1173,7 +1173,7 @@ class AFFCD_Security_Manager {
         
         return [
             'status' => 'success',
-            'message' => sprintf(__('Found %d rate limit records.', 'affiliate-cross-domain'), count($current_limits)),
+            'message' => sprintf(__('Found %d rate limit records.', 'affiliatewp-cross-domain-plugin-suite'), count($current_limits)),
             'identifier' => $identifier,
             'current_limits' => $current_limits,
             'is_blocked' => $this->is_ip_blocked($identifier)
@@ -1196,7 +1196,7 @@ class AFFCD_Security_Manager {
         
         return [
             'status' => 'success',
-            'message' => sprintf(__('Found %d fraud detection records.', 'affiliate-cross-domain'), count($fraud_records)),
+            'message' => sprintf(__('Found %d fraud detection records.', 'affiliatewp-cross-domain-plugin-suite'), count($fraud_records)),
             'identifier' => $identifier,
             'fraud_records' => $fraud_records,
             'total_risk_score' => array_sum(array_column($fraud_records, 'risk_score'))
@@ -1266,7 +1266,7 @@ class AFFCD_Security_Manager {
         global $wpdb;
         
         if (!current_user_can('manage_affiliates')) {
-            return new WP_Error('insufficient_permissions', __('Insufficient permissions.', 'affiliate-cross-domain'));
+            return new WP_Error('insufficient_permissions', __('Insufficient permissions.', 'affiliatewp-cross-domain-plugin-suite'));
         }
         
         $where_conditions = ['1=1'];
@@ -1358,7 +1358,7 @@ class AFFCD_Security_Manager {
         global $wpdb;
         
         if (!current_user_can('manage_affiliates')) {
-            return new WP_Error('insufficient_permissions', __('Insufficient permissions.', 'affiliate-cross-domain'));
+            return new WP_Error('insufficient_permissions', __('Insufficient permissions.', 'affiliatewp-cross-domain-plugin-suite'));
         }
         
         $result = $wpdb->update(
@@ -1373,7 +1373,7 @@ class AFFCD_Security_Manager {
         );
         
         if ($result === false) {
-            return new WP_Error('db_error', __('Failed to unblock IP.', 'affiliate-cross-domain'));
+            return new WP_Error('db_error', __('Failed to unblock IP.', 'affiliatewp-cross-domain-plugin-suite'));
         }
         
         // Log the unblock action
@@ -1412,12 +1412,12 @@ class AFFCD_Security_Manager {
      */
     public function whitelist_ip($ip, $reason = '') {
         if (!current_user_can('manage_affiliates')) {
-            return new WP_Error('insufficient_permissions', __('Insufficient permissions.', 'affiliate-cross-domain'));
+            return new WP_Error('insufficient_permissions', __('Insufficient permissions.', 'affiliatewp-cross-domain-plugin-suite'));
         }
         
         $whitelisted_ips = get_option('affcd_whitelisted_ips', []);
         $whitelisted_ips[$ip] = [
-            'reason' => sanitize_text_field($reason),
+            'reason' => Sanitise_text_field($reason),
             'added_by' => get_current_user_id(),
             'added_at' => current_time('mysql')
         ];

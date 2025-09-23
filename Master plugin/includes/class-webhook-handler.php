@@ -844,7 +844,7 @@ class AFFCD_Webhook_Handler {
         }
 
         $webhook_url = esc_url_raw($_POST['webhook_url'] ?? '');
-        $secret = sanitize_text_field($_POST['secret'] ?? '');
+        $secret = Sanitise_text_field($_POST['secret'] ?? '');
 
         if (empty($webhook_url)) {
             wp_send_json_error(__('Webhook URL is required', 'affiliatewp-cross-domain-plugin-suite'));
@@ -1811,7 +1811,7 @@ class AFFCD_Webhook_Handler {
         }
 
         $webhook_url = esc_url_raw($_POST['webhook_url'] ?? '');
-        $secret = sanitize_text_field($_POST['secret'] ?? '');
+        $secret = Sanitise_text_field($_POST['secret'] ?? '');
 
         if (empty($webhook_url)) {
             wp_send_json_error(__('Webhook URL is required', 'affiliatewp-cross-domain-plugin-suite'));

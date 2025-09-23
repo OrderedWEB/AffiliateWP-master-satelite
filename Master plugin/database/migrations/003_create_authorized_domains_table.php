@@ -356,7 +356,7 @@ class AFFCD_Migration_003_Create_authorised_Domains_Table {
             return 0;
         }
         
-        // Sanitize domain IDs
+        // Sanitise domain IDs
         $domain_ids = array_map('intval', $domain_ids);
         $placeholders = implode(',', array_fill(0, count($domain_ids), '%d'));
         
@@ -667,7 +667,7 @@ class AFFCD_Migration_003_Create_authorised_Domains_Table {
             
             $domain_data = [
                 'domain_url' => esc_url_raw($domain_url),
-                'domain_name' => sanitize_text_field($domain_name),
+                'domain_name' => Sanitise_text_field($domain_name),
                 'api_key' => $old_api_key ?: self::generate_api_key(),
                 'api_secret' => self::generate_api_secret(),
                 'status' => $old_status === 'verified' ? 'active' : 'pending',
@@ -1033,7 +1033,7 @@ class AFFCD_Migration_003_Create_authorised_Domains_Table {
             [
                 'status' => 'suspended',
                 'suspended_at' => current_time('mysql'),
-                'suspended_reason' => sanitize_text_field($reason),
+                'suspended_reason' => Sanitise_text_field($reason),
                 'suspended_by' => $suspended_by,
                 'security_level' => 'strict'
             ],
@@ -1235,7 +1235,7 @@ class AFFCD_Migration_003_Create_authorised_Domains_Table {
         // Prepare data for insertion/update
         $domain_data = [
             'domain_url' => esc_url_raw($config_data['domain_url']),
-            'domain_name' => sanitize_text_field($config_data['domain_name'] ?? ''),
+            'domain_name' => Sanitise_text_field($config_data['domain_name'] ?? ''),
             'status' => in_array($config_data['status'] ?? '', ['active', 'inactive', 'suspended', 'pending']) 
                        ? $config_data['status'] : 'pending',
             'security_level' => in_array($config_data['security_level'] ?? '', ['low', 'medium', 'high', 'strict']) 
@@ -1244,13 +1244,13 @@ class AFFCD_Migration_003_Create_authorised_Domains_Table {
             'rate_limit_per_minute' => intval($config_data['rate_limit_per_minute'] ?? 100),
             'rate_limit_per_hour' => intval($config_data['rate_limit_per_hour'] ?? 1000),
             'require_https' => !empty($config_data['require_https']),
-            'owner_email' => sanitize_email($config_data['owner_email'] ?? ''),
-            'owner_name' => sanitize_text_field($config_data['owner_name'] ?? ''),
-            'contact_email' => sanitize_email($config_data['contact_email'] ?? ''),
-            'timezone' => sanitize_text_field($config_data['timezone'] ?? 'UTC'),
-            'language' => sanitize_text_field($config_data['language'] ?? 'en'),
-            'tags' => sanitize_text_field($config_data['tags'] ?? ''),
-            'notes' => sanitize_textarea_field($config_data['notes'] ?? ''),
+            'owner_email' => Sanitise_email($config_data['owner_email'] ?? ''),
+            'owner_name' => Sanitise_text_field($config_data['owner_name'] ?? ''),
+            'contact_email' => Sanitise_email($config_data['contact_email'] ?? ''),
+            'timezone' => Sanitise_text_field($config_data['timezone'] ?? 'UTC'),
+            'language' => Sanitise_text_field($config_data['language'] ?? 'en'),
+            'tags' => Sanitise_text_field($config_data['tags'] ?? ''),
+            'notes' => Sanitise_textarea_field($config_data['notes'] ?? ''),
         ];
         
         // Handle JSON fields

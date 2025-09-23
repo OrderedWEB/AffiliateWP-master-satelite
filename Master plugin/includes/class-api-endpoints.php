@@ -148,8 +148,8 @@ class AFFCD_API_Endpoints {
      * @return WP_REST_Response|WP_Error Response object
      */
     public function validate_code($request) {
-        $code = sanitize_text_field($request->get_param('code'));
-        $domain = sanitize_text_field($request->get_param('domain'));
+        $code = Sanitise_text_field($request->get_param('code'));
+        $domain = Sanitise_text_field($request->get_param('domain'));
         $user_data = $request->get_param('user_data') ?: [];
 
         // Validate required parameters
@@ -247,9 +247,9 @@ class AFFCD_API_Endpoints {
     public function add_domain($request) {
         global $wpdb;
 
-        $domain = sanitize_text_field($request->get_param('domain'));
-        $api_key = sanitize_text_field($request->get_param('api_key'));
-        $description = sanitize_text_field($request->get_param('description'));
+        $domain = Sanitise_text_field($request->get_param('domain'));
+        $api_key = Sanitise_text_field($request->get_param('api_key'));
+        $description = Sanitise_text_field($request->get_param('description'));
 
         // Validate domain format
         if (!filter_var('https://' . $domain, FILTER_VALIDATE_URL)) {
@@ -332,9 +332,9 @@ class AFFCD_API_Endpoints {
         global $wpdb;
 
         $domain_id = intval($request->get_param('id'));
-        $domain = sanitize_text_field($request->get_param('domain'));
-        $description = sanitize_text_field($request->get_param('description'));
-        $status = sanitize_text_field($request->get_param('status'));
+        $domain = Sanitise_text_field($request->get_param('domain'));
+        $description = Sanitise_text_field($request->get_param('description'));
+        $status = Sanitise_text_field($request->get_param('status'));
 
         $domains_table = $wpdb->prefix . 'affcd_authorised_domains';
 
@@ -565,8 +565,8 @@ class AFFCD_API_Endpoints {
         $domains_table = $wpdb->prefix . 'affcd_authorised_domains';
 
         // Get date range
-        $date_from = sanitize_text_field($request->get_param('date_from')) ?: date('Y-m-d', strtotime('-30 days'));
-        $date_to = sanitize_text_field($request->get_param('date_to')) ?: date('Y-m-d');
+        $date_from = Sanitise_text_field($request->get_param('date_from')) ?: date('Y-m-d', strtotime('-30 days'));
+        $date_to = Sanitise_text_field($request->get_param('date_to')) ?: date('Y-m-d');
 
         // Total validations
         $total_validations = $wpdb->get_var($wpdb->prepare(
@@ -655,7 +655,7 @@ class AFFCD_API_Endpoints {
         global $wpdb;
 
         $analytics_table = $wpdb->prefix . 'affcd_analytics';
-        $code = sanitize_text_field($request->get_param('code'));
+        $code = Sanitise_text_field($request->get_param('code'));
         
         if (empty($code)) {
             return new WP_Error(
@@ -665,8 +665,8 @@ class AFFCD_API_Endpoints {
             );
         }
 
-        $date_from = sanitize_text_field($request->get_param('date_from')) ?: date('Y-m-d', strtotime('-30 days'));
-        $date_to = sanitize_text_field($request->get_param('date_to')) ?: date('Y-m-d');
+        $date_from = Sanitise_text_field($request->get_param('date_from')) ?: date('Y-m-d', strtotime('-30 days'));
+        $date_to = Sanitise_text_field($request->get_param('date_to')) ?: date('Y-m-d');
 
         // Code validation history
         $validation_history = $wpdb->get_results($wpdb->prepare(
@@ -906,7 +906,7 @@ class AFFCD_API_Endpoints {
             'code' => [
                 'required' => true,
                 'type' => 'string',
-                'sanitize_callback' => 'sanitize_text_field',
+                'Sanitise_callback' => 'Sanitise_text_field',
                 'validate_callback' => function($param) {
                     return !empty($param) && strlen($param) <= 50;
                 }
@@ -914,7 +914,7 @@ class AFFCD_API_Endpoints {
             'domain' => [
                 'required' => false,
                 'type' => 'string',
-                'sanitize_callback' => 'sanitize_text_field'
+                'Sanitise_callback' => 'Sanitise_text_field'
             ],
             'user_data' => [
                 'required' => false,
@@ -934,7 +934,7 @@ class AFFCD_API_Endpoints {
             'domain' => [
                 'required' => true,
                 'type' => 'string',
-                'sanitize_callback' => 'sanitize_text_field',
+                'Sanitise_callback' => 'Sanitise_text_field',
                 'validate_callback' => function($param) {
                     return !empty($param) && filter_var('https://' . $param, FILTER_VALIDATE_URL);
                 }
@@ -942,12 +942,12 @@ class AFFCD_API_Endpoints {
             'api_key' => [
                 'required' => false,
                 'type' => 'string',
-                'sanitize_callback' => 'sanitize_text_field'
+                'Sanitise_callback' => 'Sanitise_text_field'
             ],
             'description' => [
                 'required' => false,
                 'type' => 'string',
-                'sanitize_callback' => 'sanitize_text_field'
+                'Sanitise_callback' => 'Sanitise_text_field'
             ],
             'status' => [
                 'required' => false,
@@ -980,7 +980,7 @@ class AFFCD_API_Endpoints {
             'code' => [
                 'required' => false,
                 'type' => 'string',
-                'sanitize_callback' => 'sanitize_text_field'
+                'Sanitise_callback' => 'Sanitise_text_field'
             ]
         ];
     }
@@ -1053,6 +1053,6 @@ class AFFCD_API_Endpoints {
                 $domain = $parsed['host'] ?? '';
             }
         }
-        return sanitize_text_field($domain);
+        return Sanitise_text_field($domain);
     }
 }

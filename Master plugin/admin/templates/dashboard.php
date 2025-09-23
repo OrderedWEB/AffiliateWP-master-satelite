@@ -19,14 +19,14 @@ $system_status = AFFCD_System_Health::get_status();
 ?>
 
 <div class="wrap affcd-dashboard">
-    <h1><?php _e('Affiliate Cross-Domain Dashboard', 'affiliate-cross-domain'); ?></h1>
+    <h1><?php _e('Affiliate Cross-Domain Dashboard', 'affiliatewp-cross-domain-plugin-suite'); ?></h1>
 
     <!-- System Status Bar -->
     <div class="affcd-status-bar">
         <div class="status-item <?php echo $system_status['overall'] === 'healthy' ? 'status-healthy' : 'status-warning'; ?>">
             <span class="status-icon"></span>
             <span class="status-text">
-                <?php printf(__('System Status: %s', 'affiliate-cross-domain'), 
+                <?php printf(__('System Status: %s', 'affiliatewp-cross-domain-plugin-suite'), 
                            ucfirst($system_status['overall'])); ?>
             </span>
         </div>
@@ -34,7 +34,7 @@ $system_status = AFFCD_System_Health::get_status();
         <div class="status-item">
             <span class="dashicons dashicons-networking"></span>
             <span class="status-text">
-                <?php printf(__('%d Active Domains', 'affiliate-cross-domain'), 
+                <?php printf(__('%d Active Domains', 'affiliatewp-cross-domain-plugin-suite'), 
                            count($domain_health['active'])); ?>
             </span>
         </div>
@@ -42,7 +42,7 @@ $system_status = AFFCD_System_Health::get_status();
         <div class="status-item">
             <span class="dashicons dashicons-chart-line"></span>
             <span class="status-text">
-                <?php printf(__('%d API Calls Today', 'affiliate-cross-domain'), 
+                <?php printf(__('%d API Calls Today', 'affiliatewp-cross-domain-plugin-suite'), 
                            $stats['api_calls_today']); ?>
             </span>
         </div>
@@ -50,7 +50,7 @@ $system_status = AFFCD_System_Health::get_status();
         <div class="status-item">
             <span class="dashicons dashicons-shield"></span>
             <span class="status-text">
-                <?php printf(__('%d Security Events', 'affiliate-cross-domain'), 
+                <?php printf(__('%d Security Events', 'affiliatewp-cross-domain-plugin-suite'), 
                            $stats['security_events_today']); ?>
             </span>
         </div>
@@ -61,11 +61,11 @@ $system_status = AFFCD_System_Health::get_status();
         
         <!-- Quick Stats -->
         <div class="dashboard-widget quick-stats">
-            <h3><?php _e('Quick Statistics', 'affiliate-cross-domain'); ?></h3>
+            <h3><?php _e('Quick Statistics', 'affiliatewp-cross-domain-plugin-suite'); ?></h3>
             <div class="stats-grid">
                 <div class="stat-item">
                     <div class="stat-number"><?php echo number_format($stats['total_validations']); ?></div>
-                    <div class="stat-label"><?php _e('Total Validations', 'affiliate-cross-domain'); ?></div>
+                    <div class="stat-label"><?php _e('Total Validations', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
                     <div class="stat-change <?php echo $stats['validations_change'] >= 0 ? 'positive' : 'negative'; ?>">
                         <?php echo $stats['validations_change'] >= 0 ? '+' : ''; ?><?php echo $stats['validations_change']; ?>%
                     </div>
@@ -73,7 +73,7 @@ $system_status = AFFCD_System_Health::get_status();
                 
                 <div class="stat-item">
                     <div class="stat-number"><?php echo number_format($stats['successful_validations']); ?></div>
-                    <div class="stat-label"><?php _e('Successful Validations', 'affiliate-cross-domain'); ?></div>
+                    <div class="stat-label"><?php _e('Successful Validations', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
                     <div class="stat-rate">
                         <?php echo round(($stats['successful_validations'] / max($stats['total_validations'], 1)) * 100, 1); ?>% success rate
                     </div>
@@ -81,7 +81,7 @@ $system_status = AFFCD_System_Health::get_status();
                 
                 <div class="stat-item">
                     <div class="stat-number"><?php echo number_format($stats['unique_domains']); ?></div>
-                    <div class="stat-label"><?php _e('Active Domains', 'affiliate-cross-domain'); ?></div>
+                    <div class="stat-label"><?php _e('Active Domains', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
                     <div class="stat-change">
                         <?php echo count($domain_health['healthy']); ?> healthy
                     </div>
@@ -89,7 +89,7 @@ $system_status = AFFCD_System_Health::get_status();
                 
                 <div class="stat-item">
                     <div class="stat-number"><?php echo $stats['avg_response_time']; ?>ms</div>
-                    <div class="stat-label"><?php _e('Avg Response Time', 'affiliate-cross-domain'); ?></div>
+                    <div class="stat-label"><?php _e('Avg Response Time', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
                     <div class="stat-change <?php echo $stats['response_time_change'] <= 0 ? 'positive' : 'negative'; ?>">
                         <?php echo $stats['response_time_change'] <= 0 ? '' : '+'; ?><?php echo $stats['response_time_change']; ?>%
                     </div>
@@ -99,12 +99,12 @@ $system_status = AFFCD_System_Health::get_status();
 
         <!-- Domain Health Status -->
         <div class="dashboard-widget domain-health">
-            <h3><?php _e('Domain Health Status', 'affiliate-cross-domain'); ?></h3>
+            <h3><?php _e('Domain Health Status', 'affiliatewp-cross-domain-plugin-suite'); ?></h3>
             <div class="domain-health-list">
                 <?php if (empty($domain_health['all'])): ?>
-                    <p><?php _e('No domains configured yet.', 'affiliate-cross-domain'); ?></p>
+                    <p><?php _e('No domains configured yet.', 'affiliatewp-cross-domain-plugin-suite'); ?></p>
                     <a href="<?php echo admin_url('admin.php?page=affcd-domain-management'); ?>" class="button button-primary">
-                        <?php _e('Add Your First Domain', 'affiliate-cross-domain'); ?>
+                        <?php _e('Add Your First Domain', 'affiliatewp-cross-domain-plugin-suite'); ?>
                     </a>
                 <?php else: ?>
                     <?php foreach ($domain_health['all'] as $domain): ?>
@@ -119,7 +119,7 @@ $system_status = AFFCD_System_Health::get_status();
                                 </span>
                                 <?php if ($domain['last_check']): ?>
                                     <div class="last-check">
-                                        <?php printf(__('Checked %s ago', 'affiliate-cross-domain'), 
+                                        <?php printf(__('Checked %s ago', 'affiliatewp-cross-domain-plugin-suite'), 
                                                    human_time_diff(strtotime($domain['last_check']))); ?>
                                     </div>
                                 <?php endif; ?>
@@ -127,7 +127,7 @@ $system_status = AFFCD_System_Health::get_status();
                             <div class="domain-actions">
                                 <button type="button" class="button button-small test-domain" 
                                         data-domain="<?php echo esc_attr($domain['url']); ?>">
-                                    <?php _e('Test', 'affiliate-cross-domain'); ?>
+                                    <?php _e('Test', 'affiliatewp-cross-domain-plugin-suite'); ?>
                                 </button>
                             </div>
                         </div>
@@ -135,10 +135,10 @@ $system_status = AFFCD_System_Health::get_status();
                     
                     <div class="domain-actions-bar">
                         <a href="<?php echo admin_url('admin.php?page=affcd-domain-management'); ?>" class="button">
-                            <?php _e('Manage Domains', 'affiliate-cross-domain'); ?>
+                            <?php _e('Manage Domains', 'affiliatewp-cross-domain-plugin-suite'); ?>
                         </a>
                         <button type="button" class="button test-all-domains">
-                            <?php _e('Test All Domains', 'affiliate-cross-domain'); ?>
+                            <?php _e('Test All Domains', 'affiliatewp-cross-domain-plugin-suite'); ?>
                         </button>
                     </div>
                 <?php endif; ?>
@@ -147,10 +147,10 @@ $system_status = AFFCD_System_Health::get_status();
 
         <!-- Recent Activity -->
         <div class="dashboard-widget recent-activity">
-            <h3><?php _e('Recent Security Activity', 'affiliate-cross-domain'); ?></h3>
+            <h3><?php _e('Recent Security Activity', 'affiliatewp-cross-domain-plugin-suite'); ?></h3>
             <div class="activity-list">
                 <?php if (empty($recent_activity)): ?>
-                    <p><?php _e('No recent security activity.', 'affiliate-cross-domain'); ?></p>
+                    <p><?php _e('No recent security activity.', 'affiliatewp-cross-domain-plugin-suite'); ?></p>
                 <?php else: ?>
                     <?php foreach ($recent_activity as $activity): ?>
                         <div class="activity-item severity-<?php echo $activity->severity; ?>">
@@ -202,7 +202,7 @@ $system_status = AFFCD_System_Health::get_status();
                     
                     <div class="activity-actions">
                         <a href="<?php echo admin_url('admin.php?page=affcd-security-dashboard'); ?>" class="button">
-                            <?php _e('View All Security Logs', 'affiliate-cross-domain'); ?>
+                            <?php _e('View All Security Logs', 'affiliatewp-cross-domain-plugin-suite'); ?>
                         </a>
                     </div>
                 <?php endif; ?>
@@ -211,21 +211,21 @@ $system_status = AFFCD_System_Health::get_status();
 
         <!-- Performance Metrics -->
         <div class="dashboard-widget performance-metrics">
-            <h3><?php _e('Performance Metrics (Last 24 Hours)', 'affiliate-cross-domain'); ?></h3>
+            <h3><?php _e('Performance Metrics (Last 24 Hours)', 'affiliatewp-cross-domain-plugin-suite'); ?></h3>
             <div class="metrics-chart-container">
                 <canvas id="performance-chart" width="400" height="200"></canvas>
             </div>
             <div class="metrics-summary">
                 <div class="metric-item">
-                    <span class="metric-label"><?php _e('Peak Response Time', 'affiliate-cross-domain'); ?></span>
+                    <span class="metric-label"><?php _e('Peak Response Time', 'affiliatewp-cross-domain-plugin-suite'); ?></span>
                     <span class="metric-value"><?php echo $stats['peak_response_time']; ?>ms</span>
                 </div>
                 <div class="metric-item">
-                    <span class="metric-label"><?php _e('Total Requests', 'affiliate-cross-domain'); ?></span>
+                    <span class="metric-label"><?php _e('Total Requests', 'affiliatewp-cross-domain-plugin-suite'); ?></span>
                     <span class="metric-value"><?php echo number_format($stats['total_requests_24h']); ?></span>
                 </div>
                 <div class="metric-item">
-                    <span class="metric-label"><?php _e('Error Rate', 'affiliate-cross-domain'); ?></span>
+                    <span class="metric-label"><?php _e('Error Rate', 'affiliatewp-cross-domain-plugin-suite'); ?></span>
                     <span class="metric-value"><?php echo $stats['error_rate_24h']; ?>%</span>
                 </div>
             </div>
@@ -233,24 +233,24 @@ $system_status = AFFCD_System_Health::get_status();
 
         <!-- API Usage -->
         <div class="dashboard-widget api-usage">
-            <h3><?php _e('API Usage Overview', 'affiliate-cross-domain'); ?></h3>
+            <h3><?php _e('API Usage Overview', 'affiliatewp-cross-domain-plugin-suite'); ?></h3>
             <div class="api-stats">
                 <div class="api-stat-item">
                     <div class="api-stat-number"><?php echo number_format($stats['api_calls_today']); ?></div>
-                    <div class="api-stat-label"><?php _e('Calls Today', 'affiliate-cross-domain'); ?></div>
+                    <div class="api-stat-label"><?php _e('Calls Today', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
                 </div>
                 <div class="api-stat-item">
                     <div class="api-stat-number"><?php echo number_format($stats['api_calls_week']); ?></div>
-                    <div class="api-stat-label"><?php _e('Calls This Week', 'affiliate-cross-domain'); ?></div>
+                    <div class="api-stat-label"><?php _e('Calls This Week', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
                 </div>
                 <div class="api-stat-item">
                     <div class="api-stat-number"><?php echo $stats['api_success_rate']; ?>%</div>
-                    <div class="api-stat-label"><?php _e('Success Rate', 'affiliate-cross-domain'); ?></div>
+                    <div class="api-stat-label"><?php _e('Success Rate', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
                 </div>
             </div>
             
             <div class="api-endpoints">
-                <h4><?php _e('Most Used Endpoints', 'affiliate-cross-domain'); ?></h4>
+                <h4><?php _e('Most Used Endpoints', 'affiliatewp-cross-domain-plugin-suite'); ?></h4>
                 <?php if (!empty($stats['top_endpoints'])): ?>
                     <ul class="endpoint-list">
                         <?php foreach ($stats['top_endpoints'] as $endpoint): ?>
@@ -262,21 +262,21 @@ $system_status = AFFCD_System_Health::get_status();
                         <?php endforeach; ?>
                     </ul>
                 <?php else: ?>
-                    <p><?php _e('No API usage data available.', 'affiliate-cross-domain'); ?></p>
+                    <p><?php _e('No API usage data available.', 'affiliatewp-cross-domain-plugin-suite'); ?></p>
                 <?php endif; ?>
             </div>
         </div>
 
         <!-- System Alerts -->
         <div class="dashboard-widget system-alerts">
-            <h3><?php _e('System Alerts & Notifications', 'affiliate-cross-domain'); ?></h3>
+            <h3><?php _e('System Alerts & Notifications', 'affiliatewp-cross-domain-plugin-suite'); ?></h3>
             <div class="alerts-container">
                 <?php
                 $alerts = AFFCD_System_Health::get_active_alerts();
                 if (empty($alerts)): ?>
                     <div class="no-alerts">
                         <span class="dashicons dashicons-yes-alt"></span>
-                        <p><?php _e('All systems operational', 'affiliate-cross-domain'); ?></p>
+                        <p><?php _e('All systems operational', 'affiliatewp-cross-domain-plugin-suite'); ?></p>
                     </div>
                 <?php else: ?>
                     <?php foreach ($alerts as $alert): ?>
@@ -298,12 +298,12 @@ $system_status = AFFCD_System_Health::get_status();
                             <div class="alert-actions">
                                 <?php if ($alert['action_url']): ?>
                                     <a href="<?php echo esc_url($alert['action_url']); ?>" class="button button-small">
-                                        <?php echo esc_html($alert['action_text'] ?: __('Resolve', 'affiliate-cross-domain')); ?>
+                                        <?php echo esc_html($alert['action_text'] ?: __('Resolve', 'affiliatewp-cross-domain-plugin-suite')); ?>
                                     </a>
                                 <?php endif; ?>
                                 <button type="button" class="button button-small dismiss-alert" 
                                         data-alert-id="<?php echo $alert['id']; ?>">
-                                    <?php _e('Dismiss', 'affiliate-cross-domain'); ?>
+                                    <?php _e('Dismiss', 'affiliatewp-cross-domain-plugin-suite'); ?>
                                 </button>
                             </div>
                         </div>
@@ -314,41 +314,41 @@ $system_status = AFFCD_System_Health::get_status();
 
         <!-- Quick Actions -->
         <div class="dashboard-widget quick-actions">
-            <h3><?php _e('Quick Actions', 'affiliate-cross-domain'); ?></h3>
+            <h3><?php _e('Quick Actions', 'affiliatewp-cross-domain-plugin-suite'); ?></h3>
             <div class="actions-grid">
                 <a href="<?php echo admin_url('admin.php?page=affcd-domain-management&tab=domains'); ?>" 
                    class="action-button">
                     <span class="dashicons dashicons-networking"></span>
-                    <span class="action-label"><?php _e('Add New Domain', 'affiliate-cross-domain'); ?></span>
+                    <span class="action-label"><?php _e('Add New Domain', 'affiliatewp-cross-domain-plugin-suite'); ?></span>
                 </a>
                 
                 <a href="<?php echo admin_url('admin.php?page=affcd-domain-management&tab=api'); ?>" 
                    class="action-button">
                     <span class="dashicons dashicons-admin-network"></span>
-                    <span class="action-label"><?php _e('Generate API Key', 'affiliate-cross-domain'); ?></span>
+                    <span class="action-label"><?php _e('Generate API Key', 'affiliatewp-cross-domain-plugin-suite'); ?></span>
                 </a>
                 
                 <a href="<?php echo admin_url('admin.php?page=affcd-analytics-reports'); ?>" 
                    class="action-button">
                     <span class="dashicons dashicons-chart-bar"></span>
-                    <span class="action-label"><?php _e('View Analytics', 'affiliate-cross-domain'); ?></span>
+                    <span class="action-label"><?php _e('View Analytics', 'affiliatewp-cross-domain-plugin-suite'); ?></span>
                 </a>
                 
                 <a href="<?php echo admin_url('admin.php?page=affcd-security-dashboard'); ?>" 
                    class="action-button">
                     <span class="dashicons dashicons-shield"></span>
-                    <span class="action-label"><?php _e('Security Logs', 'affiliate-cross-domain'); ?></span>
+                    <span class="action-label"><?php _e('Security Logs', 'affiliatewp-cross-domain-plugin-suite'); ?></span>
                 </a>
                 
                 <button type="button" class="action-button test-all-connections">
                     <span class="dashicons dashicons-update"></span>
-                    <span class="action-label"><?php _e('Test All Connections', 'affiliate-cross-domain'); ?></span>
+                    <span class="action-label"><?php _e('Test All Connections', 'affiliatewp-cross-domain-plugin-suite'); ?></span>
                 </button>
                 
                 <a href="<?php echo admin_url('admin.php?page=affcd-bulk-operations'); ?>" 
                    class="action-button">
                     <span class="dashicons dashicons-admin-tools"></span>
-                    <span class="action-label"><?php _e('Bulk Operations', 'affiliate-cross-domain'); ?></span>
+                    <span class="action-label"><?php _e('Bulk Operations', 'affiliatewp-cross-domain-plugin-suite'); ?></span>
                 </a>
             </div>
         </div>
@@ -357,20 +357,20 @@ $system_status = AFFCD_System_Health::get_status();
     <!-- Dashboard Footer -->
     <div class="affcd-dashboard-footer">
         <div class="footer-stats">
-            <span><?php printf(__('Last updated: %s', 'affiliate-cross-domain'), 
+            <span><?php printf(__('Last updated: %s', 'affiliatewp-cross-domain-plugin-suite'), 
                              current_time('M j, Y g:i A')); ?></span>
-            <span><?php printf(__('System uptime: %s', 'affiliate-cross-domain'), 
+            <span><?php printf(__('System uptime: %s', 'affiliatewp-cross-domain-plugin-suite'), 
                              $system_status['uptime']); ?></span>
-            <span><?php printf(__('Plugin version: %s', 'affiliate-cross-domain'), 
+            <span><?php printf(__('Plugin version: %s', 'affiliatewp-cross-domain-plugin-suite'), 
                              AFFCD_VERSION); ?></span>
         </div>
         <div class="footer-actions">
             <button type="button" class="button refresh-dashboard">
                 <span class="dashicons dashicons-update"></span>
-                <?php _e('Refresh Dashboard', 'affiliate-cross-domain'); ?>
+                <?php _e('Refresh Dashboard', 'affiliatewp-cross-domain-plugin-suite'); ?>
             </button>
             <a href="<?php echo admin_url('admin.php?page=affcd-settings'); ?>" class="button">
-                <?php _e('Settings', 'affiliate-cross-domain'); ?>
+                <?php _e('Settings', 'affiliatewp-cross-domain-plugin-suite'); ?>
             </a>
         </div>
     </div>

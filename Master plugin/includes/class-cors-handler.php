@@ -51,7 +51,7 @@ class AFFCD_CORS_Handler {
         }
         
         header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-        header('Access-Control-Allow-Headers: Content-Type, Authorization, X-API-Key');
+        header('Access-Control-Allow-Headers: Content-Type, authorisation, X-API-Key');
     }
     
     private function get_request_origin() {

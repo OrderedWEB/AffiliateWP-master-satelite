@@ -446,9 +446,9 @@ class AFFCD_Viral_Engine {
     public function ajax_viral_invite() {
         check_ajax_referer('affcd_satellite_nonce', 'nonce');
 
-        $viral_token = sanitize_text_field($_POST['viral_token'] ?? '');
-        $email = sanitize_email($_POST['email'] ?? '');
-        $action_type = sanitize_text_field($_POST['action_type'] ?? ''); // 'accept' or 'dismiss'
+        $viral_token = Sanitise_text_field($_POST['viral_token'] ?? '');
+        $email = Sanitise_email($_POST['email'] ?? '');
+        $action_type = Sanitise_text_field($_POST['action_type'] ?? ''); // 'accept' or 'dismiss'
 
         if (empty($viral_token) || empty($email)) {
             wp_send_json_error('Missing required data');

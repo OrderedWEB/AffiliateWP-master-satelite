@@ -2,7 +2,7 @@
 /**
  * Domain Manager Class
  *
- * Handles domain authorization, verification, and management operations.
+ * Handles domain authorisation, verification, and management operations.
  * Works in conjunction with the admin interface for complete domain management.
  *
  * @package AffiliateWP_Cross_Domain_Plugin_Suite_Master
@@ -77,8 +77,8 @@ class AFFCD_Domain_Manager {
             return new WP_Error('missing_domain_url', __('Domain URL is required', 'affiliatewp-cross-domain-plugin-suite'));
         }
         
-        // Sanitize domain URL
-        $domain_url = affcd_sanitize_domain($data['domain_url']);
+        // Sanitise domain URL
+        $domain_url = affcd_Sanitise_domain($data['domain_url']);
         if (empty($domain_url)) {
             return new WP_Error('invalid_domain_url', __('Invalid domain URL format', 'affiliatewp-cross-domain-plugin-suite'));
         }
@@ -102,23 +102,23 @@ class AFFCD_Domain_Manager {
         // Prepare domain data
         $domain_data = [
             'domain_url' => $domain_url,
-            'domain_name' => sanitize_text_field($data['domain_name'] ?? ''),
+            'domain_name' => Sanitise_text_field($data['domain_name'] ?? ''),
             'api_key' => $api_key,
             'api_secret' => $api_secret,
             'verification_token' => $verification_token,
-            'status' => sanitize_text_field($data['status'] ?? 'pending'),
+            'status' => Sanitise_text_field($data['status'] ?? 'pending'),
             'verification_status' => 'unverified',
             'max_daily_requests' => absint($data['max_daily_requests'] ?? 10000),
             'rate_limit_per_minute' => absint($data['rate_limit_per_minute'] ?? 100),
             'rate_limit_per_hour' => absint($data['rate_limit_per_hour'] ?? 1000),
-            'security_level' => sanitize_text_field($data['security_level'] ?? 'medium'),
+            'security_level' => Sanitise_text_field($data['security_level'] ?? 'medium'),
             'require_https' => !empty($data['require_https']),
-            'owner_email' => sanitize_email($data['owner_email'] ?? ''),
-            'owner_name' => sanitize_text_field($data['owner_name'] ?? ''),
-            'contact_email' => sanitize_email($data['contact_email'] ?? ''),
-            'timezone' => sanitize_text_field($data['timezone'] ?? 'UTC'),
-            'language' => sanitize_text_field($data['language'] ?? 'en'),
-            'notes' => sanitize_textarea_field($data['notes'] ?? ''),
+            'owner_email' => Sanitise_email($data['owner_email'] ?? ''),
+            'owner_name' => Sanitise_text_field($data['owner_name'] ?? ''),
+            'contact_email' => Sanitise_email($data['contact_email'] ?? ''),
+            'timezone' => Sanitise_text_field($data['timezone'] ?? 'UTC'),
+            'language' => Sanitise_text_field($data['language'] ?? 'en'),
+            'notes' => Sanitise_textarea_field($data['notes'] ?? ''),
             'created_by' => get_current_user_id()
         ];
         
@@ -178,7 +178,7 @@ class AFFCD_Domain_Manager {
         $formats = [];
         
         if (isset($data['domain_name'])) {
-            $update_data['domain_name'] = sanitize_text_field($data['domain_name']);
+            $update_data['domain_name'] = Sanitise_text_field($data['domain_name']);
             $formats[] = '%s';
         }
         
@@ -203,7 +203,7 @@ class AFFCD_Domain_Manager {
         }
         
         if (isset($data['security_level'])) {
-            $update_data['security_level'] = sanitize_text_field($data['security_level']);
+            $update_data['security_level'] = Sanitise_text_field($data['security_level']);
             $formats[] = '%s';
         }
         
@@ -213,22 +213,22 @@ class AFFCD_Domain_Manager {
         }
         
         if (isset($data['owner_email'])) {
-            $update_data['owner_email'] = sanitize_email($data['owner_email']);
+            $update_data['owner_email'] = Sanitise_email($data['owner_email']);
             $formats[] = '%s';
         }
         
         if (isset($data['owner_name'])) {
-            $update_data['owner_name'] = sanitize_text_field($data['owner_name']);
+            $update_data['owner_name'] = Sanitise_text_field($data['owner_name']);
             $formats[] = '%s';
         }
         
         if (isset($data['contact_email'])) {
-            $update_data['contact_email'] = sanitize_email($data['contact_email']);
+            $update_data['contact_email'] = Sanitise_email($data['contact_email']);
             $formats[] = '%s';
         }
         
         if (isset($data['notes'])) {
-            $update_data['notes'] = sanitize_textarea_field($data['notes']);
+            $update_data['notes'] = Sanitise_textarea_field($data['notes']);
             $formats[] = '%s';
         }
         
@@ -238,7 +238,7 @@ class AFFCD_Domain_Manager {
         }
         
         if (isset($data['webhook_secret'])) {
-            $update_data['webhook_secret'] = sanitize_text_field($data['webhook_secret']);
+            $update_data['webhook_secret'] = Sanitise_text_field($data['webhook_secret']);
             $formats[] = '%s';
         }
         
@@ -383,7 +383,7 @@ class AFFCD_Domain_Manager {
     public function get_domain_by_api_key($api_key) {
         global $wpdb;
         
-        $api_key = sanitize_text_field($api_key);
+        $api_key = Sanitise_text_field($api_key);
         
         return $wpdb->get_row($wpdb->prepare(
             "SELECT * FROM {$this->table_name} WHERE api_key = %s AND status = 'active'",
@@ -662,8 +662,8 @@ class AFFCD_Domain_Manager {
         }
         
         $args = [
-            'status' => sanitize_text_field($_POST['status'] ?? ''),
-            'search' => sanitize_text_field($_POST['search'] ?? ''),
+            'status' => Sanitise_text_field($_POST['status'] ?? ''),
+            'search' => Sanitise_text_field($_POST['search'] ?? ''),
             'limit' => absint($_POST['length'] ?? 25),
             'offset' => absint($_POST['start'] ?? 0)
         ];
@@ -702,13 +702,13 @@ class AFFCD_Domain_Manager {
         }
         
         $domain_data = [
-            'domain_url' => sanitize_text_field($_POST['domain_url'] ?? ''),
-            'domain_name' => sanitize_text_field($_POST['domain_name'] ?? ''),
-            'status' => sanitize_text_field($_POST['status'] ?? 'pending'),
-            'owner_email' => sanitize_email($_POST['owner_email'] ?? ''),
-            'owner_name' => sanitize_text_field($_POST['owner_name'] ?? ''),
-            'contact_email' => sanitize_email($_POST['contact_email'] ?? ''),
-            'notes' => sanitize_textarea_field($_POST['notes'] ?? '')
+            'domain_url' => Sanitise_text_field($_POST['domain_url'] ?? ''),
+            'domain_name' => Sanitise_text_field($_POST['domain_name'] ?? ''),
+            'status' => Sanitise_text_field($_POST['status'] ?? 'pending'),
+            'owner_email' => Sanitise_email($_POST['owner_email'] ?? ''),
+            'owner_name' => Sanitise_text_field($_POST['owner_name'] ?? ''),
+            'contact_email' => Sanitise_email($_POST['contact_email'] ?? ''),
+            'notes' => Sanitise_textarea_field($_POST['notes'] ?? '')
         ];
         
         $result = $this->add_domain($domain_data);
@@ -735,14 +735,14 @@ class AFFCD_Domain_Manager {
         
         $domain_id = absint($_POST['domain_id'] ?? 0);
         $domain_data = [
-            'domain_name' => sanitize_text_field($_POST['domain_name'] ?? ''),
-            'status' => sanitize_text_field($_POST['status'] ?? ''),
-            'owner_email' => sanitize_email($_POST['owner_email'] ?? ''),
-            'owner_name' => sanitize_text_field($_POST['owner_name'] ?? ''),
-            'contact_email' => sanitize_email($_POST['contact_email'] ?? ''),
-            'notes' => sanitize_textarea_field($_POST['notes'] ?? ''),
+            'domain_name' => Sanitise_text_field($_POST['domain_name'] ?? ''),
+            'status' => Sanitise_text_field($_POST['status'] ?? ''),
+            'owner_email' => Sanitise_email($_POST['owner_email'] ?? ''),
+            'owner_name' => Sanitise_text_field($_POST['owner_name'] ?? ''),
+            'contact_email' => Sanitise_email($_POST['contact_email'] ?? ''),
+            'notes' => Sanitise_textarea_field($_POST['notes'] ?? ''),
             'webhook_url' => esc_url_raw($_POST['webhook_url'] ?? ''),
-            'webhook_secret' => sanitize_text_field($_POST['webhook_secret'] ?? '')
+            'webhook_secret' => Sanitise_text_field($_POST['webhook_secret'] ?? '')
         ];
         
         $result = $this->update_domain($domain_id, $domain_data);
@@ -809,7 +809,7 @@ class AFFCD_Domain_Manager {
         }
         
         $domain_id = absint($_POST['domain_id'] ?? 0);
-        $status = sanitize_text_field($_POST['status'] ?? '');
+        $status = Sanitise_text_field($_POST['status'] ?? '');
         
         $result = $this->update_domain($domain_id, ['status' => $status]);
         

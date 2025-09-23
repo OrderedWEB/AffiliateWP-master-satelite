@@ -21,8 +21,8 @@ class AFFCD_Admin_Menu {
         } else {
             // Create main menu
             add_menu_page(
-                __('Affiliate System', 'affiliate-cross-domain'),
-                __('Affiliate System', 'affiliate-cross-domain'),
+                __('Affiliate System', 'affiliatewp-cross-domain-plugin-suite'),
+                __('Affiliate System', 'affiliatewp-cross-domain-plugin-suite'),
                 'manage_options',
                 'affcd-main',
                 [$this, 'render_main_page'],
@@ -35,8 +35,8 @@ class AFFCD_Admin_Menu {
         // Add submenu pages
         add_submenu_page(
             $parent_slug,
-            __('Vanity Codes', 'affiliate-cross-domain'),
-            __('Vanity Codes', 'affiliate-cross-domain'),
+            __('Vanity Codes', 'affiliatewp-cross-domain-plugin-suite'),
+            __('Vanity Codes', 'affiliatewp-cross-domain-plugin-suite'),
             'manage_affiliates',
             'affcd-vanity-codes',
             [$this, 'render_vanity_codes_page']
@@ -44,8 +44,8 @@ class AFFCD_Admin_Menu {
         
         add_submenu_page(
             $parent_slug,
-            __('Analytics', 'affiliate-cross-domain'),
-            __('Analytics', 'affiliate-cross-domain'),
+            __('Analytics', 'affiliatewp-cross-domain-plugin-suite'),
+            __('Analytics', 'affiliatewp-cross-domain-plugin-suite'),
             'manage_affiliates',
             'affcd-analytics',
             [$this, 'render_analytics_page']
@@ -53,8 +53,8 @@ class AFFCD_Admin_Menu {
         
         add_submenu_page(
             $parent_slug,
-            __('Settings', 'affiliate-cross-domain'),
-            __('Settings', 'affiliate-cross-domain'),
+            __('Settings', 'affiliatewp-cross-domain-plugin-suite'),
+            __('Settings', 'affiliatewp-cross-domain-plugin-suite'),
             'manage_options',
             'affcd-settings',
             [$this, 'render_settings_page']
@@ -78,7 +78,7 @@ class AFFCD_Admin_Menu {
         
         ?>
         <div class="wrap">
-            <h1><?php _e('Affiliate Cross-Domain System', 'affiliate-cross-domain'); ?></h1>
+            <h1><?php _e('Affiliate Cross-Domain System', 'affiliatewp-cross-domain-plugin-suite'); ?></h1>
             
             <div class="affcd-dashboard">
                 <div class="affcd-dashboard-widgets">
@@ -114,8 +114,8 @@ class AFFCD_Admin_Menu {
     public function render_vanity_codes_page() {
         ?>
         <div class="wrap">
-            <h1><?php _e('Vanity Codes', 'affiliate-cross-domain'); ?></h1>
-            <p><?php _e('Manage discount codes for cross-domain affiliate system.', 'affiliate-cross-domain'); ?></p>
+            <h1><?php _e('Vanity Codes', 'affiliatewp-cross-domain-plugin-suite'); ?></h1>
+            <p><?php _e('Manage discount codes for cross-domain affiliate system.', 'affiliatewp-cross-domain-plugin-suite'); ?></p>
             
             <?php
             // Include WP_List_Table for codes
@@ -134,8 +134,8 @@ class AFFCD_Admin_Menu {
     public function render_analytics_page() {
         ?>
         <div class="wrap">
-            <h1><?php _e('Analytics', 'affiliate-cross-domain'); ?></h1>
-            <p><?php _e('View usage statistics and performance metrics.', 'affiliate-cross-domain'); ?></p>
+            <h1><?php _e('Analytics', 'affiliatewp-cross-domain-plugin-suite'); ?></h1>
+            <p><?php _e('View usage statistics and performance metrics.', 'affiliatewp-cross-domain-plugin-suite'); ?></p>
             
             <?php $this->render_analytics_dashboard(); ?>
         </div>
@@ -145,7 +145,7 @@ class AFFCD_Admin_Menu {
     public function render_settings_page() {
         ?>
         <div class="wrap">
-            <h1><?php _e('Settings', 'affiliate-cross-domain'); ?></h1>
+            <h1><?php _e('Settings', 'affiliatewp-cross-domain-plugin-suite'); ?></h1>
             
             <form method="post" action="options.php">
                 <?php settings_fields('affcd_settings'); ?>
@@ -154,7 +154,7 @@ class AFFCD_Admin_Menu {
                     <tbody>
                         <tr>
                             <th scope="row">
-                                <label for="master_api_key"><?php _e('Master API Key', 'affiliate-cross-domain'); ?></label>
+                                <label for="master_api_key"><?php _e('Master API Key', 'affiliatewp-cross-domain-plugin-suite'); ?></label>
                             </th>
                             <td>
                                 <?php $api_settings = get_option('affcd_api_settings', []); ?>
@@ -165,10 +165,10 @@ class AFFCD_Admin_Menu {
                                        class="regular-text" 
                                        readonly>
                                 <button type="button" class="button" onclick="generateApiKey()">
-                                    <?php _e('Generate New', 'affiliate-cross-domain'); ?>
+                                    <?php _e('Generate New', 'affiliatewp-cross-domain-plugin-suite'); ?>
                                 </button>
                                 <p class="description">
-                                    <?php _e('Used by client sites to authenticate API requests.', 'affiliate-cross-domain'); ?>
+                                    <?php _e('Used by client sites to authenticate API requests.', 'affiliatewp-cross-domain-plugin-suite'); ?>
                                 </p>
                             </td>
                         </tr>
@@ -194,23 +194,23 @@ class AFFCD_Admin_Menu {
         $stats = $this->get_dashboard_stats();
         ?>
         <div class="affcd-widget">
-            <h3><?php _e('System Statistics', 'affiliate-cross-domain'); ?></h3>
+            <h3><?php _e('System Statistics', 'affiliatewp-cross-domain-plugin-suite'); ?></h3>
             <div class="affcd-stats-grid">
                 <div class="affcd-stat">
                     <span class="affcd-stat-number"><?php echo number_format($stats['total_codes']); ?></span>
-                    <span class="affcd-stat-label"><?php _e('Active Codes', 'affiliate-cross-domain'); ?></span>
+                    <span class="affcd-stat-label"><?php _e('Active Codes', 'affiliatewp-cross-domain-plugin-suite'); ?></span>
                 </div>
                 <div class="affcd-stat">
                     <span class="affcd-stat-number"><?php echo number_format($stats['total_domains']); ?></span>
-                    <span class="affcd-stat-label"><?php _e('authorised Domains', 'affiliate-cross-domain'); ?></span>
+                    <span class="affcd-stat-label"><?php _e('authorised Domains', 'affiliatewp-cross-domain-plugin-suite'); ?></span>
                 </div>
                 <div class="affcd-stat">
                     <span class="affcd-stat-number"><?php echo number_format($stats['total_requests']); ?></span>
-                    <span class="affcd-stat-label"><?php _e('API Requests (30d)', 'affiliate-cross-domain'); ?></span>
+                    <span class="affcd-stat-label"><?php _e('API Requests (30d)', 'affiliatewp-cross-domain-plugin-suite'); ?></span>
                 </div>
                 <div class="affcd-stat">
                     <span class="affcd-stat-number"><?php echo number_format($stats['total_conversions']); ?></span>
-                    <span class="affcd-stat-label"><?php _e('Conversions (30d)', 'affiliate-cross-domain'); ?></span>
+                    <span class="affcd-stat-label"><?php _e('Conversions (30d)', 'affiliatewp-cross-domain-plugin-suite'); ?></span>
                 </div>
             </div>
         </div>
@@ -245,10 +245,10 @@ class AFFCD_Admin_Menu {
         $recent_activity = $this->get_recent_activity();
         ?>
         <div class="affcd-widget">
-            <h3><?php _e('Recent Activity', 'affiliate-cross-domain'); ?></h3>
+            <h3><?php _e('Recent Activity', 'affiliatewp-cross-domain-plugin-suite'); ?></h3>
             <div class="affcd-activity-list">
                 <?php if (empty($recent_activity)): ?>
-                    <p><?php _e('No recent activity.', 'affiliate-cross-domain'); ?></p>
+                    <p><?php _e('No recent activity.', 'affiliatewp-cross-domain-plugin-suite'); ?></p>
                 <?php else: ?>
                     <?php foreach ($recent_activity as $activity): ?>
                         <div class="affcd-activity-item">
@@ -290,26 +290,26 @@ class AFFCD_Admin_Menu {
     private function render_dashboard_widget_quick_actions() {
         ?>
         <div class="affcd-widget">
-            <h3><?php _e('Quick Actions', 'affiliate-cross-domain'); ?></h3>
+            <h3><?php _e('Quick Actions', 'affiliatewp-cross-domain-plugin-suite'); ?></h3>
             <div class="affcd-quick-actions">
                 <p>
                     <a href="<?php echo admin_url('admin.php?page=affcd-domain-management'); ?>" class="button button-primary">
-                        <?php _e('Manage Domains', 'affiliate-cross-domain'); ?>
+                        <?php _e('Manage Domains', 'affiliatewp-cross-domain-plugin-suite'); ?>
                     </a>
                 </p>
                 <p>
                     <a href="<?php echo admin_url('admin.php?page=affcd-vanity-codes'); ?>" class="button">
-                        <?php _e('Add New Code', 'affiliate-cross-domain'); ?>
+                        <?php _e('Add New Code', 'affiliatewp-cross-domain-plugin-suite'); ?>
                     </a>
                 </p>
                 <p>
                     <a href="<?php echo admin_url('admin.php?page=affcd-analytics'); ?>" class="button">
-                        <?php _e('View Analytics', 'affiliate-cross-domain'); ?>
+                        <?php _e('View Analytics', 'affiliatewp-cross-domain-plugin-suite'); ?>
                     </a>
                 </p>
                 <p>
                     <button type="button" class="button" onclick="testAllConnections()">
-                        <?php _e('Test All Connections', 'affiliate-cross-domain'); ?>
+                        <?php _e('Test All Connections', 'affiliatewp-cross-domain-plugin-suite'); ?>
                     </button>
                 </p>
             </div>
@@ -330,19 +330,19 @@ class AFFCD_Admin_Menu {
         ?>
         <div class="affcd-analytics-dashboard">
             <div class="affcd-analytics-section">
-                <h3><?php _e('Usage Over Time', 'affiliate-cross-domain'); ?></h3>
+                <h3><?php _e('Usage Over Time', 'affiliatewp-cross-domain-plugin-suite'); ?></h3>
                 <canvas id="usageChart" width="400" height="200"></canvas>
             </div>
             
             <div class="affcd-analytics-section">
-                <h3><?php _e('Top Performing Codes', 'affiliate-cross-domain'); ?></h3>
+                <h3><?php _e('Top Performing Codes', 'affiliatewp-cross-domain-plugin-suite'); ?></h3>
                 <table class="wp-list-table widefat fixed striped">
                     <thead>
                         <tr>
-                            <th><?php _e('Code', 'affiliate-cross-domain'); ?></th>
-                            <th><?php _e('Uses', 'affiliate-cross-domain'); ?></th>
-                            <th><?php _e('Conversions', 'affiliate-cross-domain'); ?></th>
-                            <th><?php _e('Conversion Rate', 'affiliate-cross-domain'); ?></th>
+                            <th><?php _e('Code', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                            <th><?php _e('Uses', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                            <th><?php _e('Conversions', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                            <th><?php _e('Conversion Rate', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -359,14 +359,14 @@ class AFFCD_Admin_Menu {
             </div>
             
             <div class="affcd-analytics-section">
-                <h3><?php _e('Domain Performance', 'affiliate-cross-domain'); ?></h3>
+                <h3><?php _e('Domain Performance', 'affiliatewp-cross-domain-plugin-suite'); ?></h3>
                 <table class="wp-list-table widefat fixed striped">
                     <thead>
                         <tr>
-                            <th><?php _e('Domain', 'affiliate-cross-domain'); ?></th>
-                            <th><?php _e('Requests', 'affiliate-cross-domain'); ?></th>
-                            <th><?php _e('Conversions', 'affiliate-cross-domain'); ?></th>
-                            <th><?php _e('Total Value', 'affiliate-cross-domain'); ?></th>
+                            <th><?php _e('Domain', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                            <th><?php _e('Requests', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                            <th><?php _e('Conversions', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                            <th><?php _e('Total Value', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
                         </tr>
                     </thead>
                     <tbody>

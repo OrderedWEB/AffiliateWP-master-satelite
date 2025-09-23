@@ -374,7 +374,7 @@ paths:
 
   /verify-domain:
     post:
-      summary: Verify Domain Authorization
+      summary: Verify Domain authorisation
       description: |
         Verify that a domain is authorised to use the API.
         Used during initial setup and periodic verification.
@@ -1106,7 +1106,7 @@ tags:
   - name: Information
     description: Information retrieval operations
   - name: Authentication
-    description: Authentication and authorization operations
+    description: Authentication and authorisation operations
   - name: System
     description: System health and monitoring operations
 

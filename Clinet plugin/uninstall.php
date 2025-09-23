@@ -328,7 +328,7 @@ class ACI_Uninstaller {
         if (!empty($master_domain) && !empty($api_key)) {
             wp_remote_post($master_domain . '/wp-json/affcd/v1/uninstall', [
                 'headers' => [
-                    'Authorization' => 'Bearer ' . $api_key,
+                    'authorisation' => 'Bearer ' . $api_key,
                     'X-Domain' => home_url()
                 ],
                 'body' => [

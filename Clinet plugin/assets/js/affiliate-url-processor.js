@@ -140,8 +140,8 @@
 
       this.isProcessing = true;
 
-      // Sanitize code
-      code = this.sanitizeAffiliateCode(code);
+      // Sanitise code
+      code = this.SanitiseAffiliateCode(code);
       if (!code) {
         this.isProcessing = false;
         return;
@@ -174,9 +174,9 @@
     },
 
     /**
-     * Sanitize affiliate code
+     * Sanitise affiliate code
      */
-    sanitizeAffiliateCode: function (code) {
+    SanitiseAffiliateCode: function (code) {
       if (typeof code !== "string") return null;
 
       // Remove whitespace and convert to lowercase

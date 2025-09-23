@@ -38,8 +38,8 @@ function affcd_log_activity($event_type, $event_data = [], $entity_type = '', $e
     $analytics_table = $wpdb->prefix . 'affcd_analytics';
     
     $data = [
-        'event_type' => sanitize_text_field($event_type),
-        'entity_type' => sanitize_text_field($entity_type),
+        'event_type' => Sanitise_text_field($event_type),
+        'entity_type' => Sanitise_text_field($entity_type),
         'entity_id' => $entity_id ? absint($entity_id) : null,
         'domain' => affcd_get_current_domain(),
         'user_id' => get_current_user_id() ?: null,
@@ -71,12 +71,12 @@ function affcd_get_current_domain() {
     
     // Check for domain in headers (API requests)
     if (isset($_SERVER['HTTP_X_CLIENT_DOMAIN'])) {
-        $domain = sanitize_text_field($_SERVER['HTTP_X_CLIENT_DOMAIN']);
+        $domain = Sanitise_text_field($_SERVER['HTTP_X_CLIENT_DOMAIN']);
     }
     
     // Check for domain in request parameters
     if (empty($domain) && isset($_REQUEST['domain'])) {
-        $domain = sanitize_text_field($_REQUEST['domain']);
+        $domain = Sanitise_text_field($_REQUEST['domain']);
     }
     
     // Fall back to referrer
@@ -288,12 +288,12 @@ function affcd_format_currency($amount, $currency = 'USD') {
 }
 
 /**
- * Sanitize domain URL
+ * Sanitise domain URL
  *
  * @param string $domain Domain URL
- * @return string Sanitized domain
+ * @return string Sanitised domain
  */
-function affcd_sanitize_domain($domain) {
+function affcd_Sanitise_domain($domain) {
     // Remove protocol if present
     $domain = preg_replace('#^https?://#', '', $domain);
     
@@ -303,7 +303,7 @@ function affcd_sanitize_domain($domain) {
     // Remove www prefix
     $domain = preg_replace('/^www\./', '', $domain);
     
-    // Validate and sanitize
+    // Validate and Sanitise
     $domain = strtolower(trim($domain));
     
     return filter_var('https://' . $domain, FILTER_VALIDATE_URL) ? $domain : '';

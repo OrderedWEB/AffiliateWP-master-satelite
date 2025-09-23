@@ -2,7 +2,7 @@
 /**
  * Security Validator Class
  *
- * Handles API request validation, domain authorization, JWT token validation,
+ * Handles API request validation, domain authorisation, JWT token validation,
  * and security checks for the affiliate cross-domain system.
  *
  * @package AffiliateWP_Cross_Domain_Plugin_Suite_Master
@@ -81,8 +81,8 @@ class AFFCD_Security_Validator {
         $signature = $this->get_request_signature($request);
         $timestamp = $this->get_request_timestamp($request);
 
-        // Validate domain authorization
-        $domain_validation = $this->validate_domain_authorization($domain);
+        // Validate domain authorisation
+        $domain_validation = $this->validate_domain_authorisation($domain);
         if (is_wp_error($domain_validation)) {
             return $domain_validation;
         }
@@ -124,12 +124,12 @@ class AFFCD_Security_Validator {
     }
 
     /**
-     * Validate domain authorization
+     * Validate domain authorisation
      *
      * @param string $domain Domain to validate
      * @return bool|WP_Error True if authorised, WP_Error if not
      */
-    public function validate_domain_authorization($domain) {
+    public function validate_domain_authorisation($domain) {
         if (empty($domain)) {
             return new WP_Error(
                 'missing_domain',
@@ -138,8 +138,8 @@ class AFFCD_Security_Validator {
             );
         }
 
-        // Sanitize domain
-        $clean_domain = affcd_sanitize_domain($domain);
+        // Sanitise domain
+        $clean_domain = affcd_Sanitise_domain($domain);
         if (empty($clean_domain)) {
             return new WP_Error(
                 'invalid_domain',
@@ -419,7 +419,7 @@ class AFFCD_Security_Validator {
             header('Access-Control-Expose-Headers: X-WP-Total, X-WP-TotalPages, Link');
             
             if ('OPTIONS' === $request->get_method()) {
-                header('Access-Control-Allow-Headers: Authorization, X-WP-Nonce, Content-Disposition, Content-MD5, Content-Type, X-API-Key, X-Signature, X-Client-Domain, X-Client-Version');
+                header('Access-Control-Allow-Headers: authorisation, X-WP-Nonce, Content-Disposition, Content-MD5, Content-Type, X-API-Key, X-Signature, X-Client-Domain, X-Client-Version');
                 header('Access-Control-Allow-Methods: OPTIONS, GET, POST, PUT, PATCH, DELETE');
                 header('Access-Control-Max-Age: 86400');
                 exit;
@@ -593,7 +593,7 @@ class AFFCD_Security_Validator {
             header('Access-Control-Allow-Credentials: true');
             
             if ('OPTIONS' === $_SERVER['REQUEST_METHOD']) {
-                header('Access-Control-Allow-Headers: Authorization, X-WP-Nonce, Content-Disposition, Content-MD5, Content-Type, X-API-Key, X-Signature, X-Client-Domain, X-Client-Version');
+                header('Access-Control-Allow-Headers: authorisation, X-WP-Nonce, Content-Disposition, Content-MD5, Content-Type, X-API-Key, X-Signature, X-Client-Domain, X-Client-Version');
                 header('Access-Control-Allow-Methods: OPTIONS, GET, POST, PUT, PATCH, DELETE');
                 header('Access-Control-Max-Age: 86400');
                 status_header(200);
@@ -670,35 +670,35 @@ class AFFCD_Security_Validator {
     }
 
     /**
-     * Sanitize request data
+     * Sanitise request data
      *
      * @param array $data Request data
-     * @return array Sanitized data
+     * @return array Sanitised data
      */
-    public function sanitize_request_data($data) {
+    public function Sanitise_request_data($data) {
         if (!is_array($data)) {
             return [];
         }
 
-        $sanitized = [];
+        $Sanitised = [];
         
         foreach ($data as $key => $value) {
-            $key = sanitize_key($key);
+            $key = Sanitise_key($key);
             
             if (is_array($value)) {
-                $sanitized[$key] = $this->sanitize_request_data($value);
+                $Sanitised[$key] = $this->Sanitise_request_data($value);
             } elseif (is_string($value)) {
-                $sanitized[$key] = sanitize_text_field($value);
+                $Sanitised[$key] = Sanitise_text_field($value);
             } elseif (is_numeric($value)) {
-                $sanitized[$key] = is_float($value) ? floatval($value) : intval($value);
+                $Sanitised[$key] = is_float($value) ? floatval($value) : intval($value);
             } elseif (is_bool($value)) {
-                $sanitized[$key] = (bool) $value;
+                $Sanitised[$key] = (bool) $value;
             } else {
-                $sanitized[$key] = sanitize_text_field((string) $value);
+                $Sanitised[$key] = Sanitise_text_field((string) $value);
             }
         }
 
-        return $sanitized;
+        return $Sanitised;
     }
 
     /**

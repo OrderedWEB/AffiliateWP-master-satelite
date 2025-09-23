@@ -254,7 +254,7 @@ class ACI_Price_Calculator {
 
         $response = wp_remote_get($master_domain . '/wp-json/affcd/v1/affiliate/' . $affiliate_code . '/discount', [
             'headers' => [
-                'Authorization' => 'Bearer ' . $api_key,
+                'authorisation' => 'Bearer ' . $api_key,
                 'X-Domain' => home_url()
             ],
             'timeout' => 10
@@ -564,10 +564,10 @@ class ACI_Price_Calculator {
         $affiliate_code = $_POST['affiliate_code'] ?? '';
         $options = $_POST['options'] ?? [];
 
-        // Sanitize inputs
-        $items = $this->sanitize_items($items);
-        $location = $this->sanitize_location($location);
-        $affiliate_code = sanitize_text_field($affiliate_code);
+        // Sanitise inputs
+        $items = $this->Sanitise_items($items);
+        $location = $this->Sanitise_location($location);
+        $affiliate_code = Sanitise_text_field($affiliate_code);
 
         try {
             $calculation = $this->calculate_total_price($items, $location, $affiliate_code, $options);
@@ -587,10 +587,10 @@ class ACI_Price_Calculator {
     public function ajax_apply_discount() {
         check_ajax_referer('aci_nonce', 'nonce');
 
-        $affiliate_code = sanitize_text_field($_POST['affiliate_code'] ?? '');
+        $affiliate_code = Sanitise_text_field($_POST['affiliate_code'] ?? '');
         $subtotal = floatval($_POST['subtotal'] ?? 0);
         $items = json_decode(stripslashes($_POST['items'] ?? '[]'), true);
-        $items = $this->sanitize_items($items);
+        $items = $this->Sanitise_items($items);
 
         if (empty($affiliate_code) || $subtotal <= 0) {
             wp_send_json_error(__('Invalid discount request', 'affiliate-client-integration'));
@@ -615,48 +615,48 @@ class ACI_Price_Calculator {
     }
 
     /**
-     * Sanitize items array
+     * Sanitise items array
      */
-    private function sanitize_items($items) {
+    private function Sanitise_items($items) {
         if (!is_array($items)) {
             return [];
         }
 
-        $sanitized = [];
+        $Sanitised = [];
         foreach ($items as $item) {
             if (!is_array($item)) {
                 continue;
             }
             
-            $sanitized[] = [
-                'name' => sanitize_text_field($item['name'] ?? ''),
+            $Sanitised[] = [
+                'name' => Sanitise_text_field($item['name'] ?? ''),
                 'price' => floatval($item['price'] ?? 0),
                 'quantity' => intval($item['quantity'] ?? 1),
                 'weight' => floatval($item['weight'] ?? 0),
-                'product_id' => sanitize_text_field($item['product_id'] ?? ''),
-                'sku' => sanitize_text_field($item['sku'] ?? ''),
-                'tax_category' => sanitize_text_field($item['tax_category'] ?? 'standard'),
-                'categories' => array_map('sanitize_text_field', $item['categories'] ?? []),
+                'product_id' => Sanitise_text_field($item['product_id'] ?? ''),
+                'sku' => Sanitise_text_field($item['sku'] ?? ''),
+                'tax_category' => Sanitise_text_field($item['tax_category'] ?? 'standard'),
+                'categories' => array_map('Sanitise_text_field', $item['categories'] ?? []),
                 'modifiers' => is_array($item['modifiers'] ?? null) ? $item['modifiers'] : []
             ];
         }
 
-        return $sanitized;
+        return $Sanitised;
     }
 
     /**
-     * Sanitize location array
+     * Sanitise location array
      */
-    private function sanitize_location($location) {
+    private function Sanitise_location($location) {
         if (!is_array($location)) {
             return [];
         }
 
         return [
-            'country' => sanitize_text_field($location['country'] ?? ''),
-            'state' => sanitize_text_field($location['state'] ?? ''),
-            'city' => sanitize_text_field($location['city'] ?? ''),
-            'zip' => sanitize_text_field($location['zip'] ?? '')
+            'country' => Sanitise_text_field($location['country'] ?? ''),
+            'state' => Sanitise_text_field($location['state'] ?? ''),
+            'city' => Sanitise_text_field($location['city'] ?? ''),
+            'zip' => Sanitise_text_field($location['zip'] ?? '')
         ];
     }
 

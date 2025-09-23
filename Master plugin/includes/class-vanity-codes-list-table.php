@@ -3,7 +3,6 @@
  * Vanity Codes List Table for Affiliate Cross Domain System
  * 
  * Plugin: Affiliate Cross Domain System (Master)
- * File: /wp-content/plugins/affiliate-cross-domain-system/admin/class-vanity-codes-list-table.php
  * 
  * Provides the admin interface list table for managing vanity codes
  * with bulk operations, sorting, and filtering capabilities.
@@ -42,14 +41,14 @@ class AFFCD_Vanity_Codes_List_Table extends WP_List_Table {
     public function get_columns() {
         return [
             'cb'                => '<input type="checkbox" />',
-            'vanity_code'       => __('Vanity Code', 'affiliate-cross-domain'),
-            'affiliate_info'    => __('Affiliate', 'affiliate-cross-domain'),
-            'usage_stats'       => __('Usage Stats', 'affiliate-cross-domain'),
-            'revenue'           => __('Revenue', 'affiliate-cross-domain'),
-            'status'            => __('Status', 'affiliate-cross-domain'),
-            'expires_at'        => __('Expires', 'affiliate-cross-domain'),
-            'created_at'        => __('Created', 'affiliate-cross-domain'),
-            'actions'           => __('Actions', 'affiliate-cross-domain')
+            'vanity_code'       => __('Vanity Code', 'affiliatewp-cross-domain-plugin-suite'),
+            'affiliate_info'    => __('Affiliate', 'affiliatewp-cross-domain-plugin-suite'),
+            'usage_stats'       => __('Usage Stats', 'affiliatewp-cross-domain-plugin-suite'),
+            'revenue'           => __('Revenue', 'affiliatewp-cross-domain-plugin-suite'),
+            'status'            => __('Status', 'affiliatewp-cross-domain-plugin-suite'),
+            'expires_at'        => __('Expires', 'affiliatewp-cross-domain-plugin-suite'),
+            'created_at'        => __('Created', 'affiliatewp-cross-domain-plugin-suite'),
+            'actions'           => __('Actions', 'affiliatewp-cross-domain-plugin-suite')
         ];
     }
 
@@ -75,9 +74,9 @@ class AFFCD_Vanity_Codes_List_Table extends WP_List_Table {
         $actions = [];
         
         if (current_user_can('manage_affiliates')) {
-            $actions['activate']   = __('Activate', 'affiliate-cross-domain');
-            $actions['deactivate'] = __('Deactivate', 'affiliate-cross-domain');
-            $actions['delete']     = __('Delete', 'affiliate-cross-domain');
+            $actions['activate']   = __('Activate', 'affiliatewp-cross-domain-plugin-suite');
+            $actions['deactivate'] = __('Deactivate', 'affiliatewp-cross-domain-plugin-suite');
+            $actions['delete']     = __('Delete', 'affiliatewp-cross-domain-plugin-suite');
         }
         
         return $actions;
@@ -98,14 +97,14 @@ class AFFCD_Vanity_Codes_List_Table extends WP_List_Table {
 
         // Get current page and search term
         $current_page = $this->get_pagenum();
-        $search = sanitize_text_field($_GET['s'] ?? '');
+        $search = Sanitise_text_field($_GET['s'] ?? '');
         
         // Get sorting parameters
-        $orderby = sanitize_text_field($_GET['orderby'] ?? 'created_at');
-        $order = sanitize_text_field($_GET['order'] ?? 'desc');
+        $orderby = Sanitise_text_field($_GET['orderby'] ?? 'created_at');
+        $order = Sanitise_text_field($_GET['order'] ?? 'desc');
         
         // Get filter parameters
-        $status_filter = sanitize_text_field($_GET['status'] ?? '');
+        $status_filter = Sanitise_text_field($_GET['status'] ?? '');
         $affiliate_filter = absint($_GET['affiliate_id'] ?? 0);
         
         // Prepare query arguments
@@ -184,21 +183,21 @@ class AFFCD_Vanity_Codes_List_Table extends WP_List_Table {
             $actions['edit'] = sprintf(
                 '<a href="%s">%s</a>',
                 esc_url($edit_url),
-                __('Edit', 'affiliate-cross-domain')
+                __('Edit', 'affiliatewp-cross-domain-plugin-suite')
             );
             
             $actions['delete'] = sprintf(
                 '<a href="%s" onclick="return confirm(\'%s\')">%s</a>',
                 esc_url($delete_url),
-                esc_js(__('Are you sure you want to delete this vanity code?', 'affiliate-cross-domain')),
-                __('Delete', 'affiliate-cross-domain')
+                esc_js(__('Are you sure you want to delete this vanity code?', 'affiliatewp-cross-domain-plugin-suite')),
+                __('Delete', 'affiliatewp-cross-domain-plugin-suite')
             );
         }
 
         $actions['view_stats'] = sprintf(
             '<a href="#" onclick="viewVanityStats(%d)">%s</a>',
             $item->id,
-            __('View Stats', 'affiliate-cross-domain')
+            __('View Stats', 'affiliatewp-cross-domain-plugin-suite')
         );
 
         return sprintf(
@@ -206,7 +205,7 @@ class AFFCD_Vanity_Codes_List_Table extends WP_List_Table {
             <span class="description">%s</span>%s',
             esc_url($edit_url),
             esc_html($item->vanity_code),
-            esc_html($item->description ?: __('No description', 'affiliate-cross-domain')),
+            esc_html($item->description ?: __('No description', 'affiliatewp-cross-domain-plugin-suite')),
             $this->row_actions($actions)
         );
     }
@@ -218,11 +217,11 @@ class AFFCD_Vanity_Codes_List_Table extends WP_List_Table {
         $affiliate = affwp_get_affiliate($item->affiliate_id);
         
         if (!$affiliate) {
-            return '<span class="error">' . __('Invalid Affiliate', 'affiliate-cross-domain') . '</span>';
+            return '<span class="error">' . __('Invalid Affiliate', 'affiliatewp-cross-domain-plugin-suite') . '</span>';
         }
 
         $user = get_userdata($affiliate->user_id);
-        $affiliate_name = $user ? $user->display_name : __('Unknown', 'affiliate-cross-domain');
+        $affiliate_name = $user ? $user->display_name : __('Unknown', 'affiliatewp-cross-domain-plugin-suite');
         
         return sprintf(
             '<strong>%s</strong><br>
@@ -247,11 +246,11 @@ class AFFCD_Vanity_Codes_List_Table extends WP_List_Table {
                 <div><span class="conversion-rate">%s%% %s</span></div>
             </div>',
             number_format($item->usage_count),
-            __('uses', 'affiliate-cross-domain'),
+            __('uses', 'affiliatewp-cross-domain-plugin-suite'),
             number_format($item->conversion_count),
-            __('conversions', 'affiliate-cross-domain'),
+            __('conversions', 'affiliatewp-cross-domain-plugin-suite'),
             $conversion_rate,
-            __('conversion rate', 'affiliate-cross-domain')
+            __('conversion rate', 'affiliatewp-cross-domain-plugin-suite')
         );
     }
 
@@ -280,10 +279,10 @@ class AFFCD_Vanity_Codes_List_Table extends WP_List_Table {
         ];
 
         $status_labels = [
-            'active' => __('Active', 'affiliate-cross-domain'),
-            'inactive' => __('Inactive', 'affiliate-cross-domain'),
-            'expired' => __('Expired', 'affiliate-cross-domain'),
-            'suspended' => __('Suspended', 'affiliate-cross-domain')
+            'active' => __('Active', 'affiliatewp-cross-domain-plugin-suite'),
+            'inactive' => __('Inactive', 'affiliatewp-cross-domain-plugin-suite'),
+            'expired' => __('Expired', 'affiliatewp-cross-domain-plugin-suite'),
+            'suspended' => __('Suspended', 'affiliatewp-cross-domain-plugin-suite')
         ];
 
         $class = $status_classes[$item->status] ?? 'status-unknown';
@@ -301,7 +300,7 @@ class AFFCD_Vanity_Codes_List_Table extends WP_List_Table {
      */
     public function column_expires_at($item) {
         if (!$item->expires_at) {
-            return '<span class="never-expires">' . __('Never', 'affiliate-cross-domain') . '</span>';
+            return '<span class="never-expires">' . __('Never', 'affiliatewp-cross-domain-plugin-suite') . '</span>';
         }
 
         $expires_timestamp = strtotime($item->expires_at);
@@ -310,14 +309,14 @@ class AFFCD_Vanity_Codes_List_Table extends WP_List_Table {
         if ($expires_timestamp < $current_time) {
             return sprintf(
                 '<span class="expired">%s<br><small>%s</small></span>',
-                __('Expired', 'affiliate-cross-domain'),
-                human_time_diff($expires_timestamp) . ' ' . __('ago', 'affiliate-cross-domain')
+                __('Expired', 'affiliatewp-cross-domain-plugin-suite'),
+                human_time_diff($expires_timestamp) . ' ' . __('ago', 'affiliatewp-cross-domain-plugin-suite')
             );
         } else {
             return sprintf(
                 '<span class="expires-future">%s<br><small>%s</small></span>',
                 date_i18n(get_option('date_format'), $expires_timestamp),
-                human_time_diff($expires_timestamp) . ' ' . __('remaining', 'affiliate-cross-domain')
+                human_time_diff($expires_timestamp) . ' ' . __('remaining', 'affiliatewp-cross-domain-plugin-suite')
             );
         }
     }
@@ -332,7 +331,7 @@ class AFFCD_Vanity_Codes_List_Table extends WP_List_Table {
             '<span title="%s">%s<br><small>%s</small></span>',
             date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $created_timestamp),
             date_i18n(get_option('date_format'), $created_timestamp),
-            human_time_diff($created_timestamp) . ' ' . __('ago', 'affiliate-cross-domain')
+            human_time_diff($created_timestamp) . ' ' . __('ago', 'affiliatewp-cross-domain-plugin-suite')
         );
     }
 
@@ -348,13 +347,13 @@ class AFFCD_Vanity_Codes_List_Table extends WP_List_Table {
                 $actions[] = sprintf(
                     '<button type="button" class="button button-small" onclick="toggleVanityStatus(%d, \'inactive\')">%s</button>',
                     $item->id,
-                    __('Deactivate', 'affiliate-cross-domain')
+                    __('Deactivate', 'affiliatewp-cross-domain-plugin-suite')
                 );
             } else {
                 $actions[] = sprintf(
                     '<button type="button" class="button button-small" onclick="toggleVanityStatus(%d, \'active\')">%s</button>',
                     $item->id,
-                    __('Activate', 'affiliate-cross-domain')
+                    __('Activate', 'affiliatewp-cross-domain-plugin-suite')
                 );
             }
         }
@@ -363,7 +362,7 @@ class AFFCD_Vanity_Codes_List_Table extends WP_List_Table {
         $actions[] = sprintf(
             '<button type="button" class="button button-small" onclick="showVanityAnalytics(%d)">%s</button>',
             $item->id,
-            __('Analytics', 'affiliate-cross-domain')
+            __('Analytics', 'affiliatewp-cross-domain-plugin-suite')
         );
 
         return implode(' ', $actions);
@@ -385,7 +384,7 @@ class AFFCD_Vanity_Codes_List_Table extends WP_List_Table {
         }
 
         if (!current_user_can('manage_affiliates')) {
-            wp_die(__('You do not have sufficient permissions.', 'affiliate-cross-domain'));
+            wp_die(__('You do not have sufficient permissions.', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         $vanity_ids = array_map('absint', $_GET['vanity_ids'] ?? []);
@@ -409,13 +408,13 @@ class AFFCD_Vanity_Codes_List_Table extends WP_List_Table {
 
         // Add admin notice
         $message = sprintf(
-            __('%d items processed successfully', 'affiliate-cross-domain'),
+            __('%d items processed successfully', 'affiliatewp-cross-domain-plugin-suite'),
             $success_count
         );
         
         if ($error_count > 0) {
             $message .= sprintf(
-                __(', %d errors occurred', 'affiliate-cross-domain'),
+                __(', %d errors occurred', 'affiliatewp-cross-domain-plugin-suite'),
                 $error_count
             );
         }
@@ -451,11 +450,11 @@ class AFFCD_Vanity_Codes_List_Table extends WP_List_Table {
         <div class="alignleft actions">
             <?php $this->status_filter_dropdown(); ?>
             <?php $this->affiliate_filter_dropdown(); ?>
-            <?php submit_button(__('Filter', 'affiliate-cross-domain'), 'secondary', 'filter', false); ?>
+            <?php submit_button(__('Filter', 'affiliatewp-cross-domain-plugin-suite'), 'secondary', 'filter', false); ?>
             
             <?php if (!empty($_GET['status']) || !empty($_GET['affiliate_id']) || !empty($_GET['s'])): ?>
                 <a href="<?php echo admin_url('admin.php?page=affcd-vanity-codes'); ?>" class="button">
-                    <?php _e('Clear Filters', 'affiliate-cross-domain'); ?>
+                    <?php _e('Clear Filters', 'affiliatewp-cross-domain-plugin-suite'); ?>
                 </a>
             <?php endif; ?>
         </div>
@@ -469,11 +468,11 @@ class AFFCD_Vanity_Codes_List_Table extends WP_List_Table {
         $current_status = $_GET['status'] ?? '';
         
         $statuses = [
-            '' => __('All Statuses', 'affiliate-cross-domain'),
-            'active' => __('Active', 'affiliate-cross-domain'),
-            'inactive' => __('Inactive', 'affiliate-cross-domain'),
-            'expired' => __('Expired', 'affiliate-cross-domain'),
-            'suspended' => __('Suspended', 'affiliate-cross-domain')
+            '' => __('All Statuses', 'affiliatewp-cross-domain-plugin-suite'),
+            'active' => __('Active', 'affiliatewp-cross-domain-plugin-suite'),
+            'inactive' => __('Inactive', 'affiliatewp-cross-domain-plugin-suite'),
+            'expired' => __('Expired', 'affiliatewp-cross-domain-plugin-suite'),
+            'suspended' => __('Suspended', 'affiliatewp-cross-domain-plugin-suite')
         ];
         
         echo '<select name="status" id="status-filter">';
@@ -501,11 +500,11 @@ class AFFCD_Vanity_Codes_List_Table extends WP_List_Table {
         ]);
         
         echo '<select name="affiliate_id" id="affiliate-filter">';
-        echo '<option value="">' . esc_html__('All Affiliates', 'affiliate-cross-domain') . '</option>';
+        echo '<option value="">' . esc_html__('All Affiliates', 'affiliatewp-cross-domain-plugin-suite') . '</option>';
         
         foreach ($affiliates as $affiliate) {
             $user = get_userdata($affiliate->user_id);
-            $name = $user ? $user->display_name : __('Unknown', 'affiliate-cross-domain');
+            $name = $user ? $user->display_name : __('Unknown', 'affiliatewp-cross-domain-plugin-suite');
             
             printf(
                 '<option value="%d"%s>%s (ID: %d)</option>',
@@ -526,11 +525,11 @@ class AFFCD_Vanity_Codes_List_Table extends WP_List_Table {
         
         if (!empty($search)) {
             printf(
-                __('No vanity codes found matching "%s".', 'affiliate-cross-domain'),
+                __('No vanity codes found matching "%s".', 'affiliatewp-cross-domain-plugin-suite'),
                 esc_html($search)
             );
         } else {
-            _e('No vanity codes found.', 'affiliate-cross-domain');
+            _e('No vanity codes found.', 'affiliatewp-cross-domain-plugin-suite');
         }
     }
 
@@ -555,7 +554,7 @@ class AFFCD_Vanity_Codes_List_Table extends WP_List_Table {
         }
 
         $output = '<span class="displaying-num">' . sprintf(
-            _n('%s item', '%s items', $total_items, 'affiliate-cross-domain'),
+            _n('%s item', '%s items', $total_items, 'affiliatewp-cross-domain-plugin-suite'),
             number_format_i18n($total_items)
         ) . '</span>';
 

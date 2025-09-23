@@ -15,14 +15,14 @@ class AFFCD_Analytics_Tracker {
         $table_name = $wpdb->prefix . 'affcd_usage_tracking';
         
         $data = [
-            'domain' => sanitize_url($domain),
-            'code' => sanitize_text_field($code),
+            'domain' => Sanitise_url($domain),
+            'code' => Sanitise_text_field($code),
             'ip_address' => $this->get_client_ip(),
-            'user_agent' => sanitize_text_field($_SERVER['HTTP_USER_AGENT'] ?? ''),
-            'referrer' => sanitize_url($_SERVER['HTTP_REFERER'] ?? ''),
+            'user_agent' => Sanitise_text_field($_SERVER['HTTP_USER_AGENT'] ?? ''),
+            'referrer' => Sanitise_url($_SERVER['HTTP_REFERER'] ?? ''),
             'conversion' => $conversion ? 1 : 0,
             'conversion_value' => $metadata['conversion_value'] ?? null,
-            'session_id' => sanitize_text_field($metadata['session_id'] ?? ''),
+            'session_id' => Sanitise_text_field($metadata['session_id'] ?? ''),
             'metadata' => !empty($metadata) ? json_encode($metadata) : null,
             'created_at' => current_time('mysql')
         ];

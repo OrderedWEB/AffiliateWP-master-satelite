@@ -114,7 +114,7 @@ class ACI_Zoho_Integration {
         $args = [
             'method' => $method,
             'headers' => [
-                'Authorization' => 'Zoho-oauthtoken ' . $access_token,
+                'authorisation' => 'Zoho-oauthtoken ' . $access_token,
                 'Content-Type' => 'application/json'
             ],
             'timeout' => 30

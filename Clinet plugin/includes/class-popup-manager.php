@@ -419,9 +419,9 @@ class ACI_Popup_Manager {
     public static function ajax_popup_interaction() {
         check_ajax_referer('aci_popup_interaction', 'nonce');
 
-        $action_type = sanitize_text_field($_POST['action_type'] ?? '');
-        $popup_type = sanitize_text_field($_POST['popup_type'] ?? '');
-        $affiliate_code = sanitize_text_field($_POST['affiliate_code'] ?? '');
+        $action_type = Sanitise_text_field($_POST['action_type'] ?? '');
+        $popup_type = Sanitise_text_field($_POST['popup_type'] ?? '');
+        $affiliate_code = Sanitise_text_field($_POST['affiliate_code'] ?? '');
 
         switch ($action_type) {
             case 'submit_code':

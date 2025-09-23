@@ -67,7 +67,7 @@ class ACI_API_Handler {
 
         // Prepare request data
         $request_data = array_merge([
-            'code' => sanitize_text_field($code),
+            'code' => Sanitise_text_field($code),
             'domain' => home_url(),
             'timestamp' => time(),
             'client_ip' => $this->get_client_ip(),
@@ -243,7 +243,7 @@ class ACI_API_Handler {
             'timeout' => $this->timeout,
             'headers' => [
                 'Content-Type' => 'application/json',
-                'Authorization' => 'Bearer ' . $this->api_key,
+                'authorisation' => 'Bearer ' . $this->api_key,
                 'User-Agent' => $this->get_user_agent(),
                 'X-Client-Domain' => home_url(),
                 'X-Client-Version' => ACI_VERSION
@@ -444,7 +444,7 @@ class ACI_API_Handler {
             'endpoint' => $endpoint,
             'error_message' => is_wp_error($error) ? $error->get_error_message() : $error,
             'error_code' => is_wp_error($error) ? $error->get_error_code() : 'unknown',
-            'request_data' => $this->sanitize_log_data($request_data),
+            'request_data' => $this->Sanitise_log_data($request_data),
             'timestamp' => current_time('mysql'),
             'client_ip' => $this->get_client_ip(),
             'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? ''
@@ -535,9 +535,9 @@ class ACI_API_Handler {
     }
 
     /**
-     * Sanitize log data
+     * Sanitise log data
      */
-    private function sanitize_log_data($data) {
+    private function Sanitise_log_data($data) {
         // Remove sensitive information
         $sensitive_keys = ['api_key', 'password', 'secret', 'token'];
         
@@ -559,7 +559,7 @@ class ACI_API_Handler {
         }
 
         $critical_codes = [
-            'authorization_failed',
+            'authorisation_failed',
             'domain_blocked',
             'api_key_invalid',
             'rate_limit_exceeded'
@@ -589,7 +589,7 @@ class ACI_API_Handler {
             ]),
             'headers' => [
                 'Content-Type' => 'application/json',
-                'Authorization' => 'Bearer ' . $this->api_key
+                'authorisation' => 'Bearer ' . $this->api_key
             ],
             'timeout' => 10
         ]);
@@ -830,7 +830,7 @@ class ACI_API_Handler {
                 return $this->handle_config_update_webhook($webhook_data);
             case 'affiliate_status_change':
                 return $this->handle_affiliate_status_webhook($webhook_data);
-            case 'domain_authorization_change':
+            case 'domain_authorisation_change':
                 return $this->handle_domain_auth_webhook($webhook_data);
             default:
                 return new WP_Error('unknown_webhook', __('Unknown webhook type.', 'affiliate-client-integration'));
@@ -877,19 +877,19 @@ class ACI_API_Handler {
     }
 
     /**
-     * Handle domain authorization webhook
+     * Handle domain authorisation webhook
      */
     private function handle_domain_auth_webhook($webhook_data) {
         $domain = $webhook_data['domain'] ?? '';
-        $authorization_status = $webhook_data['authorised'] ?? false;
+        $authorisation_status = $webhook_data['authorised'] ?? false;
         
         if (empty($domain)) {
-            return new WP_Error('invalid_auth_webhook', __('Invalid domain authorization webhook data.', 'affiliate-client-integration'));
+            return new WP_Error('invalid_auth_webhook', __('Invalid domain authorisation webhook data.', 'affiliate-client-integration'));
         }
 
-        // If this is our domain and authorization changed
+        // If this is our domain and authorisation changed
         if ($domain === home_url() || $domain === parse_url(home_url(), PHP_URL_HOST)) {
-            if (!$authorization_status) {
+            if (!$authorisation_status) {
                 // Domain was unauthorised - log critical event
                 $this->log_api_event('domain_unauthorised', [
                     'domain' => $domain,

@@ -174,11 +174,11 @@ class AFFILIATE_CLIENT_Tracking_Handler {
             wp_die('Invalid nonce');
         }
 
-        $event_type = sanitize_text_field($_POST['event_type']);
+        $event_type = Sanitise_text_field($_POST['event_type']);
         $event_data = isset($_POST['data']) ? $_POST['data'] : [];
 
-        // Sanitize event data
-        $event_data = $this->sanitize_event_data($event_data);
+        // Sanitise event data
+        $event_data = $this->Sanitise_event_data($event_data);
 
         $result = $this->track_event($event_type, $event_data);
 
@@ -198,7 +198,7 @@ class AFFILIATE_CLIENT_Tracking_Handler {
         
         foreach ($param_names as $param) {
             if (isset($_GET[$param]) && !empty($_GET[$param])) {
-                return sanitize_text_field($_GET[$param]);
+                return Sanitise_text_field($_GET[$param]);
             }
         }
         
@@ -263,7 +263,7 @@ class AFFILIATE_CLIENT_Tracking_Handler {
         $session_cookie = 'affiliate_client_visit_id';
         
         if (isset($_COOKIE[$session_cookie])) {
-            return sanitize_text_field($_COOKIE[$session_cookie]);
+            return Sanitise_text_field($_COOKIE[$session_cookie]);
         }
         
         $visit_id = $this->generate_visit_id();
@@ -444,27 +444,27 @@ class AFFILIATE_CLIENT_Tracking_Handler {
     }
 
     /**
-     * Sanitize event data from AJAX request
+     * Sanitise event data from AJAX request
      *
      * @param array $data Raw event data
-     * @return array Sanitized data
+     * @return array Sanitised data
      */
-    private function sanitize_event_data($data) {
-        $sanitized = [];
+    private function Sanitise_event_data($data) {
+        $Sanitised = [];
         
         foreach ($data as $key => $value) {
             if (is_string($value)) {
-                $sanitized[$key] = sanitize_text_field($value);
+                $Sanitised[$key] = Sanitise_text_field($value);
             } elseif (is_numeric($value)) {
-                $sanitized[$key] = is_float($value) ? floatval($value) : intval($value);
+                $Sanitised[$key] = is_float($value) ? floatval($value) : intval($value);
             } elseif (is_array($value)) {
-                $sanitized[$key] = $this->sanitize_event_data($value);
+                $Sanitised[$key] = $this->Sanitise_event_data($value);
             } else {
-                $sanitized[$key] = sanitize_text_field($value);
+                $Sanitised[$key] = Sanitise_text_field($value);
             }
         }
         
-        return $sanitized;
+        return $Sanitised;
     }
 
     /**
@@ -548,7 +548,7 @@ class AFFILIATE_CLIENT_Tracking_Handler {
      * @return string User agent
      */
     private function get_user_agent() {
-        return isset($_SERVER['HTTP_USER_AGENT']) ? sanitize_text_field($_SERVER['HTTP_USER_AGENT']) : '';
+        return isset($_SERVER['HTTP_USER_AGENT']) ? Sanitise_text_field($_SERVER['HTTP_USER_AGENT']) : '';
     }
 
     /**
@@ -570,7 +570,7 @@ class AFFILIATE_CLIENT_Tracking_Handler {
         
         foreach ($ip_headers as $header) {
             if (isset($_SERVER[$header]) && !empty($_SERVER[$header])) {
-                $ip = sanitize_text_field($_SERVER[$header]);
+                $ip = Sanitise_text_field($_SERVER[$header]);
                 
                 // Handle comma-separated IPs (take first one)
                 if (strpos($ip, ',') !== false) {

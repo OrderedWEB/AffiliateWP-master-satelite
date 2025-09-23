@@ -98,7 +98,7 @@ class ACI_URL_Processor {
         // Check each supported parameter
         foreach ($this->supported_parameters as $param) {
             if (isset($_GET[$param]) && !empty($_GET[$param])) {
-                $found_code = sanitize_text_field($_GET[$param]);
+                $found_code = Sanitise_text_field($_GET[$param]);
                 $parameter_used = $param;
                 break;
             }

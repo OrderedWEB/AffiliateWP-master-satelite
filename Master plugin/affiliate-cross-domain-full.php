@@ -384,15 +384,15 @@ class AffiliateWP_Cross_Domain_Plugin_Suite_Master {
      */
     private function register_admin_settings() {
         register_setting('affcd_settings', 'affcd_api_settings', [
-            'sanitize_callback' => [$this, 'sanitize_api_settings']
+            'Sanitise_callback' => [$this, 'Sanitise_api_settings']
         ]);
 
         register_setting('affcd_settings', 'affcd_security_settings', [
-            'sanitize_callback' => [$this, 'sanitize_security_settings']
+            'Sanitise_callback' => [$this, 'Sanitise_security_settings']
         ]);
 
         register_setting('affcd_settings', 'affcd_webhook_settings', [
-            'sanitize_callback' => [$this, 'sanitize_webhook_settings']
+            'Sanitise_callback' => [$this, 'Sanitise_webhook_settings']
         ]);
     }
 
@@ -455,7 +455,7 @@ class AffiliateWP_Cross_Domain_Plugin_Suite_Master {
             wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
-        $domain = sanitize_text_field($_POST['domain'] ?? '');
+        $domain = Sanitise_text_field($_POST['domain'] ?? '');
         
         if (empty($domain)) {
             wp_send_json_error(__('Domain is required', 'affiliatewp-cross-domain-plugin-suite'));
@@ -474,8 +474,8 @@ class AffiliateWP_Cross_Domain_Plugin_Suite_Master {
      * AJAX validate code (for testing)
      */
     public function ajax_validate_code() {
-        $code = sanitize_text_field($_POST['code'] ?? '');
-        $domain = sanitize_text_field($_POST['domain'] ?? '');
+        $code = Sanitise_text_field($_POST['code'] ?? '');
+        $domain = Sanitise_text_field($_POST['domain'] ?? '');
         
         if (empty($code)) {
             wp_send_json_error(__('Code is required', 'affiliatewp-cross-domain-plugin-suite'));
@@ -516,47 +516,47 @@ class AffiliateWP_Cross_Domain_Plugin_Suite_Master {
     }
 
     /**
-     * Sanitize API settings
+     * Sanitise API settings
      */
-    public function sanitize_api_settings($input) {
-        $sanitized = [];
+    public function Sanitise_api_settings($input) {
+        $Sanitised = [];
         
-        $sanitized['enabled'] = !empty($input['enabled']);
-        $sanitized['rate_limit'] = absint($input['rate_limit'] ?? 1000);
-        $sanitized['cache_duration'] = absint($input['cache_duration'] ?? 900);
-        $sanitized['debug_mode'] = !empty($input['debug_mode']);
+        $Sanitised['enabled'] = !empty($input['enabled']);
+        $Sanitised['rate_limit'] = absint($input['rate_limit'] ?? 1000);
+        $Sanitised['cache_duration'] = absint($input['cache_duration'] ?? 900);
+        $Sanitised['debug_mode'] = !empty($input['debug_mode']);
 
-        return $sanitized;
+        return $Sanitised;
     }
 
     /**
-     * Sanitize security settings
+     * Sanitise security settings
      */
-    public function sanitize_security_settings($input) {
-        $sanitized = [];
+    public function Sanitise_security_settings($input) {
+        $Sanitised = [];
         
-        $sanitized['jwt_secret'] = sanitize_text_field($input['jwt_secret'] ?? '');
-        $sanitized['allowed_origins'] = sanitize_textarea_field($input['allowed_origins'] ?? '');
-        $sanitized['require_https'] = !empty($input['require_https']);
-        $sanitized['security_level'] = in_array($input['security_level'], ['low', 'medium', 'high']) 
+        $Sanitised['jwt_secret'] = Sanitise_text_field($input['jwt_secret'] ?? '');
+        $Sanitised['allowed_origins'] = Sanitise_textarea_field($input['allowed_origins'] ?? '');
+        $Sanitised['require_https'] = !empty($input['require_https']);
+        $Sanitised['security_level'] = in_array($input['security_level'], ['low', 'medium', 'high']) 
             ? $input['security_level'] 
             : 'high';
 
-        return $sanitized;
+        return $Sanitised;
     }
 
     /**
-     * Sanitize webhook settings
+     * Sanitise webhook settings
      */
-    public function sanitize_webhook_settings($input) {
-        $sanitized = [];
+    public function Sanitise_webhook_settings($input) {
+        $Sanitised = [];
         
-        $sanitized['enabled'] = !empty($input['enabled']);
-        $sanitized['url'] = esc_url_raw($input['url'] ?? '');
-        $sanitized['secret'] = sanitize_text_field($input['secret'] ?? '');
-        $sanitized['events'] = is_array($input['events']) ? $input['events'] : [];
+        $Sanitised['enabled'] = !empty($input['enabled']);
+        $Sanitised['url'] = esc_url_raw($input['url'] ?? '');
+        $Sanitised['secret'] = Sanitise_text_field($input['secret'] ?? '');
+        $Sanitised['events'] = is_array($input['events']) ? $input['events'] : [];
 
-        return $sanitized;
+        return $Sanitised;
     }
 
     /**

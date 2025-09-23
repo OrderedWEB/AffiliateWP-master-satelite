@@ -3,7 +3,6 @@
  * Vanity Code Manager for Affiliate Cross Domain System
  * 
  * Plugin: Affiliate Cross Domain System (Master)
- * File: /wp-content/plugins/affiliate-cross-domain-system/includes/class-vanity-code-manager.php
  * 
  * Handles creation, validation, and management of vanity affiliate codes
  * with enhanced security and rate limiting.
@@ -117,24 +116,24 @@ class AFFCD_Vanity_Code_Manager {
 
         // Security checks
         if (!$this->security_manager->check_rate_limit('create_vanity', get_current_user_id())) {
-            return new WP_Error('rate_limit', __('Rate limit exceeded. Please try again later.', 'affiliate-cross-domain'));
+            return new WP_Error('rate_limit', __('Rate limit exceeded. Please try again later.', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
-        // Sanitize and prepare data
-        $vanity_code = sanitize_text_field($data['vanity_code']);
+        // Sanitise and prepare data
+        $vanity_code = Sanitise_text_field($data['vanity_code']);
         $affiliate_id = absint($data['affiliate_id']);
-        $affiliate_code = sanitize_text_field($data['affiliate_code']);
-        $description = sanitize_textarea_field($data['description'] ?? '');
-        $expires_at = !empty($data['expires_at']) ? sanitize_text_field($data['expires_at']) : null;
+        $affiliate_code = Sanitise_text_field($data['affiliate_code']);
+        $description = Sanitise_textarea_field($data['description'] ?? '');
+        $expires_at = !empty($data['expires_at']) ? Sanitise_text_field($data['expires_at']) : null;
 
         // Check if vanity code already exists
         if ($this->vanity_code_exists($vanity_code)) {
-            return new WP_Error('duplicate_code', __('Vanity code already exists.', 'affiliate-cross-domain'));
+            return new WP_Error('duplicate_code', __('Vanity code already exists.', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         // Verify affiliate exists
         if (!$this->verify_affiliate_exists($affiliate_id)) {
-            return new WP_Error('invalid_affiliate', __('Invalid affiliate ID.', 'affiliate-cross-domain'));
+            return new WP_Error('invalid_affiliate', __('Invalid affiliate ID.', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         // Insert new vanity code
@@ -153,7 +152,7 @@ class AFFCD_Vanity_Code_Manager {
         );
 
         if ($result === false) {
-            return new WP_Error('db_error', __('Failed to create vanity code.', 'affiliate-cross-domain'));
+            return new WP_Error('db_error', __('Failed to create vanity code.', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         $vanity_id = $wpdb->insert_id;
@@ -182,12 +181,12 @@ class AFFCD_Vanity_Code_Manager {
         // Check if vanity code exists
         $existing = $this->get_vanity_code($vanity_id);
         if (!$existing) {
-            return new WP_Error('not_found', __('Vanity code not found.', 'affiliate-cross-domain'));
+            return new WP_Error('not_found', __('Vanity code not found.', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         // Security check
         if (!current_user_can('manage_affiliates')) {
-            return new WP_Error('insufficient_permissions', __('Insufficient permissions.', 'affiliate-cross-domain'));
+            return new WP_Error('insufficient_permissions', __('Insufficient permissions.', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         // Validate updated data
@@ -201,7 +200,7 @@ class AFFCD_Vanity_Code_Manager {
         $update_formats = [];
 
         if (isset($data['description'])) {
-            $update_data['description'] = sanitize_textarea_field($data['description']);
+            $update_data['description'] = Sanitise_textarea_field($data['description']);
             $update_formats[] = '%s';
         }
 
@@ -211,12 +210,12 @@ class AFFCD_Vanity_Code_Manager {
         }
 
         if (isset($data['expires_at'])) {
-            $update_data['expires_at'] = !empty($data['expires_at']) ? sanitize_text_field($data['expires_at']) : null;
+            $update_data['expires_at'] = !empty($data['expires_at']) ? Sanitise_text_field($data['expires_at']) : null;
             $update_formats[] = '%s';
         }
 
         if (empty($update_data)) {
-            return new WP_Error('no_changes', __('No valid changes provided.', 'affiliate-cross-domain'));
+            return new WP_Error('no_changes', __('No valid changes provided.', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         // Perform update
@@ -229,7 +228,7 @@ class AFFCD_Vanity_Code_Manager {
         );
 
         if ($result === false) {
-            return new WP_Error('db_error', __('Failed to update vanity code.', 'affiliate-cross-domain'));
+            return new WP_Error('db_error', __('Failed to update vanity code.', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         // Clear caches
@@ -255,12 +254,12 @@ class AFFCD_Vanity_Code_Manager {
         // Check if vanity code exists
         $existing = $this->get_vanity_code($vanity_id);
         if (!$existing) {
-            return new WP_Error('not_found', __('Vanity code not found.', 'affiliate-cross-domain'));
+            return new WP_Error('not_found', __('Vanity code not found.', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         // Security check
         if (!current_user_can('manage_affiliates')) {
-            return new WP_Error('insufficient_permissions', __('Insufficient permissions.', 'affiliate-cross-domain'));
+            return new WP_Error('insufficient_permissions', __('Insufficient permissions.', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         // Delete the vanity code (usage tracking will be deleted by foreign key constraint)
@@ -271,7 +270,7 @@ class AFFCD_Vanity_Code_Manager {
         );
 
         if ($result === false) {
-            return new WP_Error('db_error', __('Failed to delete vanity code.', 'affiliate-cross-domain'));
+            return new WP_Error('db_error', __('Failed to delete vanity code.', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         // Clear caches
@@ -327,7 +326,7 @@ class AFFCD_Vanity_Code_Manager {
             return [
                 'valid' => false,
                 'error' => 'invalid_code',
-                'message' => __('Invalid vanity code.', 'affiliate-cross-domain')
+                'message' => __('Invalid vanity code.', 'affiliatewp-cross-domain-plugin-suite')
             ];
         }
 
@@ -336,7 +335,7 @@ class AFFCD_Vanity_Code_Manager {
             return [
                 'valid' => false,
                 'error' => 'inactive_code',
-                'message' => __('Vanity code is not active.', 'affiliate-cross-domain')
+                'message' => __('Vanity code is not active.', 'affiliatewp-cross-domain-plugin-suite')
             ];
         }
 
@@ -345,7 +344,7 @@ class AFFCD_Vanity_Code_Manager {
             return [
                 'valid' => false,
                 'error' => 'expired_code',
-                'message' => __('Vanity code has expired.', 'affiliate-cross-domain')
+                'message' => __('Vanity code has expired.', 'affiliatewp-cross-domain-plugin-suite')
             ];
         }
 
@@ -354,7 +353,7 @@ class AFFCD_Vanity_Code_Manager {
             return [
                 'valid' => false,
                 'error' => 'unauthorised_domain',
-                'message' => __('Domain not authorised.', 'affiliate-cross-domain')
+                'message' => __('Domain not authorised.', 'affiliatewp-cross-domain-plugin-suite')
             ];
         }
 
@@ -380,10 +379,10 @@ class AFFCD_Vanity_Code_Manager {
             $this->usage_table,
             [
                 'vanity_code_id' => $vanity_code_id,
-                'domain' => sanitize_text_field($domain),
+                'domain' => Sanitise_text_field($domain),
                 'user_ip' => $this->security_manager->get_client_ip(),
-                'user_agent' => sanitize_text_field($_SERVER['HTTP_USER_AGENT'] ?? ''),
-                'referrer' => sanitize_text_field($_SERVER['HTTP_REFERER'] ?? ''),
+                'user_agent' => Sanitise_text_field($_SERVER['HTTP_USER_AGENT'] ?? ''),
+                'referrer' => Sanitise_text_field($_SERVER['HTTP_REFERER'] ?? ''),
                 'session_id' => session_id()
             ],
             ['%d', '%s', '%s', '%s', '%s', '%s']
@@ -478,7 +477,7 @@ class AFFCD_Vanity_Code_Manager {
      */
     public function bulk_operations($action, $vanity_ids) {
         if (!current_user_can('manage_affiliates')) {
-            return new WP_Error('insufficient_permissions', __('Insufficient permissions.', 'affiliate-cross-domain'));
+            return new WP_Error('insufficient_permissions', __('Insufficient permissions.', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
         $vanity_ids = array_map('absint', (array) $vanity_ids);
@@ -496,7 +495,7 @@ class AFFCD_Vanity_Code_Manager {
                     $results[$vanity_id] = $this->delete_vanity_code($vanity_id);
                     break;
                 default:
-                    $results[$vanity_id] = new WP_Error('invalid_action', __('Invalid bulk action.', 'affiliate-cross-domain'));
+                    $results[$vanity_id] = new WP_Error('invalid_action', __('Invalid bulk action.', 'affiliatewp-cross-domain-plugin-suite'));
             }
         }
         
@@ -511,26 +510,26 @@ class AFFCD_Vanity_Code_Manager {
         
         // Validate vanity code format
         if (empty($data['vanity_code'])) {
-            $errors[] = __('Vanity code is required.', 'affiliate-cross-domain');
+            $errors[] = __('Vanity code is required.', 'affiliatewp-cross-domain-plugin-suite');
         } elseif (!preg_match('/^[a-zA-Z0-9_-]+$/', $data['vanity_code'])) {
-            $errors[] = __('Vanity code can only contain letters, numbers, hyphens, and underscores.', 'affiliate-cross-domain');
+            $errors[] = __('Vanity code can only contain letters, numbers, hyphens, and underscores.', 'affiliatewp-cross-domain-plugin-suite');
         } elseif (strlen($data['vanity_code']) < 3 || strlen($data['vanity_code']) > 50) {
-            $errors[] = __('Vanity code must be between 3 and 50 characters.', 'affiliate-cross-domain');
+            $errors[] = __('Vanity code must be between 3 and 50 characters.', 'affiliatewp-cross-domain-plugin-suite');
         }
         
         // Validate affiliate ID
         if (empty($data['affiliate_id']) || !is_numeric($data['affiliate_id'])) {
-            $errors[] = __('Valid affiliate ID is required.', 'affiliate-cross-domain');
+            $errors[] = __('Valid affiliate ID is required.', 'affiliatewp-cross-domain-plugin-suite');
         }
         
         // Validate affiliate code
         if (empty($data['affiliate_code'])) {
-            $errors[] = __('Affiliate code is required.', 'affiliate-cross-domain');
+            $errors[] = __('Affiliate code is required.', 'affiliatewp-cross-domain-plugin-suite');
         }
         
         // Validate expiration date
         if (!empty($data['expires_at']) && strtotime($data['expires_at']) === false) {
-            $errors[] = __('Invalid expiration date format.', 'affiliate-cross-domain');
+            $errors[] = __('Invalid expiration date format.', 'affiliatewp-cross-domain-plugin-suite');
         }
         
         if (!empty($errors)) {
@@ -605,7 +604,7 @@ class AFFCD_Vanity_Code_Manager {
         check_ajax_referer('affcd_vanity_nonce', 'nonce');
         
         if (!current_user_can('manage_affiliates')) {
-            wp_die(__('Insufficient permissions.', 'affiliate-cross-domain'));
+            wp_die(__('Insufficient permissions.', 'affiliatewp-cross-domain-plugin-suite'));
         }
         
         $result = $this->create_vanity_code($_POST);
@@ -614,7 +613,7 @@ class AFFCD_Vanity_Code_Manager {
             wp_send_json_error($result->get_error_message());
         } else {
             wp_send_json_success([
-                'message' => __('Vanity code created successfully.', 'affiliate-cross-domain'),
+                'message' => __('Vanity code created successfully.', 'affiliatewp-cross-domain-plugin-suite'),
                 'vanity_id' => $result
             ]);
         }
@@ -633,7 +632,7 @@ class AFFCD_Vanity_Code_Manager {
             wp_send_json_error($result->get_error_message());
         } else {
             wp_send_json_success([
-                'message' => __('Vanity code updated successfully.', 'affiliate-cross-domain')
+                'message' => __('Vanity code updated successfully.', 'affiliatewp-cross-domain-plugin-suite')
             ]);
         }
     }
@@ -651,7 +650,7 @@ class AFFCD_Vanity_Code_Manager {
             wp_send_json_error($result->get_error_message());
         } else {
             wp_send_json_success([
-                'message' => __('Vanity code deleted successfully.', 'affiliate-cross-domain')
+                'message' => __('Vanity code deleted successfully.', 'affiliatewp-cross-domain-plugin-suite')
             ]);
         }
     }
@@ -662,7 +661,7 @@ class AFFCD_Vanity_Code_Manager {
     public function ajax_bulk_operations() {
         check_ajax_referer('affcd_vanity_nonce', 'nonce');
         
-        $action = sanitize_text_field($_POST['bulk_action'] ?? '');
+        $action = Sanitise_text_field($_POST['bulk_action'] ?? '');
         $vanity_ids = array_map('absint', $_POST['vanity_ids'] ?? []);
         
         $results = $this->bulk_operations($action, $vanity_ids);
@@ -680,7 +679,7 @@ class AFFCD_Vanity_Code_Manager {
         
         wp_send_json_success([
             'message' => sprintf(
-                __('%d items processed successfully, %d errors.', 'affiliate-cross-domain'),
+                __('%d items processed successfully, %d errors.', 'affiliatewp-cross-domain-plugin-suite'),
                 $success_count,
                 $error_count
             ),
