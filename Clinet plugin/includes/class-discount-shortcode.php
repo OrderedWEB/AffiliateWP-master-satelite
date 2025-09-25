@@ -33,7 +33,7 @@ class AFFILIATE_CLIENT_Discount_Shortcode {
     }
 
     /**
-     * Initialse shortcode and block functionality
+     * Initialize shortcode and block functionality
      */
     public function init() {
         // Register shortcodes
@@ -79,8 +79,8 @@ class AFFILIATE_CLIENT_Discount_Shortcode {
             'success_text' => '',
         ], $atts, 'affiliate_discount');
 
-        // Sanitise attributes
-        $atts = array_map('Sanitise_text_field', $atts);
+        // Sanitize attributes
+        $atts = array_map('sanitize_text_field', $atts);
         $atts['show_copy'] = filter_var($atts['show_copy'], FILTER_VALIDATE_BOOLEAN);
         $atts['show_apply'] = filter_var($atts['show_apply'], FILTER_VALIDATE_BOOLEAN);
         $atts['auto_apply'] = filter_var($atts['auto_apply'], FILTER_VALIDATE_BOOLEAN);
@@ -375,9 +375,9 @@ class AFFILIATE_CLIENT_Discount_Shortcode {
             wp_send_json_error('Invalid nonce');
         }
 
-        $code = Sanitise_text_field($_POST['code']);
-        $type = Sanitise_text_field($_POST['type'] ?? 'coupon');
-        $affiliate_id = Sanitise_text_field($_POST['affiliate_id'] ?? '');
+        $code = sanitize_text_field($_POST['code']);
+        $type = sanitize_text_field($_POST['type'] ?? 'coupon');
+        $affiliate_id = sanitize_text_field($_POST['affiliate_id'] ?? '');
 
         $result = $this->apply_discount_code($code, $type, $affiliate_id);
         wp_send_json($result);
@@ -387,9 +387,9 @@ class AFFILIATE_CLIENT_Discount_Shortcode {
      * REST API handler for applying discount
      */
     public function rest_apply_discount($request) {
-        $code = Sanitise_text_field($request->get_param('code'));
-        $type = Sanitise_text_field($request->get_param('type'));
-        $affiliate_id = Sanitise_text_field($request->get_param('affiliate_id'));
+        $code = sanitize_text_field($request->get_param('code'));
+        $type = sanitize_text_field($request->get_param('type'));
+        $affiliate_id = sanitize_text_field($request->get_param('affiliate_id'));
 
         $result = $this->apply_discount_code($code, $type, $affiliate_id);
         return rest_ensure_response($result);

@@ -39,7 +39,7 @@ class ACI_URL_Handler {
             $this->parameter_names = array_merge($this->parameter_names, $custom_params);
         }
         
-        // Initialise hooks
+        // Initialize hooks
         add_action('init', [$this, 'init'], 1);
         add_action('wp', [$this, 'process_url_parameters']);
         add_action('wp_enqueue_scripts', [$this, 'enqueue_scripts']);
@@ -56,7 +56,7 @@ class ACI_URL_Handler {
     }
 
     /**
-     * Initialse URL handler
+     * Initialize URL handler
      */
     public function init() {
         // Start session if not already started
@@ -102,7 +102,7 @@ class ACI_URL_Handler {
         
         foreach ($this->parameter_names as $param_name) {
             if (isset($_GET[$param_name]) && !empty($_GET[$param_name])) {
-                $param_value = Sanitise_text_field($_GET[$param_name]);
+                $param_value = sanitize_text_field($_GET[$param_name]);
                 
                 // Basic validation
                 if ($this->validate_parameter_value($param_value)) {
@@ -684,7 +684,7 @@ class ACI_URL_Handler {
     public function ajax_process_affiliate() {
         check_ajax_referer('aci_url_nonce', 'nonce');
         
-        $affiliate_code = Sanitise_text_field($_POST['affiliate_code'] ?? '');
+        $affiliate_code = sanitize_text_field($_POST['affiliate_code'] ?? '');
         
         if (empty($affiliate_code)) {
             wp_send_json_error(__('Affiliate code is required.', 'affiliate-client-integration'));

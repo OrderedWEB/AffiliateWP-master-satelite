@@ -35,7 +35,7 @@
     handlers: {},
 
     /**
-     * Initialse the application
+     * Initialize the application
      */
     init: function () {
       if (this.state.initialized) return;
@@ -100,35 +100,35 @@
     },
 
     /**
-     * Initialse sub-modules
+     * Initialize sub-modules
      */
     initializeModules: function () {
-      // Initialise URL processor
+      // Initialize URL processor
       if (ACI.URLProcessor) {
         ACI.URLProcessor.init();
       }
 
-      // Initialise price calculator
+      // Initialize price calculator
       if (ACI.PriceCalculator) {
         ACI.PriceCalculator.init();
       }
 
-      // Initialise validation
+      // Initialize validation
       if (ACI.Validation) {
         ACI.Validation.init();
       }
 
-      // Initialise popup manager
+      // Initialize popup manager
       if (ACI.PopupManager) {
         ACI.PopupManager.init();
       }
 
-      // Initialise session manager
+      // Initialize session manager
       this.initializeSession();
     },
 
     /**
-     * Initialse session management
+     * Initialize session management
      */
     initializeSession: function () {
       // Create session identifier
@@ -768,7 +768,7 @@
     },
   };
 
-  // Initialise when document is ready
+  // Initialize when document is ready
   $(document).ready(function () {
     ACI.App.init();
   });

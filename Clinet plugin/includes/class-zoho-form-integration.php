@@ -42,7 +42,7 @@ class AFFILIATE_CLIENT_Zoho_Form_Integration {
     }
 
     /**
-     * Initialse Zoho form integration
+     * Initialize Zoho form integration
      */
     public function init() {
         if (!$this->config['tracking_enabled']) {
@@ -158,7 +158,7 @@ class AFFILIATE_CLIENT_Zoho_Form_Integration {
         // Get visit ID
         $visit_id = null;
         if (isset($_COOKIE['affiliate_client_visit_id'])) {
-            $visit_id = Sanitise_text_field($_COOKIE['affiliate_client_visit_id']);
+            $visit_id = sanitize_text_field($_COOKIE['affiliate_client_visit_id']);
         }
 
         // Get UTM parameters from current page or session
@@ -420,7 +420,7 @@ class AFFILIATE_CLIENT_Zoho_Form_Integration {
         
         foreach ($field_names as $field_name) {
             if (isset($webhook_data[$field_name])) {
-                return Sanitise_text_field($webhook_data[$field_name]);
+                return sanitize_text_field($webhook_data[$field_name]);
             }
         }
 

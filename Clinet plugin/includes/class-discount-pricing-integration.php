@@ -50,7 +50,7 @@ class AFFILIATE_CLIENT_Discount_Pricing_Integration {
     }
 
     /**
-     * Initialse the integration
+     * Initialize the integration
      */
     public function init() {
         // Shortcodes
@@ -79,7 +79,7 @@ class AFFILIATE_CLIENT_Discount_Pricing_Integration {
     }
 
     /**
-     * Initialse obfuscated field names for security
+     * Initialize obfuscated field names for security
      */
     private function init_obfuscated_fields() {
         $this->obfuscated_fields = [
@@ -423,10 +423,10 @@ class AFFILIATE_CLIENT_Discount_Pricing_Integration {
             wp_send_json_error('Invalid nonce');
         }
 
-        $discount_code = Sanitise_text_field($_POST['discount_code'] ?? '');
+        $discount_code = sanitize_text_field($_POST['discount_code'] ?? '');
         $affiliate_id = intval($_POST['affiliate_id'] ?? 0);
         $base_price = floatval($_POST['base_price'] ?? 0);
-        $currency = Sanitise_text_field($_POST['currency'] ?? 'EUR');
+        $currency = sanitize_text_field($_POST['currency'] ?? 'EUR');
 
         $result = $this->fetch_discount_data($discount_code, $affiliate_id, $base_price, $currency);
         wp_send_json($result);
@@ -449,10 +449,10 @@ class AFFILIATE_CLIENT_Discount_Pricing_Integration {
      * REST handlers
      */
     public function rest_get_discount_data($request) {
-        $discount_code = Sanitise_text_field($request->get_param('code'));
+        $discount_code = sanitize_text_field($request->get_param('code'));
         $affiliate_id = intval($request->get_param('affiliate_id'));
         $base_price = floatval($request->get_param('base_price'));
-        $currency = Sanitise_text_field($request->get_param('currency'));
+        $currency = sanitize_text_field($request->get_param('currency'));
 
         $result = $this->fetch_discount_data($discount_code, $affiliate_id, $base_price, $currency);
         return rest_ensure_response($result);
@@ -561,8 +561,8 @@ class AFFILIATE_CLIENT_Discount_Pricing_Integration {
         // Extract order information from URL parameters or POST data
         $total_order = floatval($order_data['total_order'] ?? $_GET['totalorder'] ?? 0);
         $total_paid = floatval($order_data['total_paid'] ?? $_GET['totalpaid'] ?? 0);
-        $order_id = Sanitise_text_field($order_data['order_id'] ?? $_GET['orderid'] ?? '');
-        $discount_code = Sanitise_text_field($order_data['discount_code'] ?? $_GET['discount'] ?? '');
+        $order_id = sanitize_text_field($order_data['order_id'] ?? $_GET['orderid'] ?? '');
+        $discount_code = sanitize_text_field($order_data['discount_code'] ?? $_GET['discount'] ?? '');
 
         // Get affiliate tracking data
         $affiliate_id = $this->get_current_affiliate_id();
@@ -655,7 +655,7 @@ class AFFILIATE_CLIENT_Discount_Pricing_Integration {
 
     private function get_current_visit_id() {
         if (isset($_COOKIE['affiliate_client_visit_id'])) {
-            return Sanitise_text_field($_COOKIE['affiliate_client_visit_id']);
+            return sanitize_text_field($_COOKIE['affiliate_client_visit_id']);
         }
         return null;
     }

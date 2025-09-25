@@ -1,48 +1,36 @@
 <?php
 /**
- * Analytics Dashboard for Affiliate Cross Domain System
- * 
+ * Analytics Dashboard (Full)
+ *
  * Plugin: Affiliate Cross Domain System (Master)
  * File: /wp-content/plugins/affiliate-cross-domain-system/admin/class-analytics-dashboard.php
- * 
- * Provides comprehensive analytics and reporting functionality
- * with real-time data visualization and performance metrics.
  */
 
-// Prevent direct access
 if (!defined('ABSPATH')) {
     exit;
 }
 
 class AFFCD_Analytics_Dashboard {
 
-    private $vanity_manager;
-    private $security_manager;
-    private $cache_prefix = 'affcd_analytics_';
-    private $cache_expiration = 900; // 15 minutes
+    private $cache_group = 'affcd_analytics';
+    private $cache_ttl   = 900; // 15 minutes
 
-    /**
-     * Constructor
-     */
     public function __construct() {
-        $this->vanity_manager = new AFFCD_Vanity_Code_Manager();
-        $this->security_manager = new AFFCD_Security_Manager();
-        
-        // Initialise hooks
         add_action('admin_menu', [$this, 'add_admin_menu']);
+        add_action('admin_enqueue_scripts', [$this, 'enqueue_assets']);
+
+        // AJAX
         add_action('wp_ajax_affcd_get_analytics_data', [$this, 'ajax_get_analytics_data']);
-        add_action('wp_ajax_affcd_export_analytics', [$this, 'ajax_export_analytics']);
-        add_action('wp_ajax_affcd_generate_report', [$this, 'ajax_generate_report']);
-        add_action('admin_enqueue_scripts', [$this, 'enqueue_scripts']);
-        
-        // Schedule analytics tasks
-        add_action('affcd_update_analytics_cache', [$this, 'update_analytics_cache']);
-        add_action('affcd_generate_daily_report', [$this, 'generate_daily_report']);
+        add_action('wp_ajax_affcd_export_analytics',   [$this, 'ajax_export_analytics']);
+
+        // (Optional) scheduled cache warming hooks you can wire in your activator:
+        add_action('affcd_update_analytics_cache', [$this, 'warm_cache']);
     }
 
-    /**
-     * Add admin menu
-     */
+    /* --------------------------
+     * Admin UI
+     * -------------------------- */
+
     public function add_admin_menu() {
         add_submenu_page(
             'affiliate-wp',
@@ -50,19 +38,14 @@ class AFFCD_Analytics_Dashboard {
             __('Analytics', 'affiliatewp-cross-domain-plugin-suite'),
             'manage_affiliates',
             'affcd-analytics',
-            [$this, 'render_analytics_page']
+            [$this, 'render_page']
         );
     }
 
-    /**
-     * Enqueue scripts and styles
-     */
-    public function enqueue_scripts($hook) {
-        if (strpos($hook, 'affcd-analytics') === false) {
-            return;
-        }
+    public function enqueue_assets($hook) {
+        if (strpos($hook, 'affcd-analytics') === false) return;
 
-        // Chart.js for data visualization
+        // Chart.js
         wp_enqueue_script(
             'chartjs',
             'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js',
@@ -71,1542 +54,918 @@ class AFFCD_Analytics_Dashboard {
             true
         );
 
-        // Custom analytics script
-        wp_enqueue_script(
-            'affcd-analytics',
-            AFFCD_PLUGIN_URL . 'admin/js/analytics-dashboard.js',
-            ['jquery', 'chartjs'],
-            AFFCD_VERSION,
+        // Admin CSS (optional – provide a minimal baseline)
+        wp_add_inline_style('wp-admin', '
+        .affcd-analytics-dashboard{margin:20px 20px 0 2px}
+        .affcd-date-controls{margin:20px 0;padding:15px;background:#fff;border:1px solid #ddd;border-radius:4px}
+        .affcd-date-controls select,.affcd-date-controls input{margin-right:10px}
+        .nav-tab-wrapper{margin-top:15px}
+        .affcd-stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px;margin:20px 0}
+        .affcd-stat-card{background:#fff;border:1px solid #ddd;border-radius:4px;padding:20px;text-align:center}
+        .affcd-stat-value{font-size:2em;font-weight:700;margin:5px 0}
+        .affcd-chart-container{background:#fff;border:1px solid #ddd;border-radius:4px;padding:20px;margin:20px 0}
+        .affcd-data-table{width:100%;background:#fff;border-collapse:collapse;margin:20px 0}
+        .affcd-data-table th,.affcd-data-table td{padding:12px;text-align:left;border-bottom:1px solid #eee}
+        .affcd-data-table th{background:#f9f9f9;font-weight:700}
+        .affcd-loading{text-align:center;padding:40px}
+        ');
+
+        // Inline JS boot (tiny); the heavy lifting happens server-side
+        wp_add_inline_script('chartjs', '
+        window.AFFCD = window.AFFCD || {};
+        ', 'before');
+
+        wp_register_script(
+            'affcd-analytics-js',
+            false,
+            ['jquery','chartjs'],
+            defined('AFFCD_VERSION') ? AFFCD_VERSION : '1.0.0',
             true
         );
 
-        wp_enqueue_style(
-            'affcd-analytics',
-            AFFCD_PLUGIN_URL . 'admin/css/analytics-dashboard.css',
-            [],
-            AFFCD_VERSION
-        );
+        wp_add_inline_script('affcd-analytics-js', '
+        (function($){
+            const ajaxUrl = "'.esc_js(admin_url('admin-ajax.php')).'";
+            const nonce   = "'.esc_js(wp_create_nonce('affcd_analytics_nonce')).'";
 
-        // Localize script
-        wp_localize_script('affcd-analytics', 'affcdAnalytics', [
-            'ajaxUrl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('affcd_analytics_nonce'),
-            'i18n' => [
-                'loading' => __('Loading...', 'affiliatewp-cross-domain-plugin-suite'),
-                'error' => __('Error loading data', 'affiliatewp-cross-domain-plugin-suite'),
-                'noData' => __('No data available', 'affiliatewp-cross-domain-plugin-suite'),
-                'exportSuccess' => __('Export completed successfully', 'affiliatewp-cross-domain-plugin-suite'),
-                'reportGenerated' => __('Report generated successfully', 'affiliatewp-cross-domain-plugin-suite')
-            ]
-        ]);
+            function loadTab(tab){
+                const period    = $("#affcd-date-range").val() || "7d";
+                const startDate = $("#affcd-start-date").val() || "";
+                const endDate   = $("#affcd-end-date").val() || "";
+
+                $("#affcd-loading").show();
+                $.post(ajaxUrl, {
+                    action: "affcd_get_analytics_data",
+                    nonce,
+                    tab,
+                    period,
+                    start_date: startDate,
+                    end_date: endDate
+                }).done(function(res){
+                    $("#affcd-loading").hide();
+                    if(!res.success){ alert(res.data || "Error"); return; }
+                    renderTab(tab, res.data, res.date_range);
+                }).fail(function(){
+                    $("#affcd-loading").hide();
+                    alert("'.esc_js(__('Error loading data', 'affiliatewp-cross-domain-plugin-suite')).'");
+                });
+            }
+
+            function renderMetricCards(container, metrics){
+                const $c = $(container).empty();
+                const list = [
+                    ["total_usage","Total Usage"],
+                    ["total_conversions","Conversions"],
+                    ["total_revenue","Revenue"],
+                    ["conversion_rate","Conversion Rate"],
+                    ["unique_sessions","Unique Sessions"],
+                    ["active_domains","Active Domains"]
+                ];
+                list.forEach(([key,label])=>{
+                    if(typeof metrics[key] === "undefined") return;
+                    let value = metrics[key];
+                    if(key === "total_revenue") value = new Intl.NumberFormat().format(parseFloat(value || 0).toFixed(2));
+                    if(key === "conversion_rate") value = (value || 0)+"%";
+                    $c.append(`
+                        <div class="affcd-stat-card">
+                            <div class="affcd-stat-label">${label}</div>
+                            <div class="affcd-stat-value">${value}</div>
+                        </div>
+                    `);
+                });
+            }
+
+            // Simple chart helper
+            function makeLineChart(canvasId, labels, datasets){
+                const ctx = document.getElementById(canvasId);
+                if(!ctx) return;
+                new Chart(ctx.getContext("2d"), {
+                    type: "line",
+                    data: { labels, datasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins:{ legend:{ display: true } },
+                        scales: { x: { display: true }, y: { display: true, beginAtZero: true } }
+                    }
+                });
+            }
+
+            function makePieChart(canvasId, labels, values){
+                const ctx = document.getElementById(canvasId);
+                if(!ctx) return;
+                new Chart(ctx.getContext("2d"), {
+                    type: "pie",
+                    data: { labels, datasets:[{ data: values }]},
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            }
+
+            function renderTab(tab, payload, range){
+                if(tab === "overview"){
+                    renderMetricCards("#affcd-key-metrics", payload.metrics || {});
+                    // charts
+                    (function(){
+                        const rows = payload.traffic_trends || [];
+                        const labels = rows.map(r=>r.date);
+                        const usage  = rows.map(r=>parseInt(r.usage_count || 0,10));
+                        const conv   = rows.map(r=>parseInt(r.conversions || 0,10));
+                        const rev    = rows.map(r=>parseFloat(r.revenue || 0));
+                        makeLineChart("affcd-traffic-chart", labels, [
+                            { label:"Usage", data: usage },
+                            { label:"Conversions", data: conv },
+                            { label:"Revenue", data: rev }
+                        ]);
+                    })();
+                    // top codes table
+                    (function(){
+                        const $tb = $("#affcd-top-codes tbody").empty();
+                        (payload.top_codes || []).forEach(row=>{
+                            $tb.append(`<tr>
+                              <td>${row.code || ""}</td>
+                              <td>${row.usage_count || 0}</td>
+                              <td>${row.conversions || 0}</td>
+                              <td>${(parseFloat(row.revenue||0)).toFixed(2)}</td>
+                              <td>${row.conversion_rate ? row.conversion_rate+"%" : "0%"}</td>
+                            </tr>`);
+                        });
+                    })();
+                    // activity list
+                    (function(){
+                        const $box = $("#affcd-recent-activity").empty();
+                        (payload.recent_activity || []).forEach(r=>{
+                            $box.append(`<div>${r.created_at} — <strong>${r.code || "-"}</strong> @ ${r.domain_from || "-"} ${r.conversion_value ? " → £"+(parseFloat(r.conversion_value).toFixed(2)) : ""}</div>`);
+                        });
+                    })();
+                }
+
+                if(tab === "performance"){
+                    // Device/Browser/OS pies
+                    (function(){
+                        const d = payload.device_stats || [];
+                        makePieChart("affcd-device-chart", d.map(x=>x.device_type||"Unknown"), d.map(x=>parseInt(x.count||0,10)));
+                        const b = payload.browser_stats || [];
+                        makePieChart("affcd-browser-chart", b.map(x=>x.browser||"Unknown"), b.map(x=>parseInt(x.count||0,10)));
+                        const o = payload.os_stats || [];
+                        makePieChart("affcd-os-chart", o.map(x=>x.os||"Unknown"), o.map(x=>parseInt(x.count||0,10)));
+                    })();
+                    // Revenue line
+                    (function(){
+                        const rows = payload.revenue_trends || [];
+                        const labels = rows.map(r=>r.date);
+                        const revenue = rows.map(r=>parseFloat(r.revenue||0));
+                        const conv    = rows.map(r=>parseInt(r.conversions||0,10));
+                        makeLineChart("affcd-revenue-chart", labels, [
+                            { label:"Revenue", data: revenue },
+                            { label:"Conversions", data: conv }
+                        ]);
+                    })();
+                }
+
+                if(tab === "affiliates"){
+                    const $tb = $("#affcd-affiliate-performance tbody").empty();
+                    (payload.performance || []).forEach(r=>{
+                        $tb.append(`<tr>
+                          <td>${(r.affiliate_name||"")+" "+(r.affiliate_email?"<br><small>"+r.affiliate_email+"</small>":"")}</td>
+                          <td>${r.total_codes||0}</td>
+                          <td>${r.total_usage||0}</td>
+                          <td>${r.conversions||0}</td>
+                          <td>${(parseFloat(r.revenue||0)).toFixed(2)}</td>
+                          <td>${r.avg_order_value ? parseFloat(r.avg_order_value).toFixed(2) : "0.00"}</td>
+                          <td>${r.conversion_rate? r.conversion_rate+"%":"0%"}</td>
+                        </tr>`);
+                    });
+                }
+
+                if(tab === "domains"){
+                    const $tb = $("#affcd-domain-performance tbody").empty();
+                    (payload.performance || []).forEach(r=>{
+                        $tb.append(`<tr>
+                          <td>${r.domain||r.domain_from||"-"}</td>
+                          <td>${r.total_requests||0}</td>
+                          <td>${r.successful_validations||0}</td>
+                          <td>${r.conversions||0}</td>
+                          <td>${(parseFloat(r.revenue||0)).toFixed(2)}</td>
+                          <td>${r.success_rate ? r.success_rate+"%":"0%"}</td>
+                          <td>${r.status||"—"}</td>
+                        </tr>`);
+                    });
+
+                    (function(){
+                        const rows = payload.activity || [];
+                        const labels = rows.map(r=>r.date);
+                        const totals = rows.map(r=>parseInt(r.total_requests||0,10));
+                        makeLineChart("affcd-domain-activity", labels, [{label:"Requests", data: totals}]);
+                    })();
+                }
+
+                if(tab === "geographic"){
+                    const $tb = $("#affcd-geographic-performance tbody").empty();
+                    (payload.performance || []).forEach(r=>{
+                        $tb.append(`<tr>
+                          <td>${r.country||"-"}</td>
+                          <td>${r.region||"-"}</td>
+                          <td>${r.sessions||0}</td>
+                          <td>${r.conversions||0}</td>
+                          <td>${(parseFloat(r.revenue||0)).toFixed(2)}</td>
+                          <td>${r.conversion_rate? r.conversion_rate+"%":"0%"}</td>
+                          <td>${r.avg_order_value? parseFloat(r.avg_order_value).toFixed(2):"0.00"}</td>
+                        </tr>`);
+                    });
+                }
+
+                if(tab === "security"){
+                    const $metrics = $("#affcd-security-metrics").empty();
+                    (payload.metrics || []).forEach(m=>{
+                        $metrics.append(`<div class="affcd-stat-card">
+                          <div class="affcd-stat-label">${m.label}</div>
+                          <div class="affcd-stat-value">${m.value}</div>
+                        </div>`);
+                    });
+
+                    (function(){
+                        const rows = payload.events_over_time || [];
+                        const labels = rows.map(r=>r.date);
+                        const totals = rows.map(r=>parseInt(r.total||0,10));
+                        makeLineChart("affcd-security-events", labels, [{label:"Events", data: totals}]);
+                    })();
+
+                    const $tb = $("#affcd-security-events-table tbody").empty();
+                    (payload.recent || []).forEach(r=>{
+                        $tb.append(`<tr>
+                          <td>${r.created_at||""}</td>
+                          <td>${r.event_type||""}</td>
+                          <td>${r.severity||""}</td>
+                          <td>${r.ip_address||""}</td>
+                          <td>${r.domain||""}</td>
+                          <td>${r.details||""}</td>
+                        </tr>`);
+                    });
+                }
+            }
+
+            $(document).on("change", "#affcd-date-range", function(){
+                const v = $(this).val();
+                $("#affcd-custom-date-range").toggle(v==="custom");
+            });
+
+            $("#affcd-apply-custom-range, #affcd-refresh-data").on("click", function(){
+                const tab = $(".nav-tab.nav-tab-active").data("tab") || "overview";
+                loadTab(tab);
+            });
+
+            $(".nav-tab-wrapper").on("click", ".nav-tab", function(e){
+                e.preventDefault();
+                $(".nav-tab").removeClass("nav-tab-active");
+                $(this).addClass("nav-tab-active");
+                loadTab($(this).data("tab"));
+                history.replaceState(null, "", $(this).attr("href"));
+            });
+
+            // initial load
+            $(function(){
+                const tab = $(".nav-tab.nav-tab-active").data("tab") || "overview";
+                loadTab(tab);
+            });
+
+            // Export
+            $("#affcd-export-data").on("click", function(){
+                const period = $("#affcd-date-range").val() || "7d";
+                $.post(ajaxUrl, { action:"affcd_export_analytics", nonce, period, format:"csv"}).done(function(res){
+                    if(res.success && res.data && res.data.download_url){
+                        window.location = res.data.download_url;
+                    }else{
+                        alert(res.data || "Export failed");
+                    }
+                });
+            });
+
+        })(jQuery);
+        ');
+
+        wp_enqueue_script('affcd-analytics-js');
     }
 
-    /**
-     * Render analytics dashboard page
-     */
-    public function render_analytics_page() {
-        $current_tab = $_GET['tab'] ?? 'overview';
-        $date_range = $_GET['range'] ?? '7d';
-        
+    public function render_page() {
+        $current_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'overview';
+        $tabs = ['overview','performance','affiliates','domains','geographic','security'];
+
+        if (!in_array($current_tab, $tabs, true)) $current_tab = 'overview';
+
         ?>
         <div class="wrap affcd-analytics-dashboard">
             <h1><?php _e('Analytics Dashboard', 'affiliatewp-cross-domain-plugin-suite'); ?></h1>
 
-            <!-- Date Range Selector -->
             <div class="affcd-date-controls">
-                <select id="affcd-date-range" data-current="<?php echo esc_attr($date_range); ?>">
-                    <option value="24h" <?php selected($date_range, '24h'); ?>><?php _e('Last 24 Hours', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
-                    <option value="7d" <?php selected($date_range, '7d'); ?>><?php _e('Last 7 Days', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
-                    <option value="30d" <?php selected($date_range, '30d'); ?>><?php _e('Last 30 Days', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
-                    <option value="90d" <?php selected($date_range, '90d'); ?>><?php _e('Last 90 Days', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
+                <select id="affcd-date-range">
+                    <option value="24h"><?php _e('Last 24 Hours', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
+                    <option value="7d" selected><?php _e('Last 7 Days', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
+                    <option value="30d"><?php _e('Last 30 Days', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
+                    <option value="90d"><?php _e('Last 90 Days', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
                     <option value="custom"><?php _e('Custom Range', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
                 </select>
-                
-                <div id="affcd-custom-date-range" style="display: none;">
+                <span id="affcd-custom-date-range" style="display:none">
                     <input type="date" id="affcd-start-date" />
                     <span>to</span>
                     <input type="date" id="affcd-end-date" />
                     <button type="button" id="affcd-apply-custom-range" class="button"><?php _e('Apply', 'affiliatewp-cross-domain-plugin-suite'); ?></button>
-                </div>
-                
+                </span>
                 <button type="button" id="affcd-refresh-data" class="button"><?php _e('Refresh', 'affiliatewp-cross-domain-plugin-suite'); ?></button>
                 <button type="button" id="affcd-export-data" class="button button-primary"><?php _e('Export Data', 'affiliatewp-cross-domain-plugin-suite'); ?></button>
             </div>
 
-            <!-- Tab Navigation -->
             <nav class="nav-tab-wrapper">
-                <a href="?page=affcd-analytics&tab=overview" 
-                   class="nav-tab <?php echo $current_tab === 'overview' ? 'nav-tab-active' : ''; ?>">
-                    <?php _e('Overview', 'affiliatewp-cross-domain-plugin-suite'); ?>
-                </a>
-                <a href="?page=affcd-analytics&tab=performance" 
-                   class="nav-tab <?php echo $current_tab === 'performance' ? 'nav-tab-active' : ''; ?>">
-                    <?php _e('Performance', 'affiliatewp-cross-domain-plugin-suite'); ?>
-                </a>
-                <a href="?page=affcd-analytics&tab=affiliates" 
-                   class="nav-tab <?php echo $current_tab === 'affiliates' ? 'nav-tab-active' : ''; ?>">
-                    <?php _e('Affiliates', 'affiliatewp-cross-domain-plugin-suite'); ?>
-                </a>
-                <a href="?page=affcd-analytics&tab=domains" 
-                   class="nav-tab <?php echo $current_tab === 'domains' ? 'nav-tab-active' : ''; ?>">
-                    <?php _e('Domains', 'affiliatewp-cross-domain-plugin-suite'); ?>
-                </a>
-                <a href="?page=affcd-analytics&tab=geographic" 
-                   class="nav-tab <?php echo $current_tab === 'geographic' ? 'nav-tab-active' : ''; ?>">
-                    <?php _e('Geographic', 'affiliatewp-cross-domain-plugin-suite'); ?>
-                </a>
-                <a href="?page=affcd-analytics&tab=security" 
-                   class="nav-tab <?php echo $current_tab === 'security' ? 'nav-tab-active' : ''; ?>">
-                    <?php _e('Security', 'affiliatewp-cross-domain-plugin-suite'); ?>
-                </a>
+                <?php foreach ($tabs as $t): ?>
+                    <?php
+                        $href = esc_url(add_query_arg(['page'=>'affcd-analytics','tab'=>$t], admin_url('admin.php')));
+                        $active = $current_tab === $t ? ' nav-tab-active' : '';
+                    ?>
+                    <a href="<?php echo $href; ?>" data-tab="<?php echo esc_attr($t); ?>" class="nav-tab<?php echo $active; ?>">
+                        <?php echo esc_html(ucfirst($t)); ?>
+                    </a>
+                <?php endforeach; ?>
             </nav>
 
-            <!-- Loading Indicator -->
-            <div id="affcd-loading" class="affcd-loading" style="display: none;">
+            <div id="affcd-loading" class="affcd-loading" style="display:none;">
                 <div class="spinner is-active"></div>
                 <span><?php _e('Loading analytics data...', 'affiliatewp-cross-domain-plugin-suite'); ?></span>
             </div>
 
-            <!-- Tab Content -->
             <div class="tab-content" id="affcd-analytics-content">
-                <?php
-                switch ($current_tab) {
-                    case 'overview':
-                        $this->render_overview_tab();
-                        break;
-                    case 'performance':
-                        $this->render_performance_tab();
-                        break;
-                    case 'affiliates':
-                        $this->render_affiliates_tab();
-                        break;
-                    case 'domains':
-                        $this->render_domains_tab();
-                        break;
-                    case 'geographic':
-                        $this->render_geographic_tab();
-                        break;
-                    case 'security':
-                        $this->render_security_tab();
-                        break;
-                }
-                ?>
-            </div>
-        </div>
-
-        <style>
-        .affcd-analytics-dashboard {
-            margin: 20px 20px 0 2px;
-        }
-        .affcd-date-controls {
-            margin: 20px 0;
-            padding: 15px;
-            background: #fff;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        .affcd-date-controls select,
-        .affcd-date-controls input {
-            margin-right: 10px;
-        }
-        .affcd-stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin: 20px 0;
-        }
-        .affcd-stat-card {
-            background: #fff;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 20px;
-            text-align: center;
-        }
-        .affcd-stat-value {
-            font-size: 2.5em;
-            font-weight: bold;
-            margin: 10px 0;
-        }
-        .affcd-stat-label {
-            color: #666;
-            font-size: 0.9em;
-        }
-        .affcd-chart-container {
-            background: #fff;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 20px;
-            margin: 20px 0;
-        }
-        .affcd-chart-title {
-            font-size: 1.2em;
-            font-weight: bold;
-            margin-bottom: 15px;
-        }
-        .affcd-loading {
-            text-align: center;
-            padding: 40px;
-        }
-        .affcd-loading .spinner {
-            float: none;
-            margin: 0 auto 20px;
-        }
-        .affcd-data-table {
-            width: 100%;
-            background: #fff;
-            border-collapse: collapse;
-            margin: 20px 0;
-        }
-        .affcd-data-table th,
-        .affcd-data-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        .affcd-data-table th {
-            background: #f9f9f9;
-            font-weight: bold;
-        }
-        .affcd-trend-up {
-            color: #46b450;
-        }
-        .affcd-trend-down {
-            color: #dc3232;
-        }
-        .affcd-trend-neutral {
-            color: #ffb900;
-        }
-        </style>
-        <?php
-    }
-
-    /**
-     * Render overview tab
-     */
-    private function render_overview_tab() {
-        ?>
-        <div class="overview-tab">
-            <!-- Key Metrics Cards -->
-            <div class="affcd-stats-grid" id="affcd-key-metrics">
-                <!-- Cards will be populated via AJAX -->
-            </div>
-
-            <!-- Charts Row -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                <div class="affcd-chart-container">
-                    <div class="affcd-chart-title"><?php _e('Traffic Trends', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
-                    <canvas id="affcd-traffic-chart" width="400" height="200"></canvas>
-                </div>
-                  <div class="affcd-chart-container">
-                    <div class="affcd-chart-title"><?php _e('Conversion Rates', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
-                    <canvas id="affcd-conversion-chart" width="400" height="200"></canvas>
-                </div>
-            </div>
-
-            <!-- Recent Activity -->
-            <div class="affcd-chart-container">
-                <div class="affcd-chart-title"><?php _e('Recent Activity', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
-                <div id="affcd-recent-activity">
-                    <!-- Activity will be populated via AJAX -->
-                </div>
-            </div>
-
-            <!-- Top Performing Codes -->
-            <div class="affcd-chart-container">
-                <div class="affcd-chart-title"><?php _e('Top Performing Vanity Codes', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
-                <table class="affcd-data-table" id="affcd-top-codes">
-                    <thead>
-                        <tr>
-                            <th><?php _e('Code', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                            <th><?php _e('Usage', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                            <th><?php _e('Conversions', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                            <th><?php _e('Revenue', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                </tr>
-                <?php foreach (array_slice($data['overview']['top_codes'], 0, 5) as $code): ?>
-                    <tr>
-                        <td><?php echo esc_html($code['vanity_code']); ?></td>
-                        <td><?php echo number_format($code['usage_count']); ?></td>
-                        <td>$<?php echo number_format($code['revenue'], 2); ?></td>
-                    </tr>
-                <?php endforeach; ?>
-            </table>
-        <?php else: ?>
-            <p><?php _e('No activity in the last 24 hours.', 'affiliatewp-cross-domain-plugin-suite'); ?></p>
-        <?php endif; ?>
-        
-        <p><small><?php _e('This is an automated report from your Affiliate Cross Domain System.', 'affiliatewp-cross-domain-plugin-suite'); ?></small></p>
-        <?php
-        return ob_get_clean();
-    }
-}></th>
-                            <th><?php _e('Conversion Rate', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Data will be populated via AJAX -->
-                    </tbody>
-                </table>
+                <?php if ($current_tab === 'overview'): ?>
+                    <div class="affcd-stats-grid" id="affcd-key-metrics"></div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;min-height:280px;">
+                        <div class="affcd-chart-container">
+                            <div class="affcd-chart-title"><?php _e('Traffic & Conversions', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
+                            <div style="height:260px"><canvas id="affcd-traffic-chart"></canvas></div>
+                        </div>
+                        <div class="affcd-chart-container">
+                            <div class="affcd-chart-title"><?php _e('Recent Activity', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
+                            <div id="affcd-recent-activity" style="max-height:260px;overflow:auto"></div>
+                        </div>
+                    </div>
+                    <div class="affcd-chart-container">
+                        <div class="affcd-chart-title"><?php _e('Top Performing Vanity Codes', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
+                        <table class="affcd-data-table" id="affcd-top-codes">
+                            <thead>
+                                <tr>
+                                    <th><?php _e('Code', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                    <th><?php _e('Usage', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                    <th><?php _e('Conversions', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                    <th><?php _e('Revenue', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                    <th><?php _e('Conversion Rate', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                <?php elseif ($current_tab === 'performance'): ?>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;min-height:280px;">
+                        <div class="affcd-chart-container">
+                            <div class="affcd-chart-title"><?php _e('Revenue & Conversions Over Time', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
+                            <div style="height:260px"><canvas id="affcd-revenue-chart"></canvas></div>
+                        </div>
+                        <div class="affcd-chart-container">
+                            <div class="affcd-chart-title"><?php _e('Device / Browser / OS', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;min-height:260px;">
+                                <canvas id="affcd-device-chart"></canvas>
+                                <canvas id="affcd-browser-chart"></canvas>
+                                <canvas id="affcd-os-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                <?php elseif ($current_tab === 'affiliates'): ?>
+                    <div class="affcd-chart-container">
+                        <div class="affcd-chart-title"><?php _e('Affiliate Performance', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
+                        <table class="affcd-data-table" id="affcd-affiliate-performance">
+                            <thead>
+                                <tr>
+                                    <th><?php _e('Affiliate', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                    <th><?php _e('Codes', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                    <th><?php _e('Total Usage', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                    <th><?php _e('Conversions', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                    <th><?php _e('Revenue', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                    <th><?php _e('Avg. Order Value', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                    <th><?php _e('Conversion Rate', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                <?php elseif ($current_tab === 'domains'): ?>
+                    <div class="affcd-chart-container">
+                        <div class="affcd-chart-title"><?php _e('Domain Performance', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
+                        <table class="affcd-data-table" id="affcd-domain-performance">
+                            <thead>
+                                <tr>
+                                    <th><?php _e('Domain', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                    <th><?php _e('Total Requests', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                    <th><?php _e('Successful Validations', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                    <th><?php _e('Conversions', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                    <th><?php _e('Revenue', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                    <th><?php _e('Success Rate', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                    <th><?php _e('Status', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div class="affcd-chart-container">
+                        <div class="affcd-chart-title"><?php _e('Domain Activity Over Time', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
+                        <div style="height:260px"><canvas id="affcd-domain-activity"></canvas></div>
+                    </div>
+                <?php elseif ($current_tab === 'geographic'): ?>
+                    <div class="affcd-chart-container">
+                        <div class="affcd-chart-title"><?php _e('Geographic Performance', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
+                        <table class="affcd-data-table" id="affcd-geographic-performance">
+                            <thead>
+                                <tr>
+                                    <th><?php _e('Country', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                    <th><?php _e('Region', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                    <th><?php _e('Sessions', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                    <th><?php _e('Conversions', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                    <th><?php _e('Revenue', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                    <th><?php _e('Conversion Rate', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                    <th><?php _e('Avg. Order Value', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                <?php elseif ($current_tab === 'security'): ?>
+                    <div class="affcd-stats-grid" id="affcd-security-metrics"></div>
+                    <div class="affcd-chart-container">
+                        <div class="affcd-chart-title"><?php _e('Security Events Over Time', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
+                        <div style="height:260px"><canvas id="affcd-security-events"></canvas></div>
+                    </div>
+                    <div class="affcd-chart-container">
+                        <div class="affcd-chart-title"><?php _e('Recent Security Events', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
+                        <table class="affcd-data-table" id="affcd-security-events-table">
+                            <thead>
+                                <tr>
+                                    <th><?php _e('Timestamp', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                    <th><?php _e('Event Type', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                    <th><?php _e('Severity', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                    <th><?php _e('Source IP', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                    <th><?php _e('Domain', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                    <th><?php _e('Details', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
         <?php
     }
 
-    /**
-     * Render performance tab
-     */
-    private function render_performance_tab() {
-        ?>
-        <div class="performance-tab">
-            <!-- Performance Metrics -->
-            <div class="affcd-chart-container">
-                <div class="affcd-chart-title"><?php _e('Performance Overview', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
-                <div class="affcd-stats-grid" id="affcd-performance-metrics">
-                    <!-- Metrics will be populated via AJAX -->
-                </div>
-            </div>
+    /* --------------------------
+     * AJAX endpoints
+     * -------------------------- */
 
-            <!-- Performance Charts -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                <div class="affcd-chart-container">
-                    <div class="affcd-chart-title"><?php _e('Revenue Over Time', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
-                    <canvas id="affcd-revenue-chart" width="400" height="200"></canvas>
-                </div>
-                
-                <div class="affcd-chart-container">
-                    <div class="affcd-chart-title"><?php _e('Code Performance Comparison', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
-                    <canvas id="affcd-performance-comparison" width="400" height="200"></canvas>
-                </div>
-            </div>
-
-            <!-- Device & Browser Analytics -->
-            <div class="affcd-chart-container">
-                <div class="affcd-chart-title"><?php _e('Device & Browser Analytics', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
-                    <canvas id="affcd-device-chart"></canvas>
-                    <canvas id="affcd-browser-chart"></canvas>
-                    <canvas id="affcd-os-chart"></canvas>
-                </div>
-            </div>
-        </div>
-        <?php
-    }
-
-    /**
-     * Render affiliates tab
-     */
-    private function render_affiliates_tab() {
-        ?>
-        <div class="affiliates-tab">
-            <!-- Affiliate Performance Table -->
-            <div class="affcd-chart-container">
-                <div class="affcd-chart-title"><?php _e('Affiliate Performance', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
-                <table class="affcd-data-table" id="affcd-affiliate-performance">
-                    <thead>
-                        <tr>
-                            <th><?php _e('Affiliate', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                            <th><?php _e('Codes', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                            <th><?php _e('Total Usage', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                            <th><?php _e('Conversions', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                            <th><?php _e('Revenue', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                            <th><?php _e('Avg. Order Value', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                            <th><?php _e('Conversion Rate', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Data will be populated via AJAX -->
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Affiliate Comparison Chart -->
-            <div class="affcd-chart-container">
-                <div class="affcd-chart-title"><?php _e('Affiliate Revenue Comparison', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
-                <canvas id="affcd-affiliate-comparison" width="800" height="400"></canvas>
-            </div>
-        </div>
-        <?php
-    }
-
-    /**
-     * Render domains tab
-     */
-    private function render_domains_tab() {
-        ?>
-        <div class="domains-tab">
-            <!-- Domain Performance -->
-            <div class="affcd-chart-container">
-                <div class="affcd-chart-title"><?php _e('Domain Performance', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
-                <table class="affcd-data-table" id="affcd-domain-performance">
-                    <thead>
-                        <tr>
-                            <th><?php _e('Domain', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                            <th><?php _e('Total Requests', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                            <th><?php _e('Successful Validations', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                            <th><?php _e('Conversions', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                            <th><?php _e('Revenue', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                            <th><?php _e('Success Rate', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                            <th><?php _e('Status', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Data will be populated via AJAX -->
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Domain Activity Chart -->
-            <div class="affcd-chart-container">
-                <div class="affcd-chart-title"><?php _e('Domain Activity Over Time', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
-                <canvas id="affcd-domain-activity" width="800" height="400"></canvas>
-            </div>
-        </div>
-        <?php
-    }
-
-    /**
-     * Render geographic tab
-     */
-    private function render_geographic_tab() {
-        ?>
-        <div class="geographic-tab">
-            <!-- Geographic Distribution -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                <div class="affcd-chart-container">
-                    <div class="affcd-chart-title"><?php _e('Traffic by Country', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
-                    <canvas id="affcd-country-chart"></canvas>
-                </div>
-                
-                <div class="affcd-chart-container">
-                    <div class="affcd-chart-title"><?php _e('Revenue by Region', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
-                    <canvas id="affcd-region-revenue"></canvas>
-                </div>
-            </div>
-
-            <!-- Geographic Performance Table -->
-            <div class="affcd-chart-container">
-                <div class="affcd-chart-title"><?php _e('Geographic Performance Details', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
-                <table class="affcd-data-table" id="affcd-geographic-performance">
-                    <thead>
-                        <tr>
-                            <th><?php _e('Country', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                            <th><?php _e('Region', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                            <th><?php _e('Sessions', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                            <th><?php _e('Conversions', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                            <th><?php _e('Revenue', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                            <th><?php _e('Conversion Rate', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                            <th><?php _e('Avg. Order Value', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Data will be populated via AJAX -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        <?php
-    }
-
-    /**
-     * Render security tab
-     */
-    private function render_security_tab() {
-        ?>
-        <div class="security-tab">
-            <!-- Security Metrics -->
-            <div class="affcd-stats-grid" id="affcd-security-metrics">
-                <!-- Metrics will be populated via AJAX -->
-            </div>
-
-            <!-- Security Events Chart -->
-            <div class="affcd-chart-container">
-                <div class="affcd-chart-title"><?php _e('Security Events Over Time', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
-                <canvas id="affcd-security-events" width="800" height="400"></canvas>
-            </div>
-
-            <!-- Recent Security Events -->
-            <div class="affcd-chart-container">
-                <div class="affcd-chart-title"><?php _e('Recent Security Events', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
-                <table class="affcd-data-table" id="affcd-security-events-table">
-                    <thead>
-                        <tr>
-                            <th><?php _e('Timestamp', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                            <th><?php _e('Event Type', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                            <th><?php _e('Severity', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                            <th><?php _e('Source IP', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                            <th><?php _e('Domain', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                            <th><?php _e('Details', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Data will be populated via AJAX -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        <?php
-    }
-
-    /**
-     * Get analytics data for specified period
-     */
-    public function get_analytics_data($period = '7d', $start_date = null, $end_date = null) {
-        $cache_key = $this->cache_prefix . md5($period . $start_date . $end_date);
-        $cached_data = wp_cache_get($cache_key, 'affcd_analytics');
-        
-        if ($cached_data !== false) {
-            return $cached_data;
+    public function ajax_get_analytics_data() {
+        check_ajax_referer('affcd_analytics_nonce', 'nonce');
+        if (!current_user_can('manage_affiliates')) {
+            wp_send_json_error(__('Insufficient permissions.', 'affiliatewp-cross-domain-plugin-suite'));
         }
 
-        global $wpdb;
-        
-        // Calculate date range
-        $date_range = $this->calculate_date_range($period, $start_date, $end_date);
-        
-        $data = [
-            'period' => $period,
-            'date_range' => $date_range,
-            'overview' => $this->get_overview_data($date_range),
-            'performance' => $this->get_performance_data($date_range),
-            'affiliates' => $this->get_affiliates_data($date_range),
-            'domains' => $this->get_domains_data($date_range),
-            'geographic' => $this->get_geographic_data($date_range),
-            'security' => $this->get_security_data($date_range)
+        $tab       = sanitize_key($_POST['tab'] ?? 'overview');
+        $period    = sanitize_text_field($_POST['period'] ?? '7d');
+        $start     = sanitize_text_field($_POST['start_date'] ?? '');
+        $end       = sanitize_text_field($_POST['end_date'] ?? '');
+
+        [$from, $to] = $this->date_range($period, $start, $end);
+
+        $cache_key = md5($tab.$from.$to);
+        $cached = wp_cache_get($cache_key, $this->cache_group);
+        if ($cached !== false) {
+            wp_send_json_success($cached);
+        }
+
+        $data_map = [
+            'overview'   => [$this, 'data_overview'],
+            'performance'=> [$this, 'data_performance'],
+            'affiliates' => [$this, 'data_affiliates'],
+            'domains'    => [$this, 'data_domains'],
+            'geographic' => [$this, 'data_geographic'],
+            'security'   => [$this, 'data_security'],
         ];
 
-        // Cache the data
-        wp_cache_set($cache_key, $data, 'affcd_analytics', $this->cache_expiration);
-        
-        return $data;
+        if (!isset($data_map[$tab])) $tab = 'overview';
+
+        $payload = call_user_func($data_map[$tab], $from, $to);
+        $resp = ['data' => $payload, 'date_range' => ['from'=>$from,'to'=>$to]];
+
+        wp_cache_set($cache_key, $resp, $this->cache_group, $this->cache_ttl);
+        wp_send_json_success($resp);
     }
 
-    /**
-     * Get overview data
-     */
-    private function get_overview_data($date_range) {
+    public function ajax_export_analytics() {
+        check_ajax_referer('affcd_analytics_nonce', 'nonce');
+        if (!current_user_can('manage_affiliates')) {
+            wp_send_json_error(__('Insufficient permissions.', 'affiliatewp-cross-domain-plugin-suite'));
+        }
+
+        $period = sanitize_text_field($_POST['period'] ?? '7d');
+        [$from, $to] = $this->date_range($period, '', '');
+
+        // Export a compact snapshot CSV of key overview + top codes
+        $snap = $this->data_overview($from, $to);
+
+        $upload = wp_upload_dir();
+        $dir = trailingslashit($upload['basedir']).'affcd-exports/';
+        if (!file_exists($dir)) wp_mkdir_p($dir);
+
+        $filename = 'affcd-analytics-'.date('Y-m-d-H-i-s').'.csv';
+        $path = $dir.$filename;
+
+        $fh = fopen($path, 'w');
+        fputcsv($fh, ['Metric','Value']);
+        foreach (['total_usage','total_conversions','total_revenue','conversion_rate','unique_sessions','active_domains'] as $k) {
+            $label = ucwords(str_replace('_',' ',$k));
+            fputcsv($fh, [$label, $snap['metrics'][$k] ?? 0]);
+        }
+        fputcsv($fh, []);
+        fputcsv($fh, ['Top Codes']);
+        fputcsv($fh, ['Code','Usage','Conversions','Revenue','Conversion Rate']);
+        foreach ($snap['top_codes'] as $r) {
+            fputcsv($fh, [
+                $r['code'],
+                $r['usage_count'],
+                $r['conversions'],
+                $r['revenue'],
+                ($r['conversion_rate'] ?? 0).'%'
+            ]);
+        }
+        fclose($fh);
+
+        wp_send_json_success([
+            'download_url' => trailingslashit($upload['baseurl']).'affcd-exports/'.$filename,
+            'filename'     => $filename
+        ]);
+    }
+
+    /* --------------------------
+     * Data providers
+     * -------------------------- */
+
+    private function data_overview($from, $to) {
         global $wpdb;
-        
-        $vanity_table = $wpdb->prefix . 'affcd_vanity_codes';
-        $usage_table = $wpdb->prefix . 'affcd_usage_tracking';
-        
-        // Key metrics
-        $metrics = $wpdb->get_row($wpdb->prepare(
-            "SELECT 
-                COUNT(DISTINCT v.id) as total_codes,
-                COUNT(DISTINCT CASE WHEN v.status = 'active' THEN v.id END) as active_codes,
-                COALESCE(SUM(u.conversion_value), 0) as total_revenue,
-                COUNT(u.id) as total_usage,
-                COUNT(CASE WHEN u.converted = 1 THEN u.id END) as total_conversions,
-                COUNT(DISTINCT u.user_ip) as unique_visitors,
-                COUNT(DISTINCT u.domain) as active_domains
-             FROM {$vanity_table} v
-             LEFT JOIN {$usage_table} u ON v.id = u.vanity_code_id 
-                AND u.tracked_at BETWEEN %s AND %s",
-            $date_range['start'], $date_range['end']
-        ), ARRAY_A);
+        $usage = $wpdb->prefix.'affcd_usage_tracking';
+        $codes = $wpdb->prefix.'affcd_vanity_codes';
 
-        // Calculate conversion rate
-        $metrics['conversion_rate'] = $metrics['total_usage'] > 0 ? 
-            round(($metrics['total_conversions'] / $metrics['total_usage']) * 100, 2) : 0;
+        // Metrics
+        $metrics = $wpdb->get_row($wpdb->prepare("
+            SELECT
+                COUNT(*) AS total_usage,
+                COUNT(DISTINCT session_id) AS unique_sessions,
+                SUM(CASE WHEN status='success' AND conversion_value IS NOT NULL THEN 1 ELSE 0 END) AS total_conversions,
+                COALESCE(SUM(CASE WHEN status='success' THEN conversion_value ELSE 0 END),0) AS total_revenue,
+                COUNT(DISTINCT domain_from) AS active_domains
+            FROM {$usage}
+            WHERE created_at BETWEEN %s AND %s
+        ", $from, $to), ARRAY_A) ?: [];
 
-        // Calculate average order value
-        $metrics['avg_order_value'] = $metrics['total_conversions'] > 0 ? 
-            round($metrics['total_revenue'] / $metrics['total_conversions'], 2) : 0;
+        $metrics['conversion_rate'] = !empty($metrics['total_usage']) && (int)$metrics['total_usage'] > 0
+            ? round(((int)$metrics['total_conversions'] / (int)$metrics['total_usage']) * 100, 2)
+            : 0;
 
-        // Traffic trends over time
-        $traffic_trends = $wpdb->get_results($wpdb->prepare(
-            "SELECT 
-                DATE(tracked_at) as date,
-                COUNT(*) as usage_count,
-                COUNT(CASE WHEN converted = 1 THEN 1 END) as conversions,
-                SUM(conversion_value) as revenue
-             FROM {$usage_table}
-             WHERE tracked_at BETWEEN %s AND %s
-             GROUP BY DATE(tracked_at)
-             ORDER BY date",
-            $date_range['start'], $date_range['end']
-        ), ARRAY_A);
+        // Traffic / conversions / revenue by day
+        $traffic_trends = $wpdb->get_results($wpdb->prepare("
+            SELECT
+                DATE(created_at) AS date,
+                COUNT(*) AS usage_count,
+                SUM(CASE WHEN status='success' AND conversion_value IS NOT NULL THEN 1 ELSE 0 END) AS conversions,
+                COALESCE(SUM(CASE WHEN status='success' THEN conversion_value ELSE 0 END),0) AS revenue
+            FROM {$usage}
+            WHERE created_at BETWEEN %s AND %s
+            GROUP BY DATE(created_at)
+            ORDER BY DATE(created_at) ASC
+        ", $from, $to), ARRAY_A) ?: [];
 
-        // Top performing codes
-        $top_codes = $wpdb->get_results($wpdb->prepare(
-            "SELECT 
-                v.vanity_code,
-                v.description,
-                COUNT(u.id) as usage_count,
-                COUNT(CASE WHEN u.converted = 1 THEN u.id END) as conversions,
-                SUM(u.conversion_value) as revenue,
-                ROUND((COUNT(CASE WHEN u.converted = 1 THEN u.id END) / COUNT(u.id)) * 100, 2) as conversion_rate
-             FROM {$vanity_table} v
-             LEFT JOIN {$usage_table} u ON v.id = u.vanity_code_id 
-                AND u.tracked_at BETWEEN %s AND %s
-             GROUP BY v.id
-             HAVING usage_count > 0
-             ORDER BY revenue DESC, conversions DESC
-             LIMIT 10",
-            $date_range['start'], $date_range['end']
-        ), ARRAY_A);
+        // Top codes: using usage_tracking.affiliate_code (string) (not FK), but also try join with vanity_codes to ensure it exists
+        $top_codes = $wpdb->get_results($wpdb->prepare("
+            SELECT
+                COALESCE(u.affiliate_code, v.code) AS code,
+                COUNT(u.id) AS usage_count,
+                SUM(CASE WHEN u.status='success' AND u.conversion_value IS NOT NULL THEN 1 ELSE 0 END) AS conversions,
+                COALESCE(SUM(CASE WHEN u.status='success' THEN u.conversion_value ELSE 0 END),0) AS revenue,
+                ROUND(
+                    (SUM(CASE WHEN u.status='success' AND u.conversion_value IS NOT NULL THEN 1 ELSE 0 END) / NULLIF(COUNT(u.id),0)) * 100,
+                2) AS conversion_rate
+            FROM {$usage} u
+            LEFT JOIN {$codes} v ON v.code = u.affiliate_code
+            WHERE u.created_at BETWEEN %s AND %s
+            GROUP BY COALESCE(u.affiliate_code, v.code)
+            HAVING usage_count > 0
+            ORDER BY revenue DESC, conversions DESC
+            LIMIT 10
+        ", $from, $to), ARRAY_A) ?: [];
 
         // Recent activity
-        $recent_activity = $wpdb->get_results($wpdb->prepare(
-            "SELECT 
-                v.vanity_code,
-                u.domain,
-                u.converted,
-                u.conversion_value,
-                u.tracked_at
-             FROM {$usage_table} u
-             JOIN {$vanity_table} v ON u.vanity_code_id = v.id
-             WHERE u.tracked_at BETWEEN %s AND %s
-             ORDER BY u.tracked_at DESC
-             LIMIT 20",
-            $date_range['start'], $date_range['end']
-        ), ARRAY_A);
+        $recent_activity = $wpdb->get_results($wpdb->prepare("
+            SELECT
+                created_at,
+                domain_from,
+                affiliate_code AS code,
+                CASE WHEN status='success' AND conversion_value IS NOT NULL THEN conversion_value ELSE NULL END AS conversion_value
+            FROM {$usage}
+            WHERE created_at BETWEEN %s AND %s
+            ORDER BY created_at DESC
+            LIMIT 25
+        ", $from, $to), ARRAY_A) ?: [];
+
+        return [
+            'metrics'         => $metrics,
+            'traffic_trends'  => $traffic_trends,
+            'top_codes'       => $top_codes,
+            'recent_activity' => $recent_activity,
+        ];
+    }
+
+    private function data_performance($from, $to) {
+        global $wpdb;
+        $usage = $wpdb->prefix.'affcd_usage_tracking';
+
+        // Device (JSON device_info -> $.type)
+        $device_stats = $wpdb->get_results($wpdb->prepare("
+            SELECT
+                COALESCE(JSON_UNQUOTE(JSON_EXTRACT(device_info, '$.type')), 'Unknown') AS device_type,
+                COUNT(*) AS count,
+                SUM(CASE WHEN status='success' AND conversion_value IS NOT NULL THEN 1 ELSE 0 END) AS conversions,
+                COALESCE(SUM(CASE WHEN status='success' THEN conversion_value ELSE 0 END),0) AS revenue
+            FROM {$usage}
+            WHERE created_at BETWEEN %s AND %s
+            GROUP BY device_type
+            ORDER BY count DESC
+        ", $from, $to), ARRAY_A) ?: [];
+
+        // Browser (JSON device_info -> $.browser)
+        $browser_stats = $wpdb->get_results($wpdb->prepare("
+            SELECT
+                COALESCE(JSON_UNQUOTE(JSON_EXTRACT(device_info, '$.browser')), 'Unknown') AS browser,
+                COUNT(*) AS count,
+                SUM(CASE WHEN status='success' AND conversion_value IS NOT NULL THEN 1 ELSE 0 END) AS conversions
+            FROM {$usage}
+            WHERE created_at BETWEEN %s AND %s
+            GROUP BY browser
+            ORDER BY count DESC
+            LIMIT 12
+        ", $from, $to), ARRAY_A) ?: [];
+
+        // OS (JSON device_info -> $.os)
+        $os_stats = $wpdb->get_results($wpdb->prepare("
+            SELECT
+                COALESCE(JSON_UNQUOTE(JSON_EXTRACT(device_info, '$.os')), 'Unknown') AS os,
+                COUNT(*) AS count
+            FROM {$usage}
+            WHERE created_at BETWEEN %s AND %s
+            GROUP BY os
+            ORDER BY count DESC
+        ", $from, $to), ARRAY_A) ?: [];
+
+        // Revenue trend line
+        $revenue_trends = $wpdb->get_results($wpdb->prepare("
+            SELECT
+                DATE(created_at) AS date,
+                COALESCE(SUM(CASE WHEN status='success' THEN conversion_value ELSE 0 END),0) AS revenue,
+                SUM(CASE WHEN status='success' AND conversion_value IS NOT NULL THEN 1 ELSE 0 END) AS conversions
+            FROM {$usage}
+            WHERE created_at BETWEEN %s AND %s
+            GROUP BY DATE(created_at)
+            ORDER BY DATE(created_at) ASC
+        ", $from, $to), ARRAY_A) ?: [];
+
+        return [
+            'device_stats'   => $device_stats,
+            'browser_stats'  => $browser_stats,
+            'os_stats'       => $os_stats,
+            'revenue_trends' => $revenue_trends,
+        ];
+    }
+
+    private function data_affiliates($from, $to) {
+        global $wpdb;
+        $usage = $wpdb->prefix.'affcd_usage_tracking';
+        $codes = $wpdb->prefix.'affcd_vanity_codes';
+
+        // Roll up by affiliate_id via vanity_codes join when possible; fall back on affiliate_code string
+        $rows = $wpdb->get_results($wpdb->prepare("
+            SELECT
+                v.affiliate_id,
+                COUNT(DISTINCT v.id) AS total_codes,
+                COUNT(u.id) AS total_usage,
+                SUM(CASE WHEN u.status='success' AND u.conversion_value IS NOT NULL THEN 1 ELSE 0 END) AS conversions,
+                COALESCE(SUM(CASE WHEN u.status='success' THEN u.conversion_value ELSE 0 END),0) AS revenue,
+                ROUND(AVG(CASE WHEN u.status='success' AND u.conversion_value IS NOT NULL THEN u.conversion_value END),2) AS avg_order_value,
+                ROUND(
+                    (SUM(CASE WHEN u.status='success' AND u.conversion_value IS NOT NULL THEN 1 ELSE 0 END)
+                        / NULLIF(COUNT(u.id),0)) * 100, 2
+                ) AS conversion_rate
+            FROM {$codes} v
+            LEFT JOIN {$usage} u
+                ON u.affiliate_code = v.code
+                AND u.created_at BETWEEN %s AND %s
+            GROUP BY v.affiliate_id
+            HAVING total_usage > 0
+            ORDER BY revenue DESC
+            LIMIT 100
+        ", $from, $to), ARRAY_A) ?: [];
+
+        // add affiliate name/email if AffiliateWP is present
+        foreach ($rows as &$r) {
+            $r['affiliate_name']  = 'Unknown';
+            $r['affiliate_email'] = '';
+            if (!empty($r['affiliate_id']) && function_exists('affwp_get_affiliate')) {
+                $aff = affwp_get_affiliate((int)$r['affiliate_id']);
+                if ($aff) {
+                    $u = get_userdata($aff->user_id);
+                    if ($u) {
+                        $r['affiliate_name']  = $u->display_name;
+                        $r['affiliate_email'] = $u->user_email;
+                    }
+                }
+            }
+        }
+
+        return ['performance' => $rows];
+    }
+
+    private function data_domains($from, $to) {
+        global $wpdb;
+        $usage   = $wpdb->prefix.'affcd_usage_tracking';
+        $domains = $wpdb->prefix.'affcd_authorized_domains';
+
+        // Current performance by domain
+        $performance = $wpdb->get_results($wpdb->prepare("
+            SELECT
+                u.domain_from AS domain,
+                d.status,
+                COUNT(u.id) AS total_requests,
+                SUM(CASE WHEN u.status='success' AND u.conversion_value IS NOT NULL THEN 1 ELSE 0 END) AS conversions,
+                COALESCE(SUM(CASE WHEN u.status='success' THEN u.conversion_value ELSE 0 END),0) AS revenue,
+                ROUND(
+                    (SUM(CASE WHEN u.status='success' THEN 1 ELSE 0 END) / NULLIF(COUNT(u.id),0)) * 100, 2
+                ) AS success_rate,
+                SUM(CASE WHEN u.status='success' THEN 1 ELSE 0 END) AS successful_validations
+            FROM {$usage} u
+            LEFT JOIN {$domains} d
+                ON d.domain_name = u.domain_from
+            WHERE u.created_at BETWEEN %s AND %s
+            GROUP BY u.domain_from, d.status
+            ORDER BY total_requests DESC
+        ", $from, $to), ARRAY_A) ?: [];
+
+        // Activity over time (total requests by day)
+        $activity = $wpdb->get_results($wpdb->prepare("
+            SELECT
+                DATE(created_at) AS date,
+                COUNT(*) AS total_requests
+            FROM {$usage}
+            WHERE created_at BETWEEN %s AND %s
+            GROUP BY DATE(created_at)
+            ORDER BY DATE(created_at) ASC
+        ", $from, $to), ARRAY_A) ?: [];
+
+        return [
+            'performance' => $performance,
+            'activity'    => $activity,
+        ];
+    }
+
+    private function data_geographic($from, $to) {
+        global $wpdb;
+        $usage = $wpdb->prefix.'affcd_usage_tracking';
+
+        // geographic_info: expect keys like country / country_code / region / city (JSON)
+        $rows = $wpdb->get_results($wpdb->prepare("
+            SELECT
+                COALESCE(JSON_UNQUOTE(JSON_EXTRACT(geographic_info, '$.country')), '') AS country,
+                COALESCE(JSON_UNQUOTE(JSON_EXTRACT(geographic_info, '$.region')),  '') AS region,
+                COUNT(*) AS sessions,
+                SUM(CASE WHEN status='success' AND conversion_value IS NOT NULL THEN 1 ELSE 0 END) AS conversions,
+                COALESCE(SUM(CASE WHEN status='success' THEN conversion_value ELSE 0 END),0) AS revenue,
+                ROUND(
+                    (SUM(CASE WHEN status='success' AND conversion_value IS NOT NULL THEN 1 ELSE 0 END)
+                        / NULLIF(COUNT(*),0)) * 100, 2
+                ) AS conversion_rate,
+                ROUND(AVG(CASE WHEN status='success' AND conversion_value IS NOT NULL THEN conversion_value END), 2) AS avg_order_value
+            FROM {$usage}
+            WHERE created_at BETWEEN %s AND %s
+              AND geographic_info IS NOT NULL
+            GROUP BY country, region
+            ORDER BY sessions DESC
+            LIMIT 500
+        ", $from, $to), ARRAY_A) ?: [];
+
+        return ['performance' => $rows];
+    }
+
+    private function data_security($from, $to) {
+        global $wpdb;
+        $sec = $wpdb->prefix.'affcd_security_logs';
+
+        // If the security_logs table exists (it does per your DB manager), provide metrics
+        $exists = $wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $sec));
+        if ($exists !== $sec) {
+            return [
+                'metrics' => [],
+                'events_over_time' => [],
+                'recent' => []
+            ];
+        }
+
+        $metrics = [
+            [
+                'label' => __('Events (period)', 'affiliatewp-cross-domain-plugin-suite'),
+                'value' => (int)$wpdb->get_var($wpdb->prepare("
+                    SELECT COUNT(*) FROM {$sec}
+                    WHERE created_at BETWEEN %s AND %s
+                ", $from, $to))
+            ],
+            [
+                'label' => __('Critical', 'affiliatewp-cross-domain-plugin-suite'),
+                'value' => (int)$wpdb->get_var($wpdb->prepare("
+                    SELECT COUNT(*) FROM {$sec}
+                    WHERE severity='critical' AND created_at BETWEEN %s AND %s
+                ", $from, $to))
+            ],
+            [
+                'label' => __('High', 'affiliatewp-cross-domain-plugin-suite'),
+                'value' => (int)$wpdb->get_var($wpdb->prepare("
+                    SELECT COUNT(*) FROM {$sec}
+                    WHERE severity='high' AND created_at BETWEEN %s AND %s
+                ", $from, $to))
+            ],
+        ];
+
+        $events_over_time = $wpdb->get_results($wpdb->prepare("
+            SELECT DATE(created_at) AS date, COUNT(*) AS total
+            FROM {$sec}
+            WHERE created_at BETWEEN %s AND %s
+            GROUP BY DATE(created_at)
+            ORDER BY DATE(created_at) ASC
+        ", $from, $to), ARRAY_A) ?: [];
+
+        $recent = $wpdb->get_results($wpdb->prepare("
+            SELECT created_at, event_type, severity, ip_address, domain,
+                   LEFT(COALESCE(event_data,''), 140) AS details
+            FROM {$sec}
+            WHERE created_at BETWEEN %s AND %s
+            ORDER BY created_at DESC
+            LIMIT 50
+        ", $from, $to), ARRAY_A) ?: [];
 
         return [
             'metrics' => $metrics,
-            'traffic_trends' => $traffic_trends,
-            'top_codes' => $top_codes,
-            'recent_activity' => $recent_activity
+            'events_over_time' => $events_over_time,
+            'recent'  => $recent
         ];
     }
 
-    /**
-     * Get performance data
-     */
-    private function get_performance_data($date_range) {
-        global $wpdb;
-        
-        $usage_table = $wpdb->prefix . 'affcd_usage_tracking';
-        
-        // Device analytics
-        $device_stats = $wpdb->get_results($wpdb->prepare(
-            "SELECT 
-                device_type,
-                COUNT(*) as count,
-                COUNT(CASE WHEN converted = 1 THEN 1 END) as conversions,
-                SUM(conversion_value) as revenue
-             FROM {$usage_table}
-             WHERE tracked_at BETWEEN %s AND %s
-             GROUP BY device_type",
-            $date_range['start'], $date_range['end']
-        ), ARRAY_A);
+    /* --------------------------
+     * Helpers
+     * -------------------------- */
 
-        // Browser analytics
-        $browser_stats = $wpdb->get_results($wpdb->prepare(
-            "SELECT 
-                browser,
-                COUNT(*) as count,
-                COUNT(CASE WHEN converted = 1 THEN 1 END) as conversions
-             FROM {$usage_table}
-             WHERE tracked_at BETWEEN %s AND %s AND browser IS NOT NULL
-             GROUP BY browser
-             ORDER BY count DESC
-             LIMIT 10",
-            $date_range['start'], $date_range['end']
-        ), ARRAY_A);
-
-        // Revenue over time
-        $revenue_trends = $wpdb->get_results($wpdb->prepare(
-            "SELECT 
-                DATE(tracked_at) as date,
-                SUM(conversion_value) as revenue,
-                COUNT(CASE WHEN converted = 1 THEN 1 END) as conversions
-             FROM {$usage_table}
-             WHERE tracked_at BETWEEN %s AND %s
-             GROUP BY DATE(tracked_at)
-             ORDER BY date",
-            $date_range['start'], $date_range['end']
-        ), ARRAY_A);
-
-        return [
-            'device_stats' => $device_stats,
-            'browser_stats' => $browser_stats,
-            'revenue_trends' => $revenue_trends
-        ];
-    }
-
-    /**
-     * Get affiliates data
-     */
-    private function get_affiliates_data($date_range) {
-        global $wpdb;
-        
-        $vanity_table = $wpdb->prefix . 'affcd_vanity_codes';
-        $usage_table = $wpdb->prefix . 'affcd_usage_tracking';
-        
-        $affiliate_performance = $wpdb->get_results($wpdb->prepare(
-            "SELECT 
-                v.affiliate_id,
-                COUNT(DISTINCT v.id) as total_codes,
-                COUNT(u.id) as total_usage,
-                COUNT(CASE WHEN u.converted = 1 THEN u.id END) as conversions,
-                SUM(u.conversion_value) as revenue,
-                ROUND(AVG(CASE WHEN u.converted = 1 THEN u.conversion_value END), 2) as avg_order_value,
-                ROUND((COUNT(CASE WHEN u.converted = 1 THEN u.id END) / COUNT(u.id)) * 100, 2) as conversion_rate
-             FROM {$vanity_table} v
-             LEFT JOIN {$usage_table} u ON v.id = u.vanity_code_id 
-                AND u.tracked_at BETWEEN %s AND %s
-             GROUP BY v.affiliate_id
-             HAVING total_usage > 0
-             ORDER BY revenue DESC",
-            $date_range['start'], $date_range['end']
-        ), ARRAY_A);
-
-        // Enhance with affiliate names
-        foreach ($affiliate_performance as &$performance) {
-            $affiliate = affwp_get_affiliate($performance['affiliate_id']);
-            if ($affiliate) {
-                $user = get_userdata($affiliate->user_id);
-                $performance['affiliate_name'] = $user ? $user->display_name : 'Unknown';
-                $performance['affiliate_email'] = $user ? $user->user_email : '';
-            } else {
-                $performance['affiliate_name'] = 'Unknown Affiliate';
-                $performance['affiliate_email'] = '';
-            }
+    private function date_range($period, $start = '', $end = '') {
+        if ($period === 'custom' && $start && $end) {
+            return [$start.' 00:00:00', $end.' 23:59:59'];
         }
-
-        return [
-            'performance' => $affiliate_performance
-        ];
-    }
-
-    /**
-     * Get domains data
-     */
-    private function get_domains_data($date_range) {
-        global $wpdb;
-        
-        $usage_table = $wpdb->prefix . 'affcd_usage_tracking';
-        $domains_table = $wpdb->prefix . 'affcd_authorised_domains';
-        
-        $domain_performance = $wpdb->get_results($wpdb->prepare(
-            "SELECT 
-                u.domain,
-                d.status,
-                COUNT(u.id) as total_requests,
-                COUNT(CASE WHEN u.converted = 1 THEN u.id END) as conversions,
-                SUM(u.conversion_value) as revenue,
-                ROUND((COUNT(CASE WHEN u.converted = 1 THEN u.id END) / COUNT(u.id)) * 100, 2) as success_rate
-             FROM {$usage_table} u
-             LEFT JOIN {$domains_table} d ON u.domain = d.domain
-             WHERE u.tracked_at BETWEEN %s AND %s
-             GROUP BY u.domain
-             ORDER BY total_requests DESC",
-            $date_range['start'], $date_range['end']
-        ), ARRAY_A);
-
-        return [
-            'performance' => $domain_performance
-        ];
-    }
-
-    /**
-     * Get geographic data
-     */
-    private function get_geographic_data($date_range) {
-        global $wpdb;
-        
-        $usage_table = $wpdb->prefix . 'affcd_usage_tracking';
-        
-        $geographic_performance = $wpdb->get_results($wpdb->prepare(
-            "SELECT 
-                country_code,
-                region,
-                COUNT(*) as sessions,
-                COUNT(CASE WHEN converted = 1 THEN 1 END) as conversions,
-                SUM(conversion_value) as revenue,
-                ROUND((COUNT(CASE WHEN converted = 1 THEN 1 END) / COUNT(*)) * 100, 2) as conversion_rate,
-                ROUND(AVG(CASE WHEN converted = 1 THEN conversion_value END), 2) as avg_order_value
-             FROM {$usage_table}
-             WHERE tracked_at BETWEEN %s AND %s 
-               AND country_code IS NOT NULL
-             GROUP BY country_code, region
-             ORDER BY sessions DESC",
-            $date_range['start'], $date_range['end']
-        ), ARRAY_A);
-
-        return [
-            'performance' => $geographic_performance
-        ];
-    }
-
-    /**
-     * Get security data
-     */
-    private function get_security_data($date_range) {
-        return $this->security_manager->get_security_dashboard_data();
-    }
-
-    /**
-     * Calculate date range
-     */
-    private function calculate_date_range($period, $start_date = null, $end_date = null) {
-        if ($period === 'custom' && $start_date && $end_date) {
-            return [
-                'start' => $start_date . ' 00:00:00',
-                'end' => $end_date . ' 23:59:59'
-            ];
-        }
-
-        $end = current_time('mysql');
-        
+        $to = current_time('mysql');
         switch ($period) {
-            case '24h':
-                $start = date('Y-m-d H:i:s', strtotime('-24 hours'));
-                break;
+            case '24h': $from = date('Y-m-d H:i:s', strtotime('-24 hours')); break;
+            case '30d': $from = date('Y-m-d H:i:s', strtotime('-30 days'));  break;
+            case '90d': $from = date('Y-m-d H:i:s', strtotime('-90 days'));  break;
             case '7d':
-                $start = date('Y-m-d H:i:s', strtotime('-7 days'));
-                break;
-            case '30d':
-                $start = date('Y-m-d H:i:s', strtotime('-30 days'));
-                break;
-            case '90d':
-                $start = date('Y-m-d H:i:s', strtotime('-90 days'));
-                break;
-            default:
-                $start = date('Y-m-d H:i:s', strtotime('-7 days'));
+            default:    $from = date('Y-m-d H:i:s', strtotime('-7 days'));   break;
         }
-
-        return ['start' => $start, 'end' => $end];
+        return [$from, $to];
     }
 
-    /**
-     * AJAX: Get analytics data
-     */
-    public function ajax_get_analytics_data() {
-        check_ajax_referer('affcd_analytics_nonce', 'nonce');
-        
-        if (!current_user_can('manage_affiliates')) {
-            wp_die(__('Insufficient permissions.', 'affiliatewp-cross-domain-plugin-suite'));
-        }
-
-        $period = Sanitise_text_field($_POST['period'] ?? '7d');
-        $start_date = Sanitise_text_field($_POST['start_date'] ?? '');
-        $end_date = Sanitise_text_field($_POST['end_date'] ?? '');
-        $tab = Sanitise_text_field($_POST['tab'] ?? 'overview');
-
-        $data = $this->get_analytics_data($period, $start_date, $end_date);
-
-        wp_send_json_success([
-            'data' => $data[$tab] ?? $data,
-            'period' => $period,
-            'date_range' => $data['date_range']
-        ]);
-    }
-
-    /**
-     * AJAX: Export analytics data
-     */
-    public function ajax_export_analytics() {
-        check_ajax_referer('affcd_analytics_nonce', 'nonce');
-        
-        if (!current_user_can('manage_affiliates')) {
-            wp_die(__('Insufficient permissions.', 'affiliatewp-cross-domain-plugin-suite'));
-        }
-
-        $period = Sanitise_text_field($_POST['period'] ?? '7d');
-        $format = Sanitise_text_field($_POST['format'] ?? 'csv');
-        
-        $data = $this->get_analytics_data($period);
-        $export_result = $this->export_data($data, $format);
-
-        if (is_wp_error($export_result)) {
-            wp_send_json_error($export_result->get_error_message());
-        }
-
-        wp_send_json_success([
-            'download_url' => $export_result['url'],
-            'filename' => $export_result['filename']
-        ]);
-    }
-
-    /**
-     * Export analytics data
-     */
-    private function export_data($data, $format = 'csv') {
-        $upload_dir = wp_upload_dir();
-        $export_dir = $upload_dir['basedir'] . '/affcd-exports/';
-        
-        if (!file_exists($export_dir)) {
-            wp_mkdir_p($export_dir);
-        }
-
-        $filename = 'affcd-analytics-' . date('Y-m-d-H-i-s') . '.' . $format;
-        $filepath = $export_dir . $filename;
-
-        switch ($format) {
-            case 'csv':
-                $this->export_to_csv($data, $filepath);
-                break;
-            case 'json':
-                $this->export_to_json($data, $filepath);
-                break;
-            default:
-                return new WP_Error('invalid_format', __('Invalid export format.', 'affiliatewp-cross-domain-plugin-suite'));
-        }
-
-        return [
-            'url' => $upload_dir['baseurl'] . '/affcd-exports/' . $filename,
-            'filename' => $filename,
-            'filepath' => $filepath
-        ];
-    }
-
-    /**
-     * Export to CSV
-     */
-    private function export_to_csv($data, $filepath) {
-        $file = fopen($filepath, 'w');
-        
-        // Overview metrics
-        fputcsv($file, ['Section', 'Metric', 'Value']);
-        foreach ($data['overview']['metrics'] as $key => $value) {
-            fputcsv($file, ['Overview', ucwords(str_replace('_', ' ', $key)), $value]);
-        }
-        
-        // Top codes
-        fputcsv($file, []);
-        fputcsv($file, ['Top Performing Codes']);
-        fputcsv($file, ['Code', 'Usage', 'Conversions', 'Revenue', 'Conversion Rate']);
-        foreach ($data['overview']['top_codes'] as $code) {
-            fputcsv($file, [
-                $code['vanity_code'],
-                $code['usage_count'],
-                $code['conversions'],
-                $code['revenue'],
-                $code['conversion_rate'] . '%'
-            ]);
-        }
-
-        fclose($file);
-    }
-
-    /**
-     * Export to JSON
-     */
-    private function export_to_json($data, $filepath) {
-        file_put_contents($filepath, json_encode($data, JSON_PRETTY_PRINT));
-    }
-
-    /**
-     * Update analytics cache
-     */
-    public function update_analytics_cache() {
-        $periods = ['24h', '7d', '30d', '90d'];
-        
-        foreach ($periods as $period) {
-            $this->get_analytics_data($period);
-        }
-    }
-
-    /**
-     * Generate daily report
-     */
-    public function generate_daily_report() {
-        $data = $this->get_analytics_data('24h');
-        
-        // Email report to administrators
-        $admin_emails = get_option('affcd_report_emails', [get_option('admin_email')]);
-        
-        $subject = sprintf(
-            __('[%s] Daily Affiliate Analytics Report', 'affiliatewp-cross-domain-plugin-suite'),
-            get_bloginfo('name')
-        );
-        
-        $message = $this->format_email_report($data);
-        
-        foreach ($admin_emails as $email) {
-            wp_mail($email, $subject, $message, ['Content-Type: text/html; charset=UTF-8']);
-        }
-    }
-
-    /**
-     * Format email report
-     */
-    private function format_email_report($data) {
-        ob_start();
-        ?>
-        <h2><?php _e('Daily Analytics Report', 'affiliatewp-cross-domain-plugin-suite'); ?></h2>
-        
-        <h3><?php _e('Key Metrics (Last 24 Hours)', 'affiliatewp-cross-domain-plugin-suite'); ?></h3>
-        <ul>
-            <li><?php _e('Total Usage:', 'affiliatewp-cross-domain-plugin-suite'); ?> <?php echo number_format($data['overview']['metrics']['total_usage']); ?></li>
-            <li><?php _e('Conversions:', 'affiliatewp-cross-domain-plugin-suite'); ?> <?php echo number_format($data['overview']['metrics']['total_conversions']); ?></li>
-            <li><?php _e('Revenue:', 'affiliatewp-cross-domain-plugin-suite'); ?> $<?php echo number_format($data['overview']['metrics']['total_revenue'], 2); ?></li>
-            <li><?php _e('Conversion Rate:', 'affiliatewp-cross-domain-plugin-suite'); ?> <?php echo $data['overview']['metrics']['conversion_rate']; ?>%</li>
-        </ul>
-
-        <h3><?php _e('Top Performing Codes', 'affiliatewp-cross-domain-plugin-suite'); ?></h3>
-        <?php if (!empty($data['overview']['top_codes'])): ?>
-            <table border="1" cellpadding="5" cellspacing="0">
-                <tr>
-                    <th><?php _e('Code', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                    <th><?php _e('Usage', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                    <th><?php _e('Revenue', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                </tr>
-                <?php foreach ($data['overview']['top_codes'] as $code): ?>
-                    <tr>
-                        <td><?php echo esc_html($code['code']); ?></td>
-                        <td><?php echo number_format($code['usage']); ?></td>
-                        <td>$<?php echo number_format($code['revenue'], 2); ?></td>
-                    </tr>
-                <?php endforeach; ?>
-            </table>
-        <?php else: ?>
-            <p><?php _e('No codes used in the last 24 hours.', 'affiliatewp-cross-domain-plugin-suite'); ?></p>
-        <?php endif; ?>
-
-        <h3><?php _e('Domain Activity', 'affiliatewp-cross-domain-plugin-suite'); ?></h3>
-        <?php if (!empty($data['overview']['domain_activity'])): ?>
-            <table border="1" cellpadding="5" cellspacing="0">
-                <tr>
-                    <th><?php _e('Domain', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                    <th><?php _e('Requests', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                    <th><?php _e('Success Rate', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                </tr>
-                <?php foreach ($data['overview']['domain_activity'] as $domain): ?>
-                    <tr>
-                        <td><?php echo esc_html($domain['domain_name']); ?></td>
-                        <td><?php echo number_format($domain['request_count']); ?></td>
-                        <td><?php echo number_format($domain['success_rate'], 2); ?>%</td>
-                    </tr>
-                <?php endforeach; ?>
-            </table>
-        <?php else: ?>
-            <p><?php _e('No domain activity in the last 24 hours.', 'affiliatewp-cross-domain-plugin-suite'); ?></p>
-        <?php endif; ?>
-
-        <h3><?php _e('Security Alerts', 'affiliatewp-cross-domain-plugin-suite'); ?></h3>
-        <?php if (!empty($data['security']['alerts'])): ?>
-            <ul>
-                <?php foreach ($data['security']['alerts'] as $alert): ?>
-                    <li><strong><?php echo esc_html($alert['type']); ?>:</strong> <?php echo esc_html($alert['message']); ?></li>
-                <?php endforeach; ?>
-            </ul>
-        <?php else: ?>
-            <p><?php _e('No security alerts in the last 24 hours.', 'affiliatewp-cross-domain-plugin-suite'); ?></p>
-        <?php endif; ?>
-
-        <hr>
-        <p><small><?php _e('This is an automated report from your AffiliateWP Cross Domain system.', 'affiliatewp-cross-domain-plugin-suite'); ?></small></p>
-        <?php
-        return ob_get_clean();
-    }
-
-    /**
-     * Get domain performance metrics
-     */
-    private function get_domain_performance() {
-        global $wpdb;
-        
-        $cache_key = 'affcd_domain_performance_' . md5(serialize(func_get_args()));
-        $cached = wp_cache_get($cache_key, 'affcd_analytics');
-        
-        if ($cached !== false) {
-            return $cached;
-        }
-
-        $domains_table = $wpdb->prefix . 'affcd_authorised_domains';
-        $logs_table = $wpdb->prefix . 'affcd_api_logs';
-        
-        $performance = $wpdb->get_results("
-            SELECT 
-                d.id,
-                d.domain_name,
-                d.domain_url,
-                COUNT(l.id) as request_count,
-                AVG(l.response_time) as avg_response_time,
-                SUM(CASE WHEN l.status = 'success' THEN 1 ELSE 0 END) as successful_requests,
-                (SUM(CASE WHEN l.status = 'success' THEN 1 ELSE 0 END) / COUNT(l.id)) * 100 as success_rate
-            FROM {$domains_table} d
-            LEFT JOIN {$logs_table} l ON d.id = l.domain_id
-            WHERE l.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-            GROUP BY d.id
-            ORDER BY request_count DESC
-        ", ARRAY_A);
-
-        wp_cache_set($cache_key, $performance, 'affcd_analytics', 900); // 15 minutes
-        return $performance;
-    }
-
-    /**
-     * Get conversion funnel data
-     */
-    private function get_conversion_funnel($date_range = 30) {
-        global $wpdb;
-        
-        $logs_table = $wpdb->prefix . 'affcd_api_logs';
-        $conversions_table = $wpdb->prefix . 'affcd_conversions';
-        
-        // Get funnel stages
-        $stages = [
-            'visitors' => $wpdb->get_var($wpdb->prepare("
-                SELECT COUNT(DISTINCT user_ip) 
-                FROM {$logs_table} 
-                WHERE created_at >= DATE_SUB(NOW(), INTERVAL %d DAY)
-            ", $date_range)),
-            
-            'code_attempts' => $wpdb->get_var($wpdb->prepare("
-                SELECT COUNT(*) 
-                FROM {$logs_table} 
-                WHERE action = 'validate_code' 
-                AND created_at >= DATE_SUB(NOW(), INTERVAL %d DAY)
-            ", $date_range)),
-            
-            'successful_validations' => $wpdb->get_var($wpdb->prepare("
-                SELECT COUNT(*) 
-                FROM {$logs_table} 
-                WHERE action = 'validate_code' 
-                AND status = 'success' 
-                AND created_at >= DATE_SUB(NOW(), INTERVAL %d DAY)
-            ", $date_range)),
-            
-            'conversions' => $wpdb->get_var($wpdb->prepare("
-                SELECT COUNT(*) 
-                FROM {$conversions_table} 
-                WHERE created_at >= DATE_SUB(NOW(), INTERVAL %d DAY)
-            ", $date_range))
-        ];
-
-        // Calculate conversion rates
-        $funnel_data = [
-            'visitors' => [
-                'count' => (int)$stages['visitors'],
-                'rate' => 100
-            ],
-            'code_attempts' => [
-                'count' => (int)$stages['code_attempts'],
-                'rate' => $stages['visitors'] > 0 ? round(($stages['code_attempts'] / $stages['visitors']) * 100, 2) : 0
-            ],
-            'successful_validations' => [
-                'count' => (int)$stages['successful_validations'],
-                'rate' => $stages['code_attempts'] > 0 ? round(($stages['successful_validations'] / $stages['code_attempts']) * 100, 2) : 0
-            ],
-            'conversions' => [
-                'count' => (int)$stages['conversions'],
-                'rate' => $stages['successful_validations'] > 0 ? round(($stages['conversions'] / $stages['successful_validations']) * 100, 2) : 0
-            ]
-        ];
-
-        return $funnel_data;
-    }
-
-    /**
-     * Get geographic distribution data
-     */
-    private function get_geographic_data($date_range = 30) {
-        global $wpdb;
-        
-        $logs_table = $wpdb->prefix . 'affcd_api_logs';
-        
-        // Get IP-based geographic data (simplified)
-        $geo_data = $wpdb->get_results($wpdb->prepare("
-            SELECT 
-                user_ip,
-                COUNT(*) as request_count,
-                SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as successful_requests
-            FROM {$logs_table}
-            WHERE created_at >= DATE_SUB(NOW(), INTERVAL %d DAY)
-            GROUP BY user_ip
-            ORDER BY request_count DESC
-            LIMIT 50
-        ", $date_range), ARRAY_A);
-
-        // Convert IPs to countries (simplified - in production, use GeoIP service)
-        $countries = [];
-        foreach ($geo_data as $record) {
-            $country = $this->ip_to_country($record['user_ip']);
-            if (!isset($countries[$country])) {
-                $countries[$country] = [
-                    'country' => $country,
-                    'requests' => 0,
-                    'success_rate' => 0
-                ];
-            }
-            $countries[$country]['requests'] += (int)$record['request_count'];
-            $countries[$country]['success_rate'] += (int)$record['successful_requests'];
-        }
-
-        // Calculate success rates
-        foreach ($countries as &$country) {
-            $country['success_rate'] = $country['requests'] > 0 
-                ? round(($country['success_rate'] / $country['requests']) * 100, 2) 
-                : 0;
-        }
-
-        return array_values($countries);
-    }
-
-    /**
-     * Simple IP to country conversion (placeholder)
-     */
-    private function ip_to_country($ip) {
-        // In production, integrate with GeoIP service like MaxMind
-        // This is a simplified placeholder
-        $ip_parts = explode('.', $ip);
-        $first_octet = (int)$ip_parts[0];
-        
-        if ($first_octet >= 1 && $first_octet <= 126) {
-            return 'United States';
-        } elseif ($first_octet >= 128 && $first_octet <= 191) {
-            return 'Europe';
-        } elseif ($first_octet >= 192 && $first_octet <= 223) {
-            return 'Asia';
-        } else {
-            return 'Other';
-        }
-    }
-
-    /**
-     * Get affiliate leaderboard
-     */
-    private function get_affiliate_leaderboard($date_range = 30) {
-        global $wpdb;
-        
-        $logs_table = $wpdb->prefix . 'affcd_api_logs';
-        $conversions_table = $wpdb->prefix . 'affcd_conversions';
-        $affiliates_table = $wpdb->prefix . 'affiliate_wp_affiliates';
-        
-        return $wpdb->get_results($wpdb->prepare("
-            SELECT 
-                a.affiliate_id,
-                a.first_name,
-                a.last_name,
-                a.user_name,
-                COUNT(DISTINCT l.id) as code_validations,
-                COUNT(DISTINCT c.id) as conversions,
-                COALESCE(SUM(c.amount), 0) as total_revenue,
-                (COUNT(DISTINCT c.id) / COUNT(DISTINCT l.id)) * 100 as conversion_rate
-            FROM {$affiliates_table} a
-            LEFT JOIN {$logs_table} l ON a.affiliate_id = l.affiliate_id 
-                AND l.created_at >= DATE_SUB(NOW(), INTERVAL %d DAY)
-            LEFT JOIN {$conversions_table} c ON a.affiliate_id = c.affiliate_id 
-                AND c.created_at >= DATE_SUB(NOW(), INTERVAL %d DAY)
-            WHERE a.status = 'active'
-            GROUP BY a.affiliate_id
-            HAVING code_validations > 0
-            ORDER BY total_revenue DESC, conversions DESC
-            LIMIT 20
-        ", $date_range, $date_range), ARRAY_A);
-    }
-
-    /**
-     * Get time-based analytics
-     */
-    private function get_time_analytics($date_range = 7) {
-        global $wpdb;
-        
-        $logs_table = $wpdb->prefix . 'affcd_api_logs';
-        $conversions_table = $wpdb->prefix . 'affcd_conversions';
-        
-        // Get daily breakdown
-        $daily_data = $wpdb->get_results($wpdb->prepare("
-            SELECT 
-                DATE(created_at) as date,
-                COUNT(*) as total_requests,
-                SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as successful_requests
-            FROM {$logs_table}
-            WHERE created_at >= DATE_SUB(NOW(), INTERVAL %d DAY)
-            GROUP BY DATE(created_at)
-            ORDER BY date ASC
-        ", $date_range), ARRAY_A);
-
-        // Get hourly breakdown for today
-        $hourly_data = $wpdb->get_results("
-            SELECT 
-                HOUR(created_at) as hour,
-                COUNT(*) as total_requests,
-                SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as successful_requests
-            FROM {$logs_table}
-            WHERE DATE(created_at) = CURDATE()
-            GROUP BY HOUR(created_at)
-            ORDER BY hour ASC
-        ", ARRAY_A);
-
-        return [
-            'daily' => $daily_data,
-            'hourly' => $hourly_data
-        ];
-    }
-
-    /**
-     * Get system health metrics
-     */
-    private function get_system_health() {
-        global $wpdb;
-        
-        $logs_table = $wpdb->prefix . 'affcd_api_logs';
-        $rate_limit_table = $wpdb->prefix . 'affcd_rate_limiting';
-        
-        // Calculate system health metrics
-        $health_metrics = [
-            'api_uptime' => $this->calculate_api_uptime(),
-            'average_response_time' => $wpdb->get_var("
-                SELECT AVG(response_time) 
-                FROM {$logs_table} 
-                WHERE created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
-            "),
-            'error_rate' => $wpdb->get_var("
-                SELECT (COUNT(CASE WHEN status = 'error' THEN 1 END) / COUNT(*)) * 100
-                FROM {$logs_table} 
-                WHERE created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
-            "),
-            'blocked_requests' => $wpdb->get_var("
-                SELECT COUNT(*) 
-                FROM {$rate_limit_table} 
-                WHERE status = 'blocked' 
-                AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
-            "),
-            'database_size' => $this->get_database_size(),
-            'cache_hit_rate' => $this->get_cache_hit_rate()
-        ];
-
-        // Determine overall health status
-        $health_score = 100;
-        if ($health_metrics['error_rate'] > 5) $health_score -= 20;
-        if ($health_metrics['average_response_time'] > 1000) $health_score -= 15;
-        if ($health_metrics['api_uptime'] < 99) $health_score -= 25;
-
-        $health_metrics['overall_score'] = max(0, $health_score);
-        $health_metrics['status'] = $this->determine_health_status($health_score);
-
-        return $health_metrics;
-    }
-
-    /**
-     * Calculate API uptime percentage
-     */
-    private function calculate_api_uptime() {
-        global $wpdb;
-        
-        $logs_table = $wpdb->prefix . 'affcd_api_logs';
-        
-        // Simple uptime calculation based on successful requests
-        $total_requests = $wpdb->get_var("
-            SELECT COUNT(*) 
-            FROM {$logs_table} 
-            WHERE created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
-        ");
-        
-        $successful_requests = $wpdb->get_var("
-            SELECT COUNT(*) 
-            FROM {$logs_table} 
-            WHERE status = 'success' 
-            AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
-        ");
-
-        return $total_requests > 0 ? round(($successful_requests / $total_requests) * 100, 2) : 100;
-    }
-
-    /**
-     * Get database size
-     */
-    private function get_database_size() {
-        global $wpdb;
-        
-        $result = $wpdb->get_row("
-            SELECT ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS size_mb
-            FROM information_schema.tables 
-            WHERE table_schema = DATABASE()
-            AND table_name LIKE '{$wpdb->prefix}affcd_%'
-        ");
-
-        return $result ? $result->size_mb : 0;
-    }
-
-    /**
-     * Get cache hit rate
-     */
-    private function get_cache_hit_rate() {
-        // Simple cache effectiveness metric
-        $cache_stats = wp_cache_get_multi([
-            'affcd_cache_hits',
-            'affcd_cache_misses'
-        ], 'affcd_stats');
-
-        $hits = $cache_stats['affcd_cache_hits'] ?? 0;
-        $misses = $cache_stats['affcd_cache_misses'] ?? 0;
-        $total = $hits + $misses;
-
-        return $total > 0 ? round(($hits / $total) * 100, 2) : 0;
-    }
-
-    /**
-     * Determine health status
-     */
-    private function determine_health_status($score) {
-        if ($score >= 90) return 'excellent';
-        if ($score >= 75) return 'good';
-        if ($score >= 60) return 'fair';
-        if ($score >= 40) return 'poor';
-        return 'critical';
-    }
-
-    /**
-     * Generate predictive insights
-     */
-    private function generate_insights($data) {
-        $insights = [];
-
-        // Trend analysis
-        if (isset($data['time_analytics']['daily']) && count($data['time_analytics']['daily']) >= 7) {
-            $recent_avg = array_sum(array_column(array_slice($data['time_analytics']['daily'], -3), 'total_requests')) / 3;
-            $previous_avg = array_sum(array_column(array_slice($data['time_analytics']['daily'], -7, 3), 'total_requests')) / 3;
-            
-            if ($recent_avg > $previous_avg * 1.2) {
-                $insights[] = [
-                    'type' => 'growth',
-                    'message' => __('API usage is trending upward significantly. Consider monitoring server resources.', 'affiliatewp-cross-domain-plugin-suite'),
-                    'priority' => 'medium'
-                ];
-            }
-        }
-
-        // Performance insights
-        if ($data['system_health']['average_response_time'] > 500) {
-            $insights[] = [
-                'type' => 'performance',
-                'message' => __('API response times are above optimal levels. Consider database optimization or caching improvements.', 'affiliatewp-cross-domain-plugin-suite'),
-                'priority' => 'high'
-            ];
-        }
-
-        // Security insights
-        if ($data['system_health']['error_rate'] > 10) {
-            $insights[] = [
-                'type' => 'security',
-                'message' => __('High error rate detected. This could indicate malicious activity or system issues.', 'affiliatewp-cross-domain-plugin-suite'),
-                'priority' => 'high'
-            ];
-        }
-
-        // Conversion insights
-        if (!empty($data['conversion_funnel']['conversions']['rate']) && $data['conversion_funnel']['conversions']['rate'] < 5) {
-            $insights[] = [
-                'type' => 'conversion',
-                'message' => __('Conversion rate is below average. Consider reviewing affiliate code effectiveness or user experience.', 'affiliatewp-cross-domain-plugin-suite'),
-                'priority' => 'medium'
-            ];
-        }
-
-        // Domain insights
-        if (!empty($data['domain_performance'])) {
-            $low_performing_domains = array_filter($data['domain_performance'], function($domain) {
-                return $domain['success_rate'] < 80;
-            });
-
-            if (count($low_performing_domains) > 0) {
-                $insights[] = [
-                    'type' => 'domain',
-                    'message' => sprintf(__('%d domains have success rates below 80%%. Review their integration status.', 'affiliatewp-cross-domain-plugin-suite'), count($low_performing_domains)),
-                    'priority' => 'medium'
-                ];
-            }
-        }
-
-        return $insights;
-    }
-
-    /**
-     * Clean up old analytics data
-     */
-    public function cleanup_old_data($days_to_keep = 90) {
-        global $wpdb;
-        
-        $tables_to_clean = [
-            $wpdb->prefix . 'affcd_api_logs',
-            $wpdb->prefix . 'affcd_analytics_cache',
-            $wpdb->prefix . 'affcd_rate_limit_events'
-        ];
-
-        $total_deleted = 0;
-        $cutoff_date = date('Y-m-d H:i:s', strtotime("-{$days_to_keep} days"));
-
-        foreach ($tables_to_clean as $table) {
-            if ($wpdb->get_var("SHOW TABLES LIKE '{$table}'") === $table) {
-                $deleted = $wpdb->query($wpdb->prepare(
-                    "DELETE FROM {$table} WHERE created_at < %s",
-                    $cutoff_date
-                ));
-                $total_deleted += $deleted;
-            }
-        }
-
-        // Clear related cache
-        wp_cache_flush_group('affcd_analytics');
-
-        return $total_deleted;
-    }
-
-    /**
-     * Export analytics data
-     */
-    public function export_data($format = 'csv', $date_range = 30) {
-        $data = $this->get_dashboard_data($date_range);
-        
-        switch ($format) {
-            case 'json':
-                return json_encode($data, JSON_PRETTY_PRINT);
-            
-            case 'xml':
-                return $this->array_to_xml($data, 'analytics');
-            
-            case 'csv':
-            default:
-                return $this->array_to_csv($data);
-        }
-    }
-
-    /**
-     * Convert array to CSV
-     */
-    private function array_to_csv($data) {
-        ob_start();
-        $output = fopen('php://output', 'w');
-        
-        // Export overview metrics
-        fputcsv($output, ['Metric', 'Value']);
-        foreach ($data['overview']['metrics'] as $key => $value) {
-            fputcsv($output, [ucwords(str_replace('_', ' ', $key)), $value]);
-        }
-        
-        fputcsv($output, []); // Empty row
-        
-        // Export top codes
-        if (!empty($data['overview']['top_codes'])) {
-            fputcsv($output, ['Top Performing Codes']);
-            fputcsv($output, ['Code', 'Usage', 'Revenue']);
-            foreach ($data['overview']['top_codes'] as $code) {
-                fputcsv($output, [$code['code'], $code['usage'], $code['revenue']]);
-            }
-        }
-
-        fclose($output);
-        return ob_get_clean();
-    }
-
-    /**
-     * Convert array to XML
-     */
-    private function array_to_xml($data, $root_element = 'data') {
-        $xml = new SimpleXMLElement("<{$root_element}/>");
-        $this->array_to_xml_recursive($data, $xml);
-        return $xml->asXML();
-    }
-
-    /**
-     * Recursive array to XML conversion
-     */
-    private function array_to_xml_recursive($array, $xml) {
-        foreach ($array as $key => $value) {
-            if (is_array($value)) {
-                $subnode = $xml->addChild($key);
-                $this->array_to_xml_recursive($value, $subnode);
-            } else {
-                $xml->addChild($key, htmlspecialchars($value));
+    public function warm_cache() {
+        foreach (['overview','performance','affiliates','domains','geographic','security'] as $tab) {
+            foreach (['24h','7d','30d','90d'] as $period) {
+                [$from, $to] = $this->date_range($period, '', '');
+                $cache_key = md5($tab.$from.$to);
+                if (wp_cache_get($cache_key, $this->cache_group) !== false) continue;
+
+                switch ($tab) {
+                    case 'performance': $payload = $this->data_performance($from, $to); break;
+                    case 'affiliates':  $payload = $this->data_affiliates($from, $to); break;
+                    case 'domains':     $payload = $this->data_domains($from, $to);    break;
+                    case 'geographic':  $payload = $this->data_geographic($from, $to); break;
+                    case 'security':    $payload = $this->data_security($from, $to);   break;
+                    case 'overview':
+                    default:            $payload = $this->data_overview($from, $to);   break;
+                }
+
+                $resp = ['data'=>$payload, 'date_range'=>['from'=>$from,'to'=>$to]];
+                wp_cache_set($cache_key, $resp, $this->cache_group, $this->cache_ttl);
             }
         }
     }
 }
 
-// Initialise the analytics dashboard
+// Boot it
 new AFFCD_Analytics_Dashboard();

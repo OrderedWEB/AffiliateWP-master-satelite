@@ -32,7 +32,7 @@ class ACI_API_Handler {
         $this->master_domain = rtrim($settings['master_domain'] ?? '', '/');
         $this->api_key = $settings['api_key'] ?? '';
         
-        // Initialise hooks
+        // Initialize hooks
         add_action('init', [$this, 'init']);
         add_action('wp_ajax_aci_test_connection', [$this, 'ajax_test_connection']);
         add_action('wp_ajax_nopriv_aci_test_connection', [$this, 'ajax_test_connection']);
@@ -43,7 +43,7 @@ class ACI_API_Handler {
     }
 
     /**
-     * Initialse API handler
+     * Initialize API handler
      */
     public function init() {
         $this->validate_configuration();
@@ -67,7 +67,7 @@ class ACI_API_Handler {
 
         // Prepare request data
         $request_data = array_merge([
-            'code' => Sanitise_text_field($code),
+            'code' => sanitize_text_field($code),
             'domain' => home_url(),
             'timestamp' => time(),
             'client_ip' => $this->get_client_ip(),
@@ -308,8 +308,8 @@ class ACI_API_Handler {
         
         $error_messages = [
             400 => __('Bad request. Please check your data.', 'affiliate-client-integration'),
-            401 => __('Unauthorised. Please check your API key.', 'affiliate-client-integration'),
-            403 => __('Forbidden. Your domain may not be authorised.', 'affiliate-client-integration'),
+            401 => __('UnAuthorized. Please check your API key.', 'affiliate-client-integration'),
+            403 => __('Forbidden. Your domain may not be Authorized.', 'affiliate-client-integration'),
             404 => __('API endpoint not found.', 'affiliate-client-integration'),
             429 => __('Rate limit exceeded. Please try again later.', 'affiliate-client-integration'),
             500 => __('Server error. Please try again later.', 'affiliate-client-integration'),
@@ -444,7 +444,7 @@ class ACI_API_Handler {
             'endpoint' => $endpoint,
             'error_message' => is_wp_error($error) ? $error->get_error_message() : $error,
             'error_code' => is_wp_error($error) ? $error->get_error_code() : 'unknown',
-            'request_data' => $this->Sanitise_log_data($request_data),
+            'request_data' => $this->sanitize_log_data($request_data),
             'timestamp' => current_time('mysql'),
             'client_ip' => $this->get_client_ip(),
             'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? ''
@@ -535,9 +535,9 @@ class ACI_API_Handler {
     }
 
     /**
-     * Sanitise log data
+     * Sanitize log data
      */
-    private function Sanitise_log_data($data) {
+    private function sanitize_log_data($data) {
         // Remove sensitive information
         $sensitive_keys = ['api_key', 'password', 'secret', 'token'];
         
@@ -881,7 +881,7 @@ class ACI_API_Handler {
      */
     private function handle_domain_auth_webhook($webhook_data) {
         $domain = $webhook_data['domain'] ?? '';
-        $authorisation_status = $webhook_data['authorised'] ?? false;
+        $authorisation_status = $webhook_data['Authorized'] ?? false;
         
         if (empty($domain)) {
             return new WP_Error('invalid_auth_webhook', __('Invalid domain authorisation webhook data.', 'affiliate-client-integration'));
@@ -890,8 +890,8 @@ class ACI_API_Handler {
         // If this is our domain and authorisation changed
         if ($domain === home_url() || $domain === parse_url(home_url(), PHP_URL_HOST)) {
             if (!$authorisation_status) {
-                // Domain was unauthorised - log critical event
-                $this->log_api_event('domain_unauthorised', [
+                // Domain was unAuthorized - log critical event
+                $this->log_api_event('domain_unAuthorized', [
                     'domain' => $domain,
                     'timestamp' => time()
                 ]);
@@ -899,7 +899,7 @@ class ACI_API_Handler {
                 // Disable API functionality
                 update_option('aci_api_disabled', true);
             } else {
-                // Domain was re-authorised
+                // Domain was re-Authorized
                 delete_option('aci_api_disabled');
             }
         }

@@ -1,0 +1,344 @@
+{
+  "name": "starneconsulting/affiliatewp-cross-domain-full",
+  "description": "Master plugin for AffiliateWP Cross Domain Full system - handles domain authorisation, vanity code management, tracking synchronisation, and API services for multi-domain affiliate management.",
+  "type": "wordpress-plugin",
+  "keywords": [
+    "wordpress",
+    "plugin",
+    "affiliate",
+    "cross-domain",
+    "tracking",
+    "vanity-codes",
+    "api",
+    "synchronisation"
+  ],
+  "homepage": "https://starneconsulting.com/affiliatewp-cross-domain-full",
+  "license": "GPL-2.0-or-later",
+  "authors": [
+    {
+      "name": "Richard King",
+      "email": "r.king@starneconsulting.com",
+      "homepage": "https://starneconsulting.com",
+      "role": "Lead Developer"
+    }
+  ],
+  "support": {
+    "email": "support@starneconsulting.com",
+    "issues": "https://github.com/starneconsulting/affiliatewp-cross-domain-full/issues",
+    "docs": "https://docs.starneconsulting.com/affiliatewp-cross-domain-full",
+    "forum": "https://community.starneconsulting.com"
+  },
+  "require": {
+    "php": ">=7.4",
+    "composer/installers": "^2.0",
+    "guzzlehttp/guzzle": "^7.4",
+    "firebase/php-jwt": "^6.0",
+    "ramsey/uuid": "^4.2",
+    "league/csv": "^9.8",
+    "monolog/monolog": "^2.8",
+    "symfony/console": "^5.4 || ^6.0",
+    "symfony/process": "^5.4 || ^6.0",
+    "doctrine/dbal": "^3.5",
+    "nesbot/carbon": "^2.65"
+  },
+  "require-dev": [],
+  "suggest": {
+    "ext-redis": "For improved caching performance",
+    "ext-memcached": "Alternative caching backend",
+    "ext-imagick": "For image processing capabilities",
+    "ext-gd": "Basic image processing support",
+    "ext-curl": "Required for external API communications",
+    "ext-mbstring": "For proper string handling",
+    "ext-intl": "For internationalisation support",
+    "ext-zip": "For backup and export functionality",
+    "ext-openssl": "Required for secure communications"
+  },
+  "autoload": {
+    "psr-4": {
+      "StarneConsulting\\AffiliateWP\\CrossDomain\\": "src/",
+      "StarneConsulting\\AffiliateWP\\CrossDomain\\API\\": "src/API/",
+      "StarneConsulting\\AffiliateWP\\CrossDomain\\Database\\": "src/Database/",
+      "StarneConsulting\\AffiliateWP\\CrossDomain\\Security\\": "src/Security/",
+      "StarneConsulting\\AffiliateWP\\CrossDomain\\Sync\\": "src/Sync/",
+      "StarneConsulting\\AffiliateWP\\CrossDomain\\Analytics\\": "src/Analytics/",
+      "StarneConsulting\\AffiliateWP\\CrossDomain\\Addon\\": "src/Addon/"
+    },
+    "files": [
+      "includes/functions.php",
+      "includes/helpers.php",
+      "includes/compatibility.php"
+    ]
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "StarneConsulting\\AffiliateWP\\CrossDomain\\Tests\\": "tests/",
+      "StarneConsulting\\AffiliateWP\\CrossDomain\\Tests\\Unit\\": "tests/unit/",
+      "StarneConsulting\\AffiliateWP\\CrossDomain\\Tests\\Integration\\": "tests/integration/",
+      "StarneConsulting\\AffiliateWP\\CrossDomain\\Tests\\Fixtures\\": "tests/fixtures/"
+    }
+  },
+  "scripts": {
+    "test": [
+      "@test:unit",
+      "@test:integration"
+    ],
+    "test:unit": [
+      "phpunit --configuration phpunit.xml --testsuite unit"
+    ],
+    "test:integration": [
+      "phpunit --configuration phpunit.xml --testsuite integration"
+    ],
+    "test:coverage": [
+      "phpunit --configuration phpunit.xml --coverage-html coverage"
+    ],
+    "lint": [
+      "phpcs --standard=WordPress --extensions=php --ignore=*/vendor/*,*/node_modules/*,*/tests/* ."
+    ],
+    "lint:fix": [
+      "phpcbf --standard=WordPress --extensions=php --ignore=*/vendor/*,*/node_modules/*,*/tests/* ."
+    ],
+    "analyse": [
+      "phpstan analyse --level=5 includes/ src/"
+    ],
+    "analyse:strict": [
+      "phpstan analyse --level=8 includes/ src/"
+    ],
+    "mess-detect": [
+      "phpmd includes/,src/ text cleancode,codesize,controversial,design,naming,unusedcode"
+    ],
+    "security": [
+      "composer audit --no-dev"
+    ],
+    "security:all": [
+      "composer audit"
+    ],
+    "validate": [
+      "composer validate --strict --no-check-publish"
+    ],
+    "build": [
+      "@validate",
+      "@lint",
+      "@analyse",
+      "@test",
+      "@security"
+    ],
+    "build:production": [
+      "@validate",
+      "@lint",
+      "@analyse:strict",
+      "@test",
+      "@security:all"
+    ],
+    "clean": [
+      "rm -rf vendor/",
+      "rm -rf coverage/",
+      "rm -rf build/",
+      "rm -f composer.lock"
+    ],
+    "package": [
+      "@build:production",
+      "@package:create"
+    ],
+    "package:create": [
+      "mkdir -p build/",
+      "rsync -av --exclude-from=.packageignore . build/affiliatewp-cross-domain-full/",
+      "cd build && zip -r affiliatewp-cross-domain-full.zip affiliatewp-cross-domain-full/"
+    ],
+    "docs:generate": [
+      "phpdoc run -d includes/,src/ -t docs/"
+    ],
+    "pre-commit": [
+      "@lint",
+      "@analyse",
+      "@test:unit"
+    ],
+    "post-install-cmd": [
+      "php -r \"if (!file_exists('.env')) copy('.env.example', '.env');\"",
+      "php -r \"echo 'Dependencies installed successfully. Run \\\"composer run setup\\\" to configure the development environment.\\n';\""
+    ],
+    "post-update-cmd": [
+      "php -r \"echo 'Dependencies updated successfully.\\n';\""
+    ],
+    "setup": [
+      "@setup:directories",
+      "@setup:permissions",
+      "@setup:config"
+    ],
+    "setup:directories": [
+      "mkdir -p logs/",
+      "mkdir -p cache/",
+      "mkdir -p tmp/",
+      "mkdir -p uploads/",
+      "mkdir -p backups/"
+    ],
+    "setup:permissions": [
+      "chmod 755 logs/",
+      "chmod 755 cache/",
+      "chmod 755 tmp/",
+      "chmod 755 uploads/",
+      "chmod 755 backups/"
+    ],
+    "setup:config": [
+      "php -r \"echo 'Development environment setup complete.\\n';\""
+    ]
+  },
+  "scripts-descriptions": {
+    "test": "Run all tests (unit and integration)",
+    "test:unit": "Run unit tests only",
+    "test:integration": "Run integration tests only",
+    "test:coverage": "Run tests with code coverage report",
+    "lint": "Check code style and standards",
+    "lint:fix": "Fix code style issues automatically",
+    "analyse": "Run static analysis (PHPStan level 5)",
+    "analyse:strict": "Run strict static analysis (PHPStan level 8)",
+    "mess-detect": "Detect code quality issues (PHPMD)",
+    "security": "Run security audit on production dependencies",
+    "security:all": "Run security audit on all dependencies",
+    "validate": "Validate composer.json",
+    "build": "Run complete build process for development",
+    "build:production": "Run complete build process for production",
+    "clean": "Clean build artifacts and dependencies",
+    "package": "Create distribution package",
+    "package:create": "Create ZIP package for distribution",
+    "docs:generate": "Generate API documentation",
+    "pre-commit": "Run pre-commit checks",
+    "setup": "Setup development environment"
+  },
+  "config": {
+    "optimize-autoloader": true,
+    "sort-packages": true,
+    "process-timeout": 600,
+    "allow-plugins": {
+      "dealerdirect/phpcodesniffer-composer-installer": true,
+      "composer/installers": true,
+      "phpstan/extension-installer": true
+    },
+    "platform": {
+      "php": "7.4"
+    },
+    "preferred-install": {
+      "*": "dist"
+    }
+  },
+  "extra": {
+    "installer-name": "affiliatewp-cross-domain-full",
+    "wordpress-plugin": {
+      "slug": "affiliatewp-cross-domain-full",
+      "name": "AffiliateWP Cross Domain Full",
+      "version": "1.0.0",
+      "author": "Richard King, starneconsulting.com",
+      "author-uri": "https://starneconsulting.com",
+      "plugin-uri": "https://starneconsulting.com/affiliatewp-cross-domain-full",
+      "text-domain": "affiliatewp-cross-domain-plugin-suite",
+      "domain-path": "/languages",
+      "requires-wp": "5.0",
+      "tested-wp": "6.4",
+      "requires-php": "7.4",
+      "network": false,
+      "license": "GPL-2.0-or-later",
+      "license-uri": "https://www.gnu.org/licenses/gpl-2.0.html",
+      "tags": [
+        "affiliate",
+        "cross-domain",
+        "tracking",
+        "vanity-codes",
+        "api"
+      ]
+    },
+    "branch-alias": {
+      "dev-main": "1.x-dev",
+      "dev-develop": "1.x-dev"
+    },
+    "phpcodesniffer-search-depth": 4
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true,
+  "repositories": [
+    {
+      "type": "composer",
+      "url": "https://wpackagist.org",
+      "only": [
+        "wpackagist-plugin/*",
+        "wpackagist-theme/*"
+      ]
+    },
+    {
+      "type": "composer",
+      "url": "https://composer.deliciousbrains.com",
+      "only": [
+        "deliciousbrains-plugin/*"
+      ]
+    }
+  ],
+  "archive": {
+    "name": "affiliatewp-cross-domain-full",
+    "exclude": [
+      "/tests",
+      "/docs",
+      "/.github",
+      "/.gitignore",
+      "/.gitattributes",
+      "/.editorconfig",
+      "/phpunit.xml",
+      "/phpunit.xml.dist",
+      "/phpcs.xml",
+      "/phpcs.xml.dist",
+      "/phpstan.neon",
+      "/phpstan.neon.dist",
+      "/phpmd.xml",
+      "/.env.example",
+      "/composer.lock",
+      "/package.json",
+      "/package-lock.json",
+      "/webpack.config.js",
+      "/webpack.mix.js",
+      "/node_modules",
+      "/src",
+      "/coverage",
+      "/build",
+      "/logs",
+      "/cache",
+      "/tmp",
+      "/.packageignore",
+      "/.distignore",
+      "/README.md",
+      "/CHANGELOG.md",
+      "/CONTRIBUTING.md",
+      "/CODE_OF_CONDUCT.md",
+      "/SECURITY.md",
+      "*.log",
+      "*.tmp",
+      "*.cache",
+      ".DS_Store",
+      "Thumbs.db",
+      ".vscode",
+      ".idea"
+    ]
+  },
+  "funding": [
+    {
+      "type": "custom",
+      "url": "https://starneconsulting.com/support"
+    },
+    {
+      "type": "paypal",
+      "url": "https://paypal.me/starneconsulting"
+    }
+  ],
+  "require-dev": {
+    "phpunit/phpunit": "^9.5",
+    "wp-coding-standards/wpcs": "^2.3",
+    "phpcompatibility/phpcompatibility-wp": "^2.1",
+    "dealerdirect/phpcodesniffer-composer-installer": "^0.7",
+    "squizlabs/php_codesniffer": "^3.7",
+    "phpstan/phpstan": "^1.9",
+    "phpmd/phpmd": "^2.13",
+    "roave/security-advisories": "dev-latest",
+    "brain/monkey": "^2.6",
+    "mockery/mockery": "^1.5",
+    "fakerphp/faker": "^1.20",
+    "symfony/var-dumper": "^5.4 || ^6.0",
+    "spatie/phpunit-watcher": "^1.23",
+    "phpdocumentor/phpdocumentor": "^3.3"
+  }
+}

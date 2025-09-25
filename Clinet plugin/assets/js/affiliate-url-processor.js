@@ -28,7 +28,7 @@
     isProcessing: false,
 
     /**
-     * Initialse URL processor
+     * Initialize URL processor
      */
     init: function () {
       this.loadConfig();
@@ -140,8 +140,8 @@
 
       this.isProcessing = true;
 
-      // Sanitise code
-      code = this.SanitiseAffiliateCode(code);
+      // Sanitize code
+      code = this.SanitizeAffiliateCode(code);
       if (!code) {
         this.isProcessing = false;
         return;
@@ -174,9 +174,9 @@
     },
 
     /**
-     * Sanitise affiliate code
+     * Sanitize affiliate code
      */
-    SanitiseAffiliateCode: function (code) {
+    SanitizeAffiliateCode: function (code) {
       if (typeof code !== "string") return null;
 
       // Remove whitespace and convert to lowercase
@@ -628,7 +628,7 @@
     },
   };
 
-  // Initialise when document is ready
+  // Initialize when document is ready
   $(document).ready(function () {
     ACI.URLProcessor.init();
   });

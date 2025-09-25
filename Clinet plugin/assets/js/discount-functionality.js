@@ -26,7 +26,7 @@
     activeWidgets: {},
 
     /**
-     * Initialse discount functionality
+     * Initialize discount functionality
      */
     init: function (config) {
       this.config = $.extend(this.config, config || {});
@@ -76,7 +76,7 @@
     },
 
     /**
-     * Initialse all discount widgets on page
+     * Initialize all discount widgets on page
      */
     initializeWidgets: function () {
       var self = this;

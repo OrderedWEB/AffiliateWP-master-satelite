@@ -32,7 +32,7 @@ class AFFCD_Security_Logs {
     }
 
     /**
-     * Initialse hooks
+     * Initialize hooks
      */
     public function init_hooks() {
         add_action('wp_login_failed', [$this, 'log_failed_login']);
@@ -80,37 +80,37 @@ class AFFCD_Security_Logs {
     public function log_event($event_type, $severity = 'medium', $data = [], $user_id = null) {
         global $wpdb;
 
-        // Sanitise inputs
-        $event_type = Sanitise_text_field($event_type);
-        $severity = in_array($severity, ['low', 'medium', 'high', 'critical']) ? $severity : 'medium';
+        // Sanitize inputs
+        $event_type = sanitize_text_field($event_type);
+        $severity = in_array($severity, ['low', 'medium', 'high', 'critical'], true) ? $severity : 'medium';
         
         // Get client information
         $ip_address = $this->get_client_ip();
-        $user_agent = Sanitise_text_field($_SERVER['HTTP_USER_AGENT'] ?? '');
-        $domain = Sanitise_text_field($_SERVER['HTTP_HOST'] ?? '');
-        $endpoint = Sanitise_text_field($_SERVER['REQUEST_URI'] ?? '');
+        $user_agent = sanitize_text_field($_SERVER['HTTP_USER_AGENT'] ?? '');
+        $domain = sanitize_text_field($_SERVER['HTTP_HOST'] ?? '');
+        $endpoint = sanitize_text_field($_SERVER['REQUEST_URI'] ?? '');
         
         // Prepare event data
         $event_data = wp_json_encode([
-            'timestamp' => current_time('mysql'),
-            'request_method' => $_SERVER['REQUEST_METHOD'] ?? '',
-            'referer' => wp_get_referer(),
-            'data' => $data
-        ]);
+            'timestamp'       => current_time('mysql'),
+            'request_method'  => $_SERVER['REQUEST_METHOD'] ?? '',
+            'referer'         => wp_get_referer(),
+            'data'            => $data
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
         // Insert log entry
         $result = $wpdb->insert(
             $this->table_name,
             [
-                'event_type' => $event_type,
-                'severity' => $severity,
-                'user_id' => $user_id ?: get_current_user_id() ?: null,
-                'ip_address' => $ip_address,
-                'user_agent' => $user_agent,
-                'event_data' => $event_data,
-                'domain' => $domain,
-                'endpoint' => $endpoint,
-                'created_at' => current_time('mysql')
+                'event_type'  => $event_type,
+                'severity'    => $severity,
+                'user_id'     => $user_id ?: (get_current_user_id() ?: null),
+                'ip_address'  => $ip_address,
+                'user_agent'  => $user_agent,
+                'event_data'  => $event_data,
+                'domain'      => $domain,
+                'endpoint'    => $endpoint,
+                'created_at'  => current_time('mysql')
             ],
             ['%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s']
         );
@@ -143,16 +143,16 @@ class AFFCD_Security_Logs {
         $wpdb->insert(
             $this->table_name,
             [
-                'event_type' => 'api_access',
-                'severity' => $severity,
-                'ip_address' => $this->get_client_ip(),
-                'user_agent' => Sanitise_text_field($_SERVER['HTTP_USER_AGENT'] ?? ''),
-                'event_data' => wp_json_encode($data),
-                'domain' => Sanitise_text_field($_SERVER['HTTP_HOST'] ?? ''),
-                'endpoint' => Sanitise_text_field($endpoint),
-                'status_code' => intval($status_code),
-                'response_time' => floatval($response_time),
-                'created_at' => current_time('mysql')
+                'event_type'    => 'api_access',
+                'severity'      => $severity,
+                'ip_address'    => $this->get_client_ip(),
+                'user_agent'    => sanitize_text_field($_SERVER['HTTP_USER_AGENT'] ?? ''),
+                'event_data'    => wp_json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+                'domain'        => sanitize_text_field($_SERVER['HTTP_HOST'] ?? ''),
+                'endpoint'      => sanitize_text_field($endpoint),
+                'status_code'   => (int) $status_code,
+                'response_time' => (float) $response_time,
+                'created_at'    => current_time('mysql')
             ],
             ['%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%f', '%s']
         );
@@ -163,7 +163,7 @@ class AFFCD_Security_Logs {
      */
     public function log_failed_login($username) {
         $this->log_event('login_failed', 'medium', [
-            'username' => Sanitise_text_field($username),
+            'username'      => sanitize_text_field($username),
             'attempt_count' => $this->get_recent_failed_attempts()
         ]);
     }
@@ -173,8 +173,8 @@ class AFFCD_Security_Logs {
      */
     public function log_successful_login($user_login, $user) {
         $this->log_event('login_success', 'low', [
-            'username' => Sanitise_text_field($user_login),
-            'user_id' => $user->ID
+            'username' => sanitize_text_field($user_login),
+            'user_id'  => $user->ID
         ], $user->ID);
     }
 
@@ -183,8 +183,8 @@ class AFFCD_Security_Logs {
      */
     public function log_suspicious_activity($activity_type, $details = []) {
         $this->log_event('suspicious_activity', 'high', [
-            'activity_type' => Sanitise_text_field($activity_type),
-            'details' => $details
+            'activity_type' => sanitize_text_field($activity_type),
+            'details'       => $details
         ]);
     }
 
@@ -193,10 +193,10 @@ class AFFCD_Security_Logs {
      */
     public function log_rate_limit_violation($endpoint, $limit_type, $current_count, $limit) {
         $this->log_event('rate_limit_violation', 'medium', [
-            'endpoint' => Sanitise_text_field($endpoint),
-            'limit_type' => Sanitise_text_field($limit_type),
-            'current_count' => intval($current_count),
-            'limit' => intval($limit)
+            'endpoint'      => sanitize_text_field($endpoint),
+            'limit_type'    => sanitize_text_field($limit_type),
+            'current_count' => (int) $current_count,
+            'limit'         => (int) $limit
         ]);
     }
 
@@ -212,27 +212,27 @@ class AFFCD_Security_Logs {
         // Apply filters
         if (!empty($filters['event_type'])) {
             $where_conditions[] = 'event_type = %s';
-            $where_values[] = Sanitise_text_field($filters['event_type']);
+            $where_values[] = sanitize_text_field($filters['event_type']);
         }
 
         if (!empty($filters['severity'])) {
             $where_conditions[] = 'severity = %s';
-            $where_values[] = Sanitise_text_field($filters['severity']);
+            $where_values[] = sanitize_text_field($filters['severity']);
         }
 
         if (!empty($filters['ip_address'])) {
             $where_conditions[] = 'ip_address = %s';
-            $where_values[] = Sanitise_text_field($filters['ip_address']);
+            $where_values[] = sanitize_text_field($filters['ip_address']);
         }
 
         if (!empty($filters['date_from'])) {
             $where_conditions[] = 'created_at >= %s';
-            $where_values[] = Sanitise_text_field($filters['date_from']);
+            $where_values[] = sanitize_text_field($filters['date_from']);
         }
 
         if (!empty($filters['date_to'])) {
             $where_conditions[] = 'created_at <= %s';
-            $where_values[] = Sanitise_text_field($filters['date_to']);
+            $where_values[] = sanitize_text_field($filters['date_to']);
         }
 
         $where_clause = implode(' AND ', $where_conditions);
@@ -242,10 +242,53 @@ class AFFCD_Security_Logs {
                 ORDER BY created_at DESC 
                 LIMIT %d OFFSET %d";
         
-        $where_values[] = intval($limit);
-        $where_values[] = intval($offset);
+        $where_values[] = (int) $limit;
+        $where_values[] = (int) $offset;
         
         return $wpdb->get_results($wpdb->prepare($sql, $where_values));
+    }
+
+    /**
+     * Get total logs count with filters (for pagination)
+     */
+    private function get_logs_total($filters = []) {
+        global $wpdb;
+
+        $where_conditions = ['1=1'];
+        $where_values = [];
+
+        if (!empty($filters['event_type'])) {
+            $where_conditions[] = 'event_type = %s';
+            $where_values[] = sanitize_text_field($filters['event_type']);
+        }
+
+        if (!empty($filters['severity'])) {
+            $where_conditions[] = 'severity = %s';
+            $where_values[] = sanitize_text_field($filters['severity']);
+        }
+
+        if (!empty($filters['ip_address'])) {
+            $where_conditions[] = 'ip_address = %s';
+            $where_values[] = sanitize_text_field($filters['ip_address']);
+        }
+
+        if (!empty($filters['date_from'])) {
+            $where_conditions[] = 'created_at >= %s';
+            $where_values[] = sanitize_text_field($filters['date_from']);
+        }
+
+        if (!empty($filters['date_to'])) {
+            $where_conditions[] = 'created_at <= %s';
+            $where_values[] = sanitize_text_field($filters['date_to']);
+        }
+
+        $where_clause = implode(' AND ', $where_conditions);
+        $sql = "SELECT COUNT(*) FROM {$this->table_name} WHERE {$where_clause}";
+
+        if ($where_values) {
+            return (int) $wpdb->get_var($wpdb->prepare($sql, $where_values));
+        }
+        return (int) $wpdb->get_var($sql);
     }
 
     /**
@@ -269,7 +312,7 @@ class AFFCD_Security_Logs {
         
         $stats['by_severity'] = [];
         foreach ($severity_stats as $stat) {
-            $stats['by_severity'][$stat->severity] = intval($stat->count);
+            $stats['by_severity'][$stat->severity] = (int) $stat->count;
         }
         
         // Events by type
@@ -285,7 +328,7 @@ class AFFCD_Security_Logs {
         
         $stats['by_type'] = [];
         foreach ($type_stats as $stat) {
-            $stats['by_type'][$stat->event_type] = intval($stat->count);
+            $stats['by_type'][$stat->event_type] = (int) $stat->count;
         }
         
         // Top IP addresses
@@ -301,7 +344,7 @@ class AFFCD_Security_Logs {
         
         $stats['by_ip'] = [];
         foreach ($ip_stats as $stat) {
-            $stats['by_ip'][$stat->ip_address] = intval($stat->count);
+            $stats['by_ip'][$stat->ip_address] = (int) $stat->count;
         }
         
         // Daily activity
@@ -316,7 +359,7 @@ class AFFCD_Security_Logs {
         
         $stats['daily_activity'] = [];
         foreach ($daily_stats as $stat) {
-            $stats['daily_activity'][$stat->date] = intval($stat->count);
+            $stats['daily_activity'][$stat->date] = (int) $stat->count;
         }
         
         return $stats;
@@ -329,26 +372,23 @@ class AFFCD_Security_Logs {
         check_ajax_referer('affcd_security_nonce', 'nonce');
         
         if (!current_user_can('manage_affiliates')) {
-            wp_die('Unauthorised');
+            wp_die('Unauthorized');
         }
         
-        $page = intval($_POST['page'] ?? 1);
-        $per_page = intval($_POST['per_page'] ?? 25);
-        $filters = $_POST['filters'] ?? [];
+        $page     = (int) ($_POST['page'] ?? 1);
+        $per_page = (int) ($_POST['per_page'] ?? 25);
+        $filters  = $_POST['filters'] ?? [];
         
         $offset = ($page - 1) * $per_page;
-        $logs = $this->get_logs($per_page, $offset, $filters);
-        
-        // Get total count for pagination
-        global $wpdb;
-        $total = $wpdb->get_var("SELECT COUNT(*) FROM {$this->table_name}");
+        $logs   = $this->get_logs($per_page, $offset, $filters);
+        $total  = $this->get_logs_total($filters);
         
         wp_send_json_success([
-            'logs' => $logs,
-            'total' => intval($total),
-            'page' => $page,
-            'per_page' => $per_page,
-            'total_pages' => ceil($total / $per_page)
+            'logs'        => $logs,
+            'total'       => (int) $total,
+            'page'        => $page,
+            'per_page'    => $per_page,
+            'total_pages' => (int) ceil($total / $per_page)
         ]);
     }
 
@@ -359,7 +399,7 @@ class AFFCD_Security_Logs {
         check_ajax_referer('affcd_security_nonce', 'nonce');
         
         if (!current_user_can('manage_options')) {
-            wp_die('Unauthorised');
+            wp_die('Unauthorized');
         }
         
         global $wpdb;
@@ -379,7 +419,7 @@ class AFFCD_Security_Logs {
         check_ajax_referer('affcd_security_nonce', 'nonce');
         
         if (!current_user_can('manage_affiliates')) {
-            wp_die('Unauthorised');
+            wp_die('Unauthorized');
         }
         
         $filters = $_POST['filters'] ?? [];
@@ -406,7 +446,7 @@ class AFFCD_Security_Logs {
         
         $filename = 'security-logs-' . date('Y-m-d-H-i-s') . '.csv';
         
-        header('Content-Type: application/csv');
+        header('Content-Type: text/csv; charset=utf-8');
         header('Content-Disposition: attachment; filename="' . $filename . '"');
         header('Pragma: no-cache');
         header('Expires: 0');
@@ -449,11 +489,11 @@ class AFFCD_Security_Logs {
         $ip_address = $this->get_client_ip();
         $since = date('Y-m-d H:i:s', strtotime('-1 hour'));
         
-        return $wpdb->get_var($wpdb->prepare(
+        return (int) $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM {$this->table_name} 
              WHERE event_type = 'login_failed' 
-             AND ip_address = %s 
-             AND created_at > %s",
+               AND ip_address = %s 
+               AND created_at > %s",
             $ip_address,
             $since
         ));
@@ -480,7 +520,7 @@ class AFFCD_Security_Logs {
     private function maybe_cleanup_logs() {
         global $wpdb;
         
-        $count = $wpdb->get_var("SELECT COUNT(*) FROM {$this->table_name}");
+        $count = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$this->table_name}");
         
         if ($count > $this->max_log_entries) {
             // Remove oldest 1000 entries
@@ -500,16 +540,18 @@ class AFFCD_Security_Logs {
         $admin_email = get_option('admin_email');
         
         // Prepare alert message
-        $subject = sprintf(__('[Security Alert] %s - %s', 'affiliatewp-cross-domain-plugin-suite'), 
-                          get_site_url(), 
-                          ucwords(str_replace('_', ' ', $event_type)));
+        $subject = sprintf(
+            __('[Security Alert] %s - %s', 'affiliatewp-cross-domain-plugin-suite'), 
+            get_site_url(), 
+            ucwords(str_replace('_', ' ', $event_type))
+        );
         
         $message = sprintf(
             __("A critical security event has been detected on your affiliate system:\n\nEvent Type: %s\nIP Address: %s\nTime: %s\nDetails: %s\n\nPlease review your security logs immediately.", 'affiliatewp-cross-domain-plugin-suite'),
             $event_type,
             $this->get_client_ip(),
             current_time('mysql'),
-            wp_json_encode($data)
+            wp_json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
         );
         
         // Send email notification

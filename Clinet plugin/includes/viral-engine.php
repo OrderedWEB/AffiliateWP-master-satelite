@@ -28,7 +28,7 @@ class AFFCD_Viral_Engine {
     }
 
     /**
-     * Initialse WordPress hooks
+     * Initialize WordPress hooks
      */
     private function init_hooks() {
         // Post-purchase hooks
@@ -56,7 +56,7 @@ class AFFCD_Viral_Engine {
     }
 
     /**
-     * Initialse viral triggers and thresholds
+     * Initialize viral triggers and thresholds
      */
     private function init_viral_triggers() {
         $this->viral_triggers = [
@@ -446,9 +446,9 @@ class AFFCD_Viral_Engine {
     public function ajax_viral_invite() {
         check_ajax_referer('affcd_satellite_nonce', 'nonce');
 
-        $viral_token = Sanitise_text_field($_POST['viral_token'] ?? '');
-        $email = Sanitise_email($_POST['email'] ?? '');
-        $action_type = Sanitise_text_field($_POST['action_type'] ?? ''); // 'accept' or 'dismiss'
+        $viral_token = sanitize_text_field($_POST['viral_token'] ?? '');
+        $email = sanitize_email($_POST['email'] ?? '');
+        $action_type = sanitize_text_field($_POST['action_type'] ?? ''); // 'accept' or 'dismiss'
 
         if (empty($viral_token) || empty($email)) {
             wp_send_json_error('Missing required data');
@@ -1334,7 +1334,7 @@ class AFFCD_Identity_Resolution {
     }
 
     /**
-     * Initialse WordPress hooks
+     * Initialize WordPress hooks
      */
     private function init_hooks() {
         // Identity collection hooks
@@ -1360,7 +1360,7 @@ class AFFCD_Identity_Resolution {
     }
 
     /**
-     * Initialse matching algorithms
+     * Initialize matching algorithms
      */
     private function init_matching_algorithms() {
         $this->matching_algorithms = [
@@ -2051,7 +2051,7 @@ class AFFCD_Quantum_Attribution {
     }
 
     /**
-     * Initialse WordPress hooks
+     * Initialize WordPress hooks
      */
     private function init_hooks() {
         // Attribution tracking hooks
@@ -2074,7 +2074,7 @@ class AFFCD_Quantum_Attribution {
     }
 
     /**
-     * Initialse attribution models
+     * Initialize attribution models
      */
     private function init_attribution_models() {
         $this->attribution_models = [
@@ -2229,7 +2229,7 @@ class AFFCD_Quantum_Attribution {
         $interaction_quality = $touchpoint_data['interaction_quality'];
         $conversion_probability = $touchpoint_data['conversion_probability'];
 
-        // Initialise if first touchpoint
+        // Initialize if first touchpoint
         if (empty($current_state['affiliate_probabilities'])) {
             $current_state['affiliate_probabilities'] = [];
             $current_state['touchpoint_weights'] = [];
@@ -3166,7 +3166,7 @@ function create_affcd_revolutionary_tables() {
 }
 
 /**
- * Initialse Revolutionary Features
+ * Initialize Revolutionary Features
  */
 class AFFCD_Revolutionary_Features_Manager {
 
@@ -3175,7 +3175,7 @@ class AFFCD_Revolutionary_Features_Manager {
     private $quantum_attribution;
 
     public function __construct($parent_plugin) {
-        // Initialise revolutionary features
+        // Initialize revolutionary features
         $this->viral_engine = new AFFCD_Viral_Engine($parent_plugin);
         $this->identity_resolution = new AFFCD_Identity_Resolution($parent_plugin);
         $this->quantum_attribution = new AFFCD_Quantum_Attribution($parent_plugin);
@@ -3184,7 +3184,7 @@ class AFFCD_Revolutionary_Features_Manager {
     }
 
     /**
-     * Initialse feature coordination hooks
+     * Initialize feature coordination hooks
      */
     private function init_hooks() {
         // Coordinate between systems

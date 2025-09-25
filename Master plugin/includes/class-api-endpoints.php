@@ -46,156 +46,133 @@ class AFFCD_API_Endpoints {
 
     /**
      * Constructor
-     *
-     * @param AFFCD_Security_Validator $security_validator Security validator instance
-     * @param AFFCD_Rate_Limiter $rate_limiter Rate limiter instance
-     * @param AFFCD_Vanity_Code_Manager $vanity_code_manager Vanity code manager instance
      */
     public function __construct($security_validator, $rate_limiter, $vanity_code_manager) {
-        $this->security_validator = $security_validator;
-        $this->rate_limiter = $rate_limiter;
-        $this->vanity_code_manager = $vanity_code_manager;
+        $this->security_validator   = $security_validator;
+        $this->rate_limiter         = $rate_limiter;
+        $this->vanity_code_manager  = $vanity_code_manager;
     }
 
     /**
      * Register REST API routes
      */
     public function register_routes() {
-        // Code validation endpoints
+        // Code validation
         register_rest_route($this->namespace, '/validate-code', [
-            'methods' => WP_REST_Server::CREATABLE,
-            'callback' => [$this, 'validate_code'],
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => [$this, 'validate_code'],
             'permission_callback' => [$this, 'validate_api_request'],
-            'args' => $this->get_validate_code_args()
+            'args'                => $this->get_validate_code_args()
         ]);
 
-        // Domain management endpoints
+        // Authorized domains (list/create/update/delete/verify)
         register_rest_route($this->namespace, '/domains', [
-            'methods' => WP_REST_Server::READABLE,
-            'callback' => [$this, 'list_domains'],
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => [$this, 'list_domains'],
             'permission_callback' => [$this, 'validate_admin_request']
         ]);
 
         register_rest_route($this->namespace, '/domains', [
-            'methods' => WP_REST_Server::CREATABLE,
-            'callback' => [$this, 'add_domain'],
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => [$this, 'add_domain'],
             'permission_callback' => [$this, 'validate_admin_request'],
-            'args' => $this->get_domain_args()
+            'args'                => $this->get_domain_args()
         ]);
 
         register_rest_route($this->namespace, '/domains/(?P<id>\d+)', [
-            'methods' => WP_REST_Server::EDITABLE,
-            'callback' => [$this, 'update_domain'],
+            'methods'             => WP_REST_Server::EDITABLE,
+            'callback'            => [$this, 'update_domain'],
             'permission_callback' => [$this, 'validate_admin_request'],
-            'args' => array_merge(['id' => ['required' => true, 'type' => 'integer']], $this->get_domain_args())
+            'args'                => array_merge(['id' => ['required' => true, 'type' => 'integer']], $this->get_domain_args())
         ]);
 
         register_rest_route($this->namespace, '/domains/(?P<id>\d+)', [
-            'methods' => WP_REST_Server::DELETABLE,
-            'callback' => [$this, 'delete_domain'],
+            'methods'             => WP_REST_Server::DELETABLE,
+            'callback'            => [$this, 'delete_domain'],
             'permission_callback' => [$this, 'validate_admin_request'],
-            'args' => ['id' => ['required' => true, 'type' => 'integer']]
+            'args'                => ['id' => ['required' => true, 'type' => 'integer']]
         ]);
 
-        // Domain verification endpoint
         register_rest_route($this->namespace, '/domains/(?P<id>\d+)/verify', [
-            'methods' => WP_REST_Server::CREATABLE,
-            'callback' => [$this, 'verify_domain'],
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => [$this, 'verify_domain'],
             'permission_callback' => [$this, 'validate_admin_request'],
-            'args' => ['id' => ['required' => true, 'type' => 'integer']]
+            'args'                => ['id' => ['required' => true, 'type' => 'integer']]
         ]);
 
-        // Analytics endpoints
+        // Analytics
         register_rest_route($this->namespace, '/analytics/summary', [
-            'methods' => WP_REST_Server::READABLE,
-            'callback' => [$this, 'get_analytics_summary'],
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => [$this, 'get_analytics_summary'],
             'permission_callback' => [$this, 'validate_admin_request']
         ]);
 
         register_rest_route($this->namespace, '/analytics/codes', [
-            'methods' => WP_REST_Server::READABLE,
-            'callback' => [$this, 'get_code_analytics'],
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => [$this, 'get_code_analytics'],
             'permission_callback' => [$this, 'validate_admin_request'],
-            'args' => $this->get_analytics_args()
+            'args'                => $this->get_analytics_args()
         ]);
 
-        // Health check endpoint
+        // Health
         register_rest_route($this->namespace, '/health', [
-            'methods' => WP_REST_Server::READABLE,
-            'callback' => [$this, 'health_check'],
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => [$this, 'health_check'],
             'permission_callback' => '__return_true'
         ]);
 
-        // Configuration endpoint for client sites
+        // Client config
         register_rest_route($this->namespace, '/config', [
-            'methods' => WP_REST_Server::READABLE,
-            'callback' => [$this, 'get_client_config'],
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => [$this, 'get_client_config'],
             'permission_callback' => [$this, 'validate_api_request']
         ]);
 
-        // Webhook test endpoint
+        // Webhook test
         register_rest_route($this->namespace, '/webhook/test', [
-            'methods' => WP_REST_Server::CREATABLE,
-            'callback' => [$this, 'test_webhook'],
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => [$this, 'test_webhook'],
             'permission_callback' => [$this, 'validate_admin_request']
         ]);
     }
 
     /**
      * Validate affiliate code
-     *
-     * @param WP_REST_Request $request Request object
-     * @return WP_REST_Response|WP_Error Response object
      */
     public function validate_code($request) {
-        $code = Sanitise_text_field($request->get_param('code'));
-        $domain = Sanitise_text_field($request->get_param('domain'));
+        $code      = sanitize_text_field($request->get_param('code'));
+        $domain    = sanitize_text_field($request->get_param('domain'));
         $user_data = $request->get_param('user_data') ?: [];
 
-        // Validate required parameters
         if (empty($code)) {
-            return new WP_Error(
-                'missing_code',
-                __('Affiliate code is required', 'affiliatewp-cross-domain-plugin-suite'),
-                ['status' => 400]
-            );
+            return new WP_Error('missing_code', __('Affiliate code is required', 'affiliatewp-cross-domain-plugin-suite'), ['status' => 400]);
         }
 
-        // Apply rate limiting
         if (!$this->rate_limiter->check_rate_limit($domain, 'validate_code')) {
-            return new WP_Error(
-                'rate_limit_exceeded',
-                __('Rate limit exceeded. Please try again later.', 'affiliatewp-cross-domain-plugin-suite'),
-                ['status' => 429]
-            );
+            return new WP_Error('rate_limit_exceeded', __('Rate limit exceeded. Please try again later.', 'affiliatewp-cross-domain-plugin-suite'), ['status' => 429]);
         }
 
-        // Validate the code
         $validation_result = $this->vanity_code_manager->validate_code($code, $domain, $user_data);
 
-        // Log the validation attempt
         $this->log_validation_attempt($code, $domain, $validation_result, $request);
 
-        // Prepare response
         $response_data = [
-            'valid' => $validation_result['valid'],
-            'message' => $validation_result['message'],
+            'valid'     => $validation_result['valid'],
+            'message'   => $validation_result['message'],
             'timestamp' => current_time('mysql')
         ];
 
-        // Add discount information if valid
         if ($validation_result['valid'] && !empty($validation_result['discount'])) {
             $response_data['discount'] = [
-                'type' => $validation_result['discount']['type'],
-                'amount' => $validation_result['discount']['amount'],
+                'type'        => $validation_result['discount']['type'],
+                'amount'      => $validation_result['discount']['amount'],
                 'description' => $validation_result['discount']['description'] ?? ''
             ];
         }
 
-        // Add affiliate information if available
         if ($validation_result['valid'] && !empty($validation_result['affiliate'])) {
             $response_data['affiliate'] = [
-                'id' => $validation_result['affiliate']['id'],
+                'id'   => $validation_result['affiliate']['id'],
                 'name' => $validation_result['affiliate']['name']
             ];
         }
@@ -204,192 +181,183 @@ class AFFCD_API_Endpoints {
     }
 
     /**
-     * List authorised domains
-     *
-     * @param WP_REST_Request $request Request object
-     * @return WP_REST_Response Response object
+     * List authorized domains (ordered by domain_url)
      */
     public function list_domains($request) {
         global $wpdb;
 
-        $domains_table = $wpdb->prefix . 'affcd_authorised_domains';
-        $page = max(1, intval($request->get_param('page') ?: 1));
+        $domains_table = $wpdb->prefix . 'affcd_authorized_domains';
+        $page     = max(1, intval($request->get_param('page') ?: 1));
         $per_page = min(100, max(1, intval($request->get_param('per_page') ?: 20)));
-        $offset = ($page - 1) * $per_page;
+        $offset   = ($page - 1) * $per_page;
 
         $domains = $wpdb->get_results($wpdb->prepare(
-            "SELECT * FROM {$domains_table} ORDER BY domain ASC LIMIT %d OFFSET %d",
+            "SELECT * FROM {$domains_table} ORDER BY domain_url ASC LIMIT %d OFFSET %d",
             $per_page,
             $offset
         ));
 
-        $total = $wpdb->get_var("SELECT COUNT(*) FROM {$domains_table}");
+        $total = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$domains_table}");
 
-        $response_data = [
-            'domains' => $domains,
-            'pagination' => [
-                'total' => intval($total),
-                'page' => $page,
+        return rest_ensure_response([
+            'domains'     => $domains,
+            'pagination'  => [
+                'total'    => $total,
+                'page'     => $page,
                 'per_page' => $per_page,
-                'pages' => ceil($total / $per_page)
+                'pages'    => (int) ceil($total / $per_page)
             ]
-        ];
-
-        return rest_ensure_response($response_data);
+        ]);
     }
 
     /**
-     * Add new authorised domain
-     *
-     * @param WP_REST_Request $request Request object
-     * @return WP_REST_Response|WP_Error Response object
+     * Add new authorized domain
      */
     public function add_domain($request) {
         global $wpdb;
 
-        $domain = Sanitise_text_field($request->get_param('domain'));
-        $api_key = Sanitise_text_field($request->get_param('api_key'));
-        $description = Sanitise_text_field($request->get_param('description'));
+        // Back-compat: accept "domain" or "domain_url"
+        $domain_url  = sanitize_text_field($request->get_param('domain_url') ?: $request->get_param('domain'));
+        $domain_name = sanitize_text_field($request->get_param('domain_name'));
+        $api_key     = sanitize_text_field($request->get_param('api_key'));
+        $api_secret  = sanitize_text_field($request->get_param('api_secret'));
+        $notes       = sanitize_text_field($request->get_param('description')); // map old "description" -> notes
+        $status      = sanitize_text_field($request->get_param('status') ?: 'active');
 
-        // Validate domain format
-        if (!filter_var('https://' . $domain, FILTER_VALIDATE_URL)) {
-            return new WP_Error(
-                'invalid_domain',
-                __('Invalid domain format', 'affiliatewp-cross-domain-plugin-suite'),
-                ['status' => 400]
-            );
+        // Normalise and validate URL
+        if (empty($domain_url)) {
+            return new WP_Error('invalid_domain', __('Domain URL is required', 'affiliatewp-cross-domain-plugin-suite'), ['status' => 400]);
+        }
+        $domain_url = $this->normalize_domain_url($domain_url);
+        if (!filter_var($domain_url, FILTER_VALIDATE_URL)) {
+            return new WP_Error('invalid_domain', __('Invalid domain URL', 'affiliatewp-cross-domain-plugin-suite'), ['status' => 400]);
         }
 
-        // Check if domain already exists
-        $domains_table = $wpdb->prefix . 'affcd_authorised_domains';
-        $existing = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$domains_table} WHERE domain = %s",
-            $domain
+        $domains_table = $wpdb->prefix . 'affcd_authorized_domains';
+
+        // Exists?
+        $existing = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$domains_table} WHERE domain_url = %s",
+            $domain_url
         ));
-
         if ($existing > 0) {
-            return new WP_Error(
-                'domain_exists',
-                __('Domain already exists', 'affiliatewp-cross-domain-plugin-suite'),
-                ['status' => 409]
-            );
+            return new WP_Error('domain_exists', __('Domain already exists', 'affiliatewp-cross-domain-plugin-suite'), ['status' => 409]);
         }
 
-        // Generate API key if not provided
+        // Keys
         if (empty($api_key)) {
-            $api_key = wp_generate_password(32, false);
+            $api_key = wp_generate_password(40, false);
+        }
+        if (empty($api_secret)) {
+            $api_secret = wp_generate_password(64, true, true);
         }
 
-        // Insert new domain
         $result = $wpdb->insert(
             $domains_table,
             [
-                'domain' => $domain,
-                'api_key' => $api_key,
-                'description' => $description,
-                'status' => 'active',
-                'created_at' => current_time('mysql'),
-                'last_verified' => null,
+                'domain_url'            => $domain_url,
+                'domain_name'           => $domain_name ?: parse_url($domain_url, PHP_URL_HOST),
+                'api_key'               => $api_key,
+                'api_secret'            => $api_secret,
+                'status'                => in_array($status, ['active','inactive','suspended','pending'], true) ? $status : 'active',
+                'verification_status'   => 'unverified',
+                'verification_method'   => 'file',
+                'notes'                 => $notes,
+                'created_by'            => get_current_user_id(),
+                'created_at'            => current_time('mysql'),
+                'updated_at'            => current_time('mysql'),
+                'last_verified_at'      => null,
                 'verification_failures' => 0
             ],
-            ['%s', '%s', '%s', '%s', '%s', '%s', '%d']
+            ['%s','%s','%s','%s','%s','%s','%s','%s','%d','%s','%s','%s','%d']
         );
 
         if ($result === false) {
-            return new WP_Error(
-                'database_error',
-                __('Failed to add domain', 'affiliatewp-cross-domain-plugin-suite'),
-                ['status' => 500]
-            );
+            return new WP_Error('database_error', __('Failed to add domain', 'affiliatewp-cross-domain-plugin-suite'), ['status' => 500]);
         }
 
-        $domain_id = $wpdb->insert_id;
+        $domain_id = (int) $wpdb->insert_id;
 
-        // Log the addition
-        affcd_log_activity('domain_added', [
-            'domain_id' => $domain_id,
-            'domain' => $domain,
-            'user_id' => get_current_user_id()
-        ]);
+        if (function_exists('affcd_log_activity')) {
+            affcd_log_activity('domain_added', [
+                'domain_id' => $domain_id,
+                'domain'    => $domain_url,
+                'user_id'   => get_current_user_id()
+            ]);
+        }
 
         return rest_ensure_response([
-            'id' => $domain_id,
-            'domain' => $domain,
-            'api_key' => $api_key,
-            'description' => $description,
-            'status' => 'active',
-            'message' => __('Domain added successfully', 'affiliatewp-cross-domain-plugin-suite')
+            'id'                  => $domain_id,
+            'domain_url'          => $domain_url,
+            'domain_name'         => $domain_name ?: parse_url($domain_url, PHP_URL_HOST),
+            'api_key'             => $api_key,
+            'api_secret'          => $api_secret,
+            'status'              => $status,
+            'verification_status' => 'unverified',
+            'message'             => __('Domain added successfully', 'affiliatewp-cross-domain-plugin-suite')
         ]);
     }
 
     /**
-     * Update authorised domain
-     *
-     * @param WP_REST_Request $request Request object
-     * @return WP_REST_Response|WP_Error Response object
+     * Update authorized domain
      */
     public function update_domain($request) {
         global $wpdb;
 
-        $domain_id = intval($request->get_param('id'));
-        $domain = Sanitise_text_field($request->get_param('domain'));
-        $description = Sanitise_text_field($request->get_param('description'));
-        $status = Sanitise_text_field($request->get_param('status'));
+        $domain_id   = (int) $request->get_param('id');
+        $domains_table = $wpdb->prefix . 'affcd_authorized_domains';
 
-        $domains_table = $wpdb->prefix . 'affcd_authorised_domains';
-
-        // Check if domain exists
-        $existing = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$domains_table} WHERE id = %d",
-            $domain_id
-        ));
-
+        $existing = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$domains_table} WHERE id = %d", $domain_id));
         if (!$existing) {
-            return new WP_Error(
-                'domain_not_found',
-                __('Domain not found', 'affiliatewp-cross-domain-plugin-suite'),
-                ['status' => 404]
-            );
+            return new WP_Error('domain_not_found', __('Domain not found', 'affiliatewp-cross-domain-plugin-suite'), ['status' => 404]);
         }
 
-        // Prepare update data
-        $update_data = [];
+        // Accept both old and new field names
+        $domain_url   = sanitize_text_field($request->get_param('domain_url') ?: $request->get_param('domain'));
+        $domain_name  = sanitize_text_field($request->get_param('domain_name'));
+        $status       = sanitize_text_field($request->get_param('status'));
+        $notes        = sanitize_text_field($request->get_param('description') ?: $request->get_param('notes'));
+        $verification_status = sanitize_text_field($request->get_param('verification_status'));
+
+        $update_data    = [];
         $update_formats = [];
 
-        if (!empty($domain) && $domain !== $existing->domain) {
-            if (!filter_var('https://' . $domain, FILTER_VALIDATE_URL)) {
-                return new WP_Error(
-                    'invalid_domain',
-                    __('Invalid domain format', 'affiliatewp-cross-domain-plugin-suite'),
-                    ['status' => 400]
-                );
+        if (!empty($domain_url) && $domain_url !== $existing->domain_url) {
+            $domain_url = $this->normalize_domain_url($domain_url);
+            if (!filter_var($domain_url, FILTER_VALIDATE_URL)) {
+                return new WP_Error('invalid_domain', __('Invalid domain URL', 'affiliatewp-cross-domain-plugin-suite'), ['status' => 400]);
             }
-            $update_data['domain'] = $domain;
+            $update_data['domain_url'] = $domain_url;
             $update_formats[] = '%s';
         }
 
-        if (!empty($description)) {
-            $update_data['description'] = $description;
+        if (!empty($domain_name)) {
+            $update_data['domain_name'] = $domain_name;
             $update_formats[] = '%s';
         }
 
-        if (!empty($status) && in_array($status, ['active', 'inactive', 'suspended'])) {
+        if (!empty($notes)) {
+            $update_data['notes'] = $notes;
+            $update_formats[] = '%s';
+        }
+
+        if (!empty($status) && in_array($status, ['active','inactive','suspended','pending'], true)) {
             $update_data['status'] = $status;
             $update_formats[] = '%s';
         }
 
+        if (!empty($verification_status) && in_array($verification_status, ['verified','unverified','failed'], true)) {
+            $update_data['verification_status'] = $verification_status;
+            $update_formats[] = '%s';
+        }
+
         if (empty($update_data)) {
-            return new WP_Error(
-                'no_changes',
-                __('No changes provided', 'affiliatewp-cross-domain-plugin-suite'),
-                ['status' => 400]
-            );
+            return new WP_Error('no_changes', __('No changes provided', 'affiliatewp-cross-domain-plugin-suite'), ['status' => 400]);
         }
 
         $update_data['updated_at'] = current_time('mysql');
         $update_formats[] = '%s';
 
-        // Update domain
         $result = $wpdb->update(
             $domains_table,
             $update_data,
@@ -399,111 +367,72 @@ class AFFCD_API_Endpoints {
         );
 
         if ($result === false) {
-            return new WP_Error(
-                'database_error',
-                __('Failed to update domain', 'affiliatewp-cross-domain-plugin-suite'),
-                ['status' => 500]
-            );
+            return new WP_Error('database_error', __('Failed to update domain', 'affiliatewp-cross-domain-plugin-suite'), ['status' => 500]);
         }
 
-        // Log the update
-        affcd_log_activity('domain_updated', [
-            'domain_id' => $domain_id,
-            'changes' => $update_data,
-            'user_id' => get_current_user_id()
-        ]);
+        if (function_exists('affcd_log_activity')) {
+            affcd_log_activity('domain_updated', [
+                'domain_id' => $domain_id,
+                'changes'   => $update_data,
+                'user_id'   => get_current_user_id()
+            ]);
+        }
 
-        return rest_ensure_response([
-            'message' => __('Domain updated successfully', 'affiliatewp-cross-domain-plugin-suite')
-        ]);
+        return rest_ensure_response(['message' => __('Domain updated successfully', 'affiliatewp-cross-domain-plugin-suite')]);
     }
 
     /**
-     * Delete authorised domain
-     *
-     * @param WP_REST_Request $request Request object
-     * @return WP_REST_Response|WP_Error Response object
+     * Delete authorized domain
      */
     public function delete_domain($request) {
         global $wpdb;
 
-        $domain_id = intval($request->get_param('id'));
-        $domains_table = $wpdb->prefix . 'affcd_authorised_domains';
+        $domain_id = (int) $request->get_param('id');
+        $domains_table = $wpdb->prefix . 'affcd_authorized_domains';
 
-        // Check if domain exists
-        $existing = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$domains_table} WHERE id = %d",
-            $domain_id
-        ));
-
+        $existing = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$domains_table} WHERE id = %d", $domain_id));
         if (!$existing) {
-            return new WP_Error(
-                'domain_not_found',
-                __('Domain not found', 'affiliatewp-cross-domain-plugin-suite'),
-                ['status' => 404]
-            );
+            return new WP_Error('domain_not_found', __('Domain not found', 'affiliatewp-cross-domain-plugin-suite'), ['status' => 404]);
         }
 
-        // Delete domain
-        $result = $wpdb->delete(
-            $domains_table,
-            ['id' => $domain_id],
-            ['%d']
-        );
+        $result = $wpdb->delete($domains_table, ['id' => $domain_id], ['%d']);
 
         if ($result === false) {
-            return new WP_Error(
-                'database_error',
-                __('Failed to delete domain', 'affiliatewp-cross-domain-plugin-suite'),
-                ['status' => 500]
-            );
+            return new WP_Error('database_error', __('Failed to delete domain', 'affiliatewp-cross-domain-plugin-suite'), ['status' => 500]);
         }
 
-        // Log the deletion
-        affcd_log_activity('domain_deleted', [
-            'domain_id' => $domain_id,
-            'domain' => $existing->domain,
-            'user_id' => get_current_user_id()
-        ]);
+        if (function_exists('affcd_log_activity')) {
+            affcd_log_activity('domain_deleted', [
+                'domain_id' => $domain_id,
+                'domain'    => $existing->domain_url,
+                'user_id'   => get_current_user_id()
+            ]);
+        }
 
-        return rest_ensure_response([
-            'message' => __('Domain deleted successfully', 'affiliatewp-cross-domain-plugin-suite')
-        ]);
+        return rest_ensure_response(['message' => __('Domain deleted successfully', 'affiliatewp-cross-domain-plugin-suite')]);
     }
 
     /**
      * Verify domain connection
-     *
-     * @param WP_REST_Request $request Request object
-     * @return WP_REST_Response|WP_Error Response object
      */
     public function verify_domain($request) {
         global $wpdb;
 
-        $domain_id = intval($request->get_param('id'));
-        $domains_table = $wpdb->prefix . 'affcd_authorised_domains';
+        $domain_id = (int) $request->get_param('id');
+        $domains_table = $wpdb->prefix . 'affcd_authorized_domains';
 
-        // Get domain details
-        $domain = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$domains_table} WHERE id = %d",
-            $domain_id
-        ));
-
+        $domain = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$domains_table} WHERE id = %d", $domain_id));
         if (!$domain) {
-            return new WP_Error(
-                'domain_not_found',
-                __('Domain not found', 'affiliatewp-cross-domain-plugin-suite'),
-                ['status' => 404]
-            );
+            return new WP_Error('domain_not_found', __('Domain not found', 'affiliatewp-cross-domain-plugin-suite'), ['status' => 404]);
         }
 
-        // Test connection
-        $test_url = 'https://' . $domain->domain . '/wp-json/wp/v2/';
+        // Build test URL
+        $base = rtrim($this->normalize_domain_url($domain->domain_url), '/');
+        $test_url = $base . '/wp-json/wp/v2/';
+
         $response = wp_remote_get($test_url, [
             'timeout' => 10,
-            'headers' => [
-                'User-Agent' => 'AffiliateWP-Cross-Domain/' . AFFCD_VERSION
-            ]
+            'headers' => ['User-Agent' => 'AffiliateWP-Cross-Domain/' . (defined('AFFCD_VERSION') ? AFFCD_VERSION : '1.0')]
         ]);
 
         $verification_success = false;
@@ -512,7 +441,7 @@ class AFFCD_API_Endpoints {
         if (is_wp_error($response)) {
             $verification_message = $response->get_error_message();
         } else {
-            $status_code = wp_remote_retrieve_response_code($response);
+            $status_code = (int) wp_remote_retrieve_response_code($response);
             if ($status_code === 200) {
                 $verification_success = true;
                 $verification_message = __('Connection verified successfully', 'affiliatewp-cross-domain-plugin-suite');
@@ -521,16 +450,18 @@ class AFFCD_API_Endpoints {
             }
         }
 
-        // Update verification status
         $update_data = [
-            'last_verified' => current_time('mysql')
+            'last_verified_at'      => current_time('mysql'),
+            'updated_at'            => current_time('mysql')
         ];
 
         if ($verification_success) {
             $update_data['verification_failures'] = 0;
-            $update_data['status'] = 'active';
+            $update_data['verification_status']   = 'verified';
+            $update_data['status']                = 'active';
         } else {
-            $update_data['verification_failures'] = intval($domain->verification_failures) + 1;
+            $update_data['verification_failures'] = (int) $domain->verification_failures + 1;
+            $update_data['verification_status']   = 'failed';
             if ($update_data['verification_failures'] >= 3) {
                 $update_data['status'] = 'suspended';
             }
@@ -540,64 +471,49 @@ class AFFCD_API_Endpoints {
             $domains_table,
             $update_data,
             ['id' => $domain_id],
-            ['%s', '%d', '%s'],
+            ['%s','%s','%d','%s','%s'],
             ['%d']
         );
 
         return rest_ensure_response([
-            'success' => $verification_success,
-            'message' => $verification_message,
-            'failures' => $update_data['verification_failures']
+            'success'  => $verification_success,
+            'message'  => $verification_message,
+            'failures' => (int) $update_data['verification_failures']
         ]);
     }
 
     /**
      * Get analytics summary
-     *
-     * @param WP_REST_Request $request Request object
-     * @return WP_REST_Response Response object
      */
     public function get_analytics_summary($request) {
         global $wpdb;
 
         $analytics_table = $wpdb->prefix . 'affcd_analytics';
-        $codes_table = $wpdb->prefix . 'affcd_vanity_codes';
-        $domains_table = $wpdb->prefix . 'affcd_authorised_domains';
+        $codes_table     = $wpdb->prefix . 'affcd_vanity_codes';
+        $domains_table   = $wpdb->prefix . 'affcd_authorized_domains';
 
-        // Get date range
-        $date_from = Sanitise_text_field($request->get_param('date_from')) ?: date('Y-m-d', strtotime('-30 days'));
-        $date_to = Sanitise_text_field($request->get_param('date_to')) ?: date('Y-m-d');
+        $date_from = sanitize_text_field($request->get_param('date_from')) ?: date('Y-m-d', strtotime('-30 days'));
+        $date_to   = sanitize_text_field($request->get_param('date_to'))   ?: date('Y-m-d');
 
-        // Total validations
-        $total_validations = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$analytics_table} 
-             WHERE event_type = 'code_validation' 
+        $total_validations = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$analytics_table}
+             WHERE event_type = 'code_validation'
              AND DATE(created_at) BETWEEN %s AND %s",
-            $date_from,
-            $date_to
+            $date_from, $date_to
         ));
 
-        // Successful validations
-        $successful_validations = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$analytics_table} 
-             WHERE event_type = 'code_validation' 
-             AND event_data LIKE '%\"valid\":true%'
-             AND DATE(created_at) BETWEEN %s AND %s",
-            $date_from,
-            $date_to
+        $successful_validations = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$analytics_table}
+             WHERE event_type = 'code_validation'
+               AND event_data LIKE '%\"valid\":true%'
+               AND DATE(created_at) BETWEEN %s AND %s",
+            $date_from, $date_to
         ));
 
-        // Total active codes
-        $total_active_codes = $wpdb->get_var(
-            "SELECT COUNT(*) FROM {$codes_table} WHERE status = 'active'"
-        );
+        $total_active_codes = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$codes_table} WHERE status = 'active'");
 
-        // Total authorised domains
-        $total_domains = $wpdb->get_var(
-            "SELECT COUNT(*) FROM {$domains_table} WHERE status = 'active'"
-        );
+        $total_domains = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$domains_table} WHERE status = 'active'");
 
-        // Top performing codes
         $top_codes = $wpdb->get_results($wpdb->prepare(
             "SELECT 
                 JSON_UNQUOTE(JSON_EXTRACT(event_data, '$.code')) as code,
@@ -605,15 +521,13 @@ class AFFCD_API_Endpoints {
                 SUM(CASE WHEN event_data LIKE '%\"valid\":true%' THEN 1 ELSE 0 END) as successful
              FROM {$analytics_table}
              WHERE event_type = 'code_validation'
-             AND DATE(created_at) BETWEEN %s AND %s
+               AND DATE(created_at) BETWEEN %s AND %s
              GROUP BY JSON_UNQUOTE(JSON_EXTRACT(event_data, '$.code'))
              ORDER BY validations DESC
              LIMIT 10",
-            $date_from,
-            $date_to
+            $date_from, $date_to
         ));
 
-        // Daily validation counts
         $daily_validations = $wpdb->get_results($wpdb->prepare(
             "SELECT 
                 DATE(created_at) as date,
@@ -621,54 +535,41 @@ class AFFCD_API_Endpoints {
                 SUM(CASE WHEN event_data LIKE '%\"valid\":true%' THEN 1 ELSE 0 END) as successful
              FROM {$analytics_table}
              WHERE event_type = 'code_validation'
-             AND DATE(created_at) BETWEEN %s AND %s
+               AND DATE(created_at) BETWEEN %s AND %s
              GROUP BY DATE(created_at)
              ORDER BY date ASC",
-            $date_from,
-            $date_to
+            $date_from, $date_to
         ));
 
         return rest_ensure_response([
             'summary' => [
-                'total_validations' => intval($total_validations),
-                'successful_validations' => intval($successful_validations),
-                'success_rate' => $total_validations > 0 ? round(($successful_validations / $total_validations) * 100, 2) : 0,
-                'total_active_codes' => intval($total_active_codes),
-                'total_domains' => intval($total_domains)
+                'total_validations'      => $total_validations,
+                'successful_validations' => $successful_validations,
+                'success_rate'           => $total_validations > 0 ? round(($successful_validations / $total_validations) * 100, 2) : 0,
+                'total_active_codes'     => $total_active_codes,
+                'total_domains'          => $total_domains
             ],
-            'top_codes' => $top_codes,
+            'top_codes'         => $top_codes,
             'daily_validations' => $daily_validations,
-            'date_range' => [
-                'from' => $date_from,
-                'to' => $date_to
-            ]
+            'date_range'        => ['from' => $date_from, 'to' => $date_to]
         ]);
     }
 
     /**
      * Get code analytics
-     *
-     * @param WP_REST_Request $request Request object
-     * @return WP_REST_Response Response object
      */
     public function get_code_analytics($request) {
         global $wpdb;
 
         $analytics_table = $wpdb->prefix . 'affcd_analytics';
-        $code = Sanitise_text_field($request->get_param('code'));
-        
+        $code = sanitize_text_field($request->get_param('code'));
         if (empty($code)) {
-            return new WP_Error(
-                'missing_code',
-                __('Code parameter is required', 'affiliatewp-cross-domain-plugin-suite'),
-                ['status' => 400]
-            );
+            return new WP_Error('missing_code', __('Code parameter is required', 'affiliatewp-cross-domain-plugin-suite'), ['status' => 400]);
         }
 
-        $date_from = Sanitise_text_field($request->get_param('date_from')) ?: date('Y-m-d', strtotime('-30 days'));
-        $date_to = Sanitise_text_field($request->get_param('date_to')) ?: date('Y-m-d');
+        $date_from = sanitize_text_field($request->get_param('date_from')) ?: date('Y-m-d', strtotime('-30 days'));
+        $date_to   = sanitize_text_field($request->get_param('date_to'))   ?: date('Y-m-d');
 
-        // Code validation history
         $validation_history = $wpdb->get_results($wpdb->prepare(
             "SELECT 
                 created_at,
@@ -677,16 +578,13 @@ class AFFCD_API_Endpoints {
                 JSON_UNQUOTE(JSON_EXTRACT(event_data, '$.message')) as message
              FROM {$analytics_table}
              WHERE event_type = 'code_validation'
-             AND JSON_UNQUOTE(JSON_EXTRACT(event_data, '$.code')) = %s
-             AND DATE(created_at) BETWEEN %s AND %s
+               AND JSON_UNQUOTE(JSON_EXTRACT(event_data, '$.code')) = %s
+               AND DATE(created_at) BETWEEN %s AND %s
              ORDER BY created_at DESC
              LIMIT 100",
-            $code,
-            $date_from,
-            $date_to
+            $code, $date_from, $date_to
         ));
 
-        // Domain breakdown
         $domain_breakdown = $wpdb->get_results($wpdb->prepare(
             "SELECT 
                 JSON_UNQUOTE(JSON_EXTRACT(event_data, '$.domain')) as domain,
@@ -694,39 +592,31 @@ class AFFCD_API_Endpoints {
                 SUM(CASE WHEN event_data LIKE '%\"valid\":true%' THEN 1 ELSE 0 END) as successful_validations
              FROM {$analytics_table}
              WHERE event_type = 'code_validation'
-             AND JSON_UNQUOTE(JSON_EXTRACT(event_data, '$.code')) = %s
-             AND DATE(created_at) BETWEEN %s AND %s
+               AND JSON_UNQUOTE(JSON_EXTRACT(event_data, '$.code')) = %s
+               AND DATE(created_at) BETWEEN %s AND %s
              GROUP BY JSON_UNQUOTE(JSON_EXTRACT(event_data, '$.domain'))
              ORDER BY total_validations DESC",
-            $code,
-            $date_from,
-            $date_to
+            $code, $date_from, $date_to
         ));
 
         return rest_ensure_response([
-            'code' => $code,
+            'code'               => $code,
             'validation_history' => $validation_history,
-            'domain_breakdown' => $domain_breakdown,
-            'date_range' => [
-                'from' => $date_from,
-                'to' => $date_to
-            ]
+            'domain_breakdown'   => $domain_breakdown,
+            'date_range'         => ['from' => $date_from, 'to' => $date_to]
         ]);
     }
 
     /**
-     * Health check endpoint
-     *
-     * @param WP_REST_Request $request Request object
-     * @return WP_REST_Response Response object
+     * Health check
      */
     public function health_check($request) {
         global $wpdb;
 
         $health_status = 'healthy';
-        $checks = [];
+        $checks        = [];
 
-        // Database connectivity
+        // DB
         try {
             $wpdb->get_var("SELECT 1");
             $checks['database'] = ['status' => 'ok', 'message' => 'Database connection successful'];
@@ -738,7 +628,7 @@ class AFFCD_API_Endpoints {
         // Required tables
         $required_tables = [
             $wpdb->prefix . 'affcd_vanity_codes',
-            $wpdb->prefix . 'affcd_authorised_domains',
+            $wpdb->prefix . 'affcd_authorized_domains',
             $wpdb->prefix . 'affcd_analytics'
         ];
 
@@ -757,20 +647,18 @@ class AFFCD_API_Endpoints {
             $health_status = 'unhealthy';
         }
 
-        // AffiliateWP dependency
+        // AffiliateWP
         if (function_exists('affiliate_wp')) {
             $checks['affiliatewp'] = ['status' => 'ok', 'message' => 'AffiliateWP is active'];
         } else {
             $checks['affiliatewp'] = ['status' => 'warning', 'message' => 'AffiliateWP not found'];
         }
 
-        // WordPress version
+        // WP version
         global $wp_version;
-        if (version_compare($wp_version, '5.0', '>=')) {
-            $checks['wordpress'] = ['status' => 'ok', 'message' => 'WordPress version compatible'];
-        } else {
-            $checks['wordpress'] = ['status' => 'warning', 'message' => 'WordPress version may be incompatible'];
-        }
+        $checks['wordpress'] = version_compare($wp_version, '5.0', '>=') ?
+            ['status' => 'ok', 'message' => 'WordPress version compatible'] :
+            ['status' => 'warning', 'message' => 'WordPress version may be incompatible'];
 
         // PHP version
         if (version_compare(PHP_VERSION, '7.4', '>=')) {
@@ -781,245 +669,212 @@ class AFFCD_API_Endpoints {
         }
 
         return rest_ensure_response([
-            'status' => $health_status,
-            'version' => AFFCD_VERSION,
+            'status'    => $health_status,
+            'version'   => defined('AFFCD_VERSION') ? AFFCD_VERSION : '1.0',
             'timestamp' => current_time('mysql'),
-            'checks' => $checks
+            'checks'    => $checks
         ]);
     }
 
     /**
      * Get client configuration
-     *
-     * @param WP_REST_Request $request Request object
-     * @return WP_REST_Response Response object
      */
     public function get_client_config($request) {
         $domain = $this->get_request_domain($request);
-        
-        // Get domain-specific settings
+
         $settings = get_option('affcd_settings', []);
-        
+
         $config = [
             'api_version' => 'v1',
-            'endpoints' => [
+            'endpoints'   => [
                 'validate_code' => rest_url($this->namespace . '/validate-code'),
-                'health' => rest_url($this->namespace . '/health')
+                'health'        => rest_url($this->namespace . '/health')
             ],
             'rate_limits' => [
                 'requests_per_hour' => $settings['rate_limit_requests_per_hour'] ?? 1000
             ],
-            'cache' => [
-                'enabled' => $settings['cache_enabled'] ?? true,
+            'cache'       => [
+                'enabled'  => $settings['cache_enabled'] ?? true,
                 'duration' => $settings['cache_duration'] ?? 900
             ],
-            'security' => [
+            'security'    => [
                 'require_https' => $settings['require_https'] ?? true
-            ]
+            ],
+            'domain'      => $domain
         ];
 
         return rest_ensure_response($config);
     }
 
     /**
-     * Test webhook endpoint
-     *
-     * @param WP_REST_Request $request Request object
-     * @return WP_REST_Response Response object
+     * Test webhook
      */
     public function test_webhook($request) {
         $webhook_url = esc_url_raw($request->get_param('url'));
-        
+
         if (empty($webhook_url)) {
-            return new WP_Error(
-                'missing_url',
-                __('Webhook URL is required', 'affiliatewp-cross-domain-plugin-suite'),
-                ['status' => 400]
-            );
+            return new WP_Error('missing_url', __('Webhook URL is required', 'affiliatewp-cross-domain-plugin-suite'), ['status' => 400]);
         }
 
-        // Test webhook with sample data
         $test_data = [
-            'event' => 'test',
+            'event'     => 'test',
             'timestamp' => current_time('mysql'),
-            'data' => [
-                'message' => 'This is a test webhook from AffiliateWP Cross Domain Plugin Suite'
-            ]
+            'data'      => ['message' => 'This is a test webhook from AffiliateWP Cross Domain Plugin Suite']
         ];
 
         $response = wp_remote_post($webhook_url, [
             'headers' => [
                 'Content-Type' => 'application/json',
-                'User-Agent' => 'AffiliateWP-Cross-Domain/' . AFFCD_VERSION
+                'User-Agent'   => 'AffiliateWP-Cross-Domain/' . (defined('AFFCD_VERSION') ? AFFCD_VERSION : '1.0')
             ],
-            'body' => wp_json_encode($test_data),
+            'body'    => wp_json_encode($test_data),
             'timeout' => 15
         ]);
 
         if (is_wp_error($response)) {
-            return new WP_Error(
-                'webhook_failed',
-                $response->get_error_message(),
-                ['status' => 500]
-            );
+            return new WP_Error('webhook_failed', $response->get_error_message(), ['status' => 500]);
         }
 
-        $status_code = wp_remote_retrieve_response_code($response);
-        $success = $status_code >= 200 && $status_code < 300;
+        $status_code = (int) wp_remote_retrieve_response_code($response);
+        $success     = $status_code >= 200 && $status_code < 300;
 
         return rest_ensure_response([
-            'success' => $success,
+            'success'     => $success,
             'status_code' => $status_code,
-            'message' => $success 
+            'message'     => $success
                 ? __('Webhook test successful', 'affiliatewp-cross-domain-plugin-suite')
                 : sprintf(__('Webhook test failed with status %d', 'affiliatewp-cross-domain-plugin-suite'), $status_code)
         ]);
     }
 
     /**
-     * Validate API request permission
-     *
-     * @param WP_REST_Request $request Request object
-     * @return bool|WP_Error Permission result
+     * Permission checks
      */
     public function validate_api_request($request) {
         return $this->security_validator->validate_request($request);
     }
-
-    /**
-     * Validate admin request permission
-     *
-     * @param WP_REST_Request $request Request object
-     * @return bool Permission result
-     */
     public function validate_admin_request($request) {
         return current_user_can('manage_affiliates');
     }
 
     /**
-     * Get validation code arguments
-     *
-     * @return array Arguments array
+     * Args
      */
     private function get_validate_code_args() {
         return [
             'code' => [
-                'required' => true,
-                'type' => 'string',
-                'Sanitise_callback' => 'Sanitise_text_field',
-                'validate_callback' => function($param) {
-                    return !empty($param) && strlen($param) <= 50;
-                }
+                'required'           => true,
+                'type'               => 'string',
+                'sanitize_callback'  => 'sanitize_text_field',
+                'validate_callback'  => function($param){ return !empty($param) && strlen($param) <= 100; }
             ],
             'domain' => [
-                'required' => false,
-                'type' => 'string',
-                'Sanitise_callback' => 'Sanitise_text_field'
+                'required'           => false,
+                'type'               => 'string',
+                'sanitize_callback'  => 'sanitize_text_field'
             ],
             'user_data' => [
                 'required' => false,
-                'type' => 'object',
-                'default' => []
+                'type'     => 'object',
+                'default'  => []
             ]
         ];
     }
 
-    /**
-     * Get domain arguments
-     *
-     * @return array Arguments array
-     */
     private function get_domain_args() {
         return [
+            // accept both "domain_url" and legacy "domain"
+            'domain_url' => [
+                'required'           => false,
+                'type'               => 'string',
+                'sanitize_callback'  => 'sanitize_text_field',
+                'validate_callback'  => function($param){ return !empty($param); }
+            ],
             'domain' => [
-                'required' => true,
-                'type' => 'string',
-                'Sanitise_callback' => 'Sanitise_text_field',
-                'validate_callback' => function($param) {
-                    return !empty($param) && filter_var('https://' . $param, FILTER_VALIDATE_URL);
-                }
+                'required'           => false,
+                'type'               => 'string',
+                'sanitize_callback'  => 'sanitize_text_field'
+            ],
+            'domain_name' => [
+                'required'           => false,
+                'type'               => 'string',
+                'sanitize_callback'  => 'sanitize_text_field'
             ],
             'api_key' => [
-                'required' => false,
-                'type' => 'string',
-                'Sanitise_callback' => 'Sanitise_text_field'
+                'required'           => false,
+                'type'               => 'string',
+                'sanitize_callback'  => 'sanitize_text_field'
+            ],
+            'api_secret' => [
+                'required'           => false,
+                'type'               => 'string',
+                'sanitize_callback'  => 'sanitize_text_field'
             ],
             'description' => [
-                'required' => false,
-                'type' => 'string',
-                'Sanitise_callback' => 'Sanitise_text_field'
+                'required'           => false,
+                'type'               => 'string',
+                'sanitize_callback'  => 'sanitize_text_field'
+            ],
+            'notes' => [
+                'required'           => false,
+                'type'               => 'string',
+                'sanitize_callback'  => 'sanitize_text_field'
             ],
             'status' => [
                 'required' => false,
-                'type' => 'string',
-                'enum' => ['active', 'inactive', 'suspended'],
-                'default' => 'active'
+                'type'     => 'string',
+                'enum'     => ['active','inactive','suspended','pending'],
+                'default'  => 'active'
+            ],
+            'verification_status' => [
+                'required' => false,
+                'type'     => 'string',
+                'enum'     => ['verified','unverified','failed']
             ]
         ];
     }
 
-    /**
-     * Get analytics arguments
-     *
-     * @return array Arguments array
-     */
     private function get_analytics_args() {
         return [
             'date_from' => [
                 'required' => false,
-                'type' => 'string',
-                'format' => 'date',
-                'default' => date('Y-m-d', strtotime('-30 days'))
+                'type'     => 'string',
+                'format'   => 'date',
+                'default'  => date('Y-m-d', strtotime('-30 days'))
             ],
             'date_to' => [
                 'required' => false,
-                'type' => 'string',
-                'format' => 'date',
-                'default' => date('Y-m-d')
+                'type'     => 'string',
+                'format'   => 'date',
+                'default'  => date('Y-m-d')
             ],
             'code' => [
-                'required' => false,
-                'type' => 'string',
-                'Sanitise_callback' => 'Sanitise_text_field'
+                'required'          => false,
+                'type'              => 'string',
+                'sanitize_callback' => 'sanitize_text_field'
             ]
         ];
     }
 
     /**
-     * Log validation attempt
-     *
-     * @param string $code Affiliate code
-     * @param string $domain Requesting domain
-     * @param array $result Validation result
-     * @param WP_REST_Request $request Request object
+     * Logging helpers
      */
     private function log_validation_attempt($code, $domain, $result, $request) {
         $event_data = [
-            'code' => $code,
-            'domain' => $domain,
-            'valid' => $result['valid'],
-            'message' => $result['message'],
+            'code'       => $code,
+            'domain'     => $domain,
+            'valid'      => $result['valid'],
+            'message'    => $result['message'],
             'ip_address' => $this->get_client_ip($request),
             'user_agent' => $request->get_header('user_agent')
         ];
-
-        affcd_log_activity('code_validation', $event_data);
+        if (function_exists('affcd_log_activity')) {
+            affcd_log_activity('code_validation', $event_data);
+        }
     }
 
-    /**
-     * Get client IP address from request
-     *
-     * @param WP_REST_Request $request Request object
-     * @return string IP address
-     */
     private function get_client_ip($request) {
-        $ip_headers = [
-            'HTTP_X_FORWARDED_FOR',
-            'HTTP_X_REAL_IP',
-            'HTTP_CLIENT_IP',
-            'REMOTE_ADDR'
-        ];
-
+        $ip_headers = ['HTTP_X_FORWARDED_FOR','HTTP_X_REAL_IP','HTTP_CLIENT_IP','REMOTE_ADDR'];
         foreach ($ip_headers as $header) {
             $ip = $request->get_header($header);
             if (!empty($ip)) {
@@ -1031,21 +886,11 @@ class AFFCD_API_Endpoints {
                 }
             }
         }
-
         return $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
     }
 
-    /**
-     * Get request domain
-     *
-     * @param WP_REST_Request $request Request object
-     * @return string Domain
-     */
     private function get_request_domain($request) {
-        $domain = $request->get_param('domain');
-        if (empty($domain)) {
-            $domain = $request->get_header('x_client_domain');
-        }
+        $domain = $request->get_param('domain') ?: $request->get_header('x_client_domain');
         if (empty($domain)) {
             $referer = $request->get_header('referer');
             if ($referer) {
@@ -1053,6 +898,14 @@ class AFFCD_API_Endpoints {
                 $domain = $parsed['host'] ?? '';
             }
         }
-        return Sanitise_text_field($domain);
+        return sanitize_text_field($domain);
+    }
+
+    private function normalize_domain_url($url) {
+        $url = trim($url);
+        if (!preg_match('#^https?://#i', $url)) {
+            $url = 'https://' . $url;
+        }
+        return $url;
     }
 }

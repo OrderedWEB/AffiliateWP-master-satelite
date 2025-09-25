@@ -13,7 +13,7 @@ jQuery(document).ready(function ($) {
 
   const DomainManagement = {
     /**
-     * Initialse domain management
+     * Initialize domain management
      */
     init: function () {
       this.bindEvents();
@@ -75,7 +75,7 @@ jQuery(document).ready(function ($) {
     },
 
     /**
-     * Initialse DataTables
+     * Initialize DataTables
      */
     initDataTables: function () {
       if ($("#domains-table").length) {
@@ -876,7 +876,7 @@ jQuery(document).ready(function ($) {
     });
   };
 
-  // Initialise on document ready
+  // Initialize on document ready
   DomainManagement.init();
 
   // Auto-refresh stats every 30 seconds

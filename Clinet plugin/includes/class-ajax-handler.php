@@ -88,7 +88,7 @@ class ACI_AJAX_Handler {
     public function ajax_validate_code() {
         $this->verify_ajax_request('aci_nonce');
 
-        $code = Sanitise_text_field($_POST['code'] ?? '');
+        $code = sanitize_text_field($_POST['code'] ?? '');
         $real_time = filter_var($_POST['real_time'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
         if (empty($code)) {
@@ -109,8 +109,8 @@ class ACI_AJAX_Handler {
         // Prepare additional data
         $additional_data = [
             'page_url' => esc_url_raw($_POST['current_url'] ?? ''),
-            'page_title' => Sanitise_text_field($_POST['page_title'] ?? ''),
-            'user_agent' => Sanitise_text_field($_POST['user_agent'] ?? ''),
+            'page_title' => sanitize_text_field($_POST['page_title'] ?? ''),
+            'user_agent' => sanitize_text_field($_POST['user_agent'] ?? ''),
             'referer' => wp_get_referer(),
             'user_id' => get_current_user_id(),
             'session_id' => $this->session_manager->get_session_id(),
@@ -156,9 +156,9 @@ class ACI_AJAX_Handler {
         $this->verify_ajax_request('aci_nonce');
 
         $original_price = floatval($_POST['original_price'] ?? 0);
-        $code = Sanitise_text_field($_POST['code'] ?? '');
-        $currency = Sanitise_text_field($_POST['currency'] ?? 'USD');
-        $product_id = Sanitise_text_field($_POST['product_id'] ?? '');
+        $code = sanitize_text_field($_POST['code'] ?? '');
+        $currency = sanitize_text_field($_POST['currency'] ?? 'USD');
+        $product_id = sanitize_text_field($_POST['product_id'] ?? '');
         $quantity = intval($_POST['quantity'] ?? 1);
 
         if ($original_price <= 0) {
@@ -174,8 +174,8 @@ class ACI_AJAX_Handler {
             'product_id' => $product_id,
             'quantity' => max(1, $quantity),
             'apply_tax' => filter_var($_POST['apply_tax'] ?? true, FILTER_VALIDATE_BOOLEAN),
-            'tax_country' => Sanitise_text_field($_POST['tax_country'] ?? ''),
-            'tax_state' => Sanitise_text_field($_POST['tax_state'] ?? ''),
+            'tax_country' => sanitize_text_field($_POST['tax_country'] ?? ''),
+            'tax_state' => sanitize_text_field($_POST['tax_state'] ?? ''),
             'include_shipping' => filter_var($_POST['include_shipping'] ?? false, FILTER_VALIDATE_BOOLEAN),
             'shipping_amount' => floatval($_POST['shipping_amount'] ?? 0)
         ];
@@ -221,7 +221,7 @@ class ACI_AJAX_Handler {
     public function ajax_track_event() {
         $this->verify_ajax_request('aci_nonce');
 
-        $event_type = Sanitise_text_field($_POST['event_type'] ?? '');
+        $event_type = sanitize_text_field($_POST['event_type'] ?? '');
         $event_data = $_POST['event_data'] ?? [];
 
         if (empty($event_type)) {
@@ -231,26 +231,26 @@ class ACI_AJAX_Handler {
             ]);
         }
 
-        // Sanitise event data
-        $Sanitised_data = [];
+        // Sanitize event data
+        $Sanitized_data = [];
         if (is_array($event_data)) {
             foreach ($event_data as $key => $value) {
-                $Sanitised_data[Sanitise_key($key)] = Sanitise_text_field($value);
+                $Sanitized_data[sanitize_key($key)] = sanitize_text_field($value);
             }
         }
 
         // Add context data
-        $Sanitised_data['timestamp'] = Sanitise_text_field($_POST['timestamp'] ?? '');
-        $Sanitised_data['url'] = esc_url_raw($_POST['url'] ?? '');
-        $Sanitised_data['user_agent'] = Sanitise_text_field($_POST['user_agent'] ?? '');
+        $Sanitized_data['timestamp'] = sanitize_text_field($_POST['timestamp'] ?? '');
+        $Sanitized_data['url'] = esc_url_raw($_POST['url'] ?? '');
+        $Sanitized_data['user_agent'] = sanitize_text_field($_POST['user_agent'] ?? '');
 
         // Log the event
-        aci_log_activity($event_type, $Sanitised_data);
+        aci_log_activity($event_type, $Sanitized_data);
 
         // Track with API if needed
         $code = $this->session_manager->get_affiliate_data('code');
         if (!empty($code) && in_array($event_type, ['impression', 'click', 'view'])) {
-            $this->api_client->track_impression($code, $Sanitised_data);
+            $this->api_client->track_impression($code, $Sanitized_data);
         }
 
         wp_send_json_success(['message' => __('Event tracked successfully.', 'affiliate-client-integration')]);
@@ -280,7 +280,7 @@ class ACI_AJAX_Handler {
     public function ajax_get_code_details() {
         $this->verify_ajax_request('aci_nonce');
 
-        $code = Sanitise_text_field($_POST['code'] ?? '');
+        $code = sanitize_text_field($_POST['code'] ?? '');
 
         if (empty($code)) {
             wp_send_json_error([
@@ -307,7 +307,7 @@ class ACI_AJAX_Handler {
     public function ajax_apply_discount() {
         $this->verify_ajax_request('aci_nonce');
 
-        $code = Sanitise_text_field($_POST['code'] ?? '');
+        $code = sanitize_text_field($_POST['code'] ?? '');
 
         if (empty($code)) {
             wp_send_json_error([
@@ -400,8 +400,8 @@ class ACI_AJAX_Handler {
             ]);
         }
 
-        // Sanitise settings
-        $Sanitised_settings = [];
+        // Sanitize settings
+        $Sanitized_settings = [];
         $allowed_settings = [
             'master_domain', 'api_key', 'api_secret', 'popup_enabled', 
             'popup_style', 'auto_apply_discount', 'track_conversions',
@@ -412,33 +412,33 @@ class ACI_AJAX_Handler {
             if (isset($settings[$key])) {
                 switch ($key) {
                     case 'master_domain':
-                        $Sanitised_settings[$key] = esc_url_raw($settings[$key]);
+                        $Sanitized_settings[$key] = esc_url_raw($settings[$key]);
                         break;
                     case 'popup_enabled':
                     case 'auto_apply_discount':
                     case 'track_conversions':
                     case 'debug_mode':
-                        $Sanitised_settings[$key] = filter_var($settings[$key], FILTER_VALIDATE_BOOLEAN);
+                        $Sanitized_settings[$key] = filter_var($settings[$key], FILTER_VALIDATE_BOOLEAN);
                         break;
                     case 'cache_duration':
                     case 'timeout':
                     case 'retry_attempts':
-                        $Sanitised_settings[$key] = intval($settings[$key]);
+                        $Sanitized_settings[$key] = intval($settings[$key]);
                         break;
                     default:
-                        $Sanitised_settings[$key] = Sanitise_text_field($settings[$key]);
+                        $Sanitized_settings[$key] = sanitize_text_field($settings[$key]);
                         break;
                 }
             }
         }
 
         // Update settings
-        $this->plugin->update_settings($Sanitised_settings);
+        $this->plugin->update_settings($Sanitized_settings);
 
         // Log settings update
         aci_log_activity('settings_updated', [
             'updated_by' => get_current_user_id(),
-            'updated_fields' => array_keys($Sanitised_settings)
+            'updated_fields' => array_keys($Sanitized_settings)
         ]);
 
         wp_send_json_success([
@@ -473,7 +473,7 @@ class ACI_AJAX_Handler {
         $this->verify_ajax_request('aci_admin_nonce');
         $this->verify_admin_capability();
 
-        $export_type = Sanitise_text_field($_POST['export_type'] ?? 'all');
+        $export_type = sanitize_text_field($_POST['export_type'] ?? 'all');
 
         $export_data = [];
 

@@ -100,17 +100,17 @@ class ACI_Shortcodes {
             'size' => 'medium'
         ], $atts, 'affiliate_discount_form');
 
-        // Sanitise attributes
-        $style = Sanitise_text_field($atts['style']);
-        $button_text = Sanitise_text_field($atts['button_text']);
-        $placeholder = Sanitise_text_field($atts['placeholder']);
+        // Sanitize attributes
+        $style = sanitize_text_field($atts['style']);
+        $button_text = sanitize_text_field($atts['button_text']);
+        $placeholder = sanitize_text_field($atts['placeholder']);
         $show_labels = filter_var($atts['show_labels'], FILTER_VALIDATE_BOOLEAN);
         $auto_apply = filter_var($atts['auto_apply'], FILTER_VALIDATE_BOOLEAN);
-        $class = Sanitise_html_class($atts['class']);
-        $id = Sanitise_html_class($atts['id']);
+        $class = sanitize_html_class($atts['class']);
+        $id = sanitize_html_class($atts['id']);
         $required = filter_var($atts['required'], FILTER_VALIDATE_BOOLEAN);
         $maxlength = intval($atts['maxlength']);
-        $size = Sanitise_text_field($atts['size']);
+        $size = sanitize_text_field($atts['size']);
 
         // Generate unique ID if not provided
         if (empty($id)) {
@@ -240,12 +240,12 @@ class ACI_Shortcodes {
             'icon' => 'tag'
         ], $atts, 'affiliate_popup_trigger');
 
-        $text = Sanitise_text_field($atts['text']);
-        $style = Sanitise_text_field($atts['style']);
-        $popup_type = Sanitise_text_field($atts['popup_type']);
-        $class = Sanitise_html_class($atts['class']);
-        $size = Sanitise_text_field($atts['size']);
-        $icon = Sanitise_text_field($atts['icon']);
+        $text = sanitize_text_field($atts['text']);
+        $style = sanitize_text_field($atts['style']);
+        $popup_type = sanitize_text_field($atts['popup_type']);
+        $class = sanitize_html_class($atts['class']);
+        $size = sanitize_text_field($atts['size']);
+        $icon = sanitize_text_field($atts['icon']);
 
         $icon_html = '';
         if (!empty($icon)) {
@@ -299,14 +299,14 @@ class ACI_Shortcodes {
             'class' => ''
         ], $atts, 'affiliate_url_parameter');
 
-        $parameter = Sanitise_text_field($atts['parameter']);
-        $default = Sanitise_text_field($atts['default']);
-        $display_type = Sanitise_text_field($atts['display_type']);
+        $parameter = sanitize_text_field($atts['parameter']);
+        $default = sanitize_text_field($atts['default']);
+        $display_type = sanitize_text_field($atts['display_type']);
         $auto_apply = filter_var($atts['auto_apply'], FILTER_VALIDATE_BOOLEAN);
-        $class = Sanitise_html_class($atts['class']);
+        $class = sanitize_html_class($atts['class']);
 
         // Get parameter value from URL
-        $value = isset($_GET[$parameter]) ? Sanitise_text_field($_GET[$parameter]) : $default;
+        $value = isset($_GET[$parameter]) ? sanitize_text_field($_GET[$parameter]) : $default;
 
         if (empty($value)) {
             return '';
@@ -366,10 +366,10 @@ class ACI_Shortcodes {
         $original_price = floatval($atts['original_price']);
         $show_discount = filter_var($atts['show_discount'], FILTER_VALIDATE_BOOLEAN);
         $show_savings = filter_var($atts['show_savings'], FILTER_VALIDATE_BOOLEAN);
-        $currency = Sanitise_text_field($atts['currency']);
-        $format = Sanitise_text_field($atts['format']);
-        $class = Sanitise_html_class($atts['class']);
-        $product_id = Sanitise_text_field($atts['product_id']);
+        $currency = sanitize_text_field($atts['currency']);
+        $format = sanitize_text_field($atts['format']);
+        $class = sanitize_html_class($atts['class']);
+        $product_id = sanitize_text_field($atts['product_id']);
         $auto_calculate = filter_var($atts['auto_calculate'], FILTER_VALIDATE_BOOLEAN);
 
         if ($original_price <= 0) {
@@ -456,16 +456,16 @@ class ACI_Shortcodes {
             'class' => ''
         ], $atts, 'affiliate_banner');
 
-        $code = Sanitise_text_field($atts['code']);
-        $title = Sanitise_text_field($atts['title']);
-        $description = Sanitise_text_field($atts['description']);
-        $style = Sanitise_text_field($atts['style']);
-        $size = Sanitise_text_field($atts['size']);
-        $background = Sanitise_hex_color($atts['background']);
-        $color = Sanitise_hex_color($atts['color']);
+        $code = sanitize_text_field($atts['code']);
+        $title = sanitize_text_field($atts['title']);
+        $description = sanitize_text_field($atts['description']);
+        $style = sanitize_text_field($atts['style']);
+        $size = sanitize_text_field($atts['size']);
+        $background = sanitize_hex_color($atts['background']);
+        $color = sanitize_hex_color($atts['color']);
         $show_copy = filter_var($atts['show_copy'], FILTER_VALIDATE_BOOLEAN);
         $show_apply = filter_var($atts['show_apply'], FILTER_VALIDATE_BOOLEAN);
-        $class = Sanitise_html_class($atts['class']);
+        $class = sanitize_html_class($atts['class']);
 
         if (empty($code)) {
             return '<div class="aci-error">Affiliate code is required for banner</div>';
@@ -552,13 +552,13 @@ class ACI_Shortcodes {
             'class' => ''
         ], $atts, 'affiliate_countdown');
 
-        $expires = Sanitise_text_field($atts['expires']);
-        $code = Sanitise_text_field($atts['code']);
-        $title = Sanitise_text_field($atts['title']);
-        $style = Sanitise_text_field($atts['style']);
-        $size = Sanitise_text_field($atts['size']);
+        $expires = sanitize_text_field($atts['expires']);
+        $code = sanitize_text_field($atts['code']);
+        $title = sanitize_text_field($atts['title']);
+        $style = sanitize_text_field($atts['style']);
+        $size = sanitize_text_field($atts['size']);
         $show_labels = filter_var($atts['show_labels'], FILTER_VALIDATE_BOOLEAN);
-        $class = Sanitise_html_class($atts['class']);
+        $class = sanitize_html_class($atts['class']);
 
         if (empty($expires)) {
             return '<div class="aci-error">Expiry date is required for countdown</div>';

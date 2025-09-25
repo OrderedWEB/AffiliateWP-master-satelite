@@ -144,7 +144,7 @@ class AffiliateClientFull {
     }
 
     /**
-     * Initialse WordPress hooks
+     * Initialize WordPress hooks
      */
     private function init_hooks() {
         add_action('init', [$this, 'init']);
@@ -171,7 +171,7 @@ class AffiliateClientFull {
     }
 
     /**
-     * Initialse plugin components
+     * Initialize plugin components
      */
     private function init_components() {
         $this->api_client = new AFFILIATE_CLIENT_API_Client($this->config);
@@ -185,13 +185,13 @@ class AffiliateClientFull {
     }
 
     /**
-     * Initialse plugin
+     * Initialize plugin
      */
     public function init() {
         // Load text domain
         load_plugin_textdomain('affiliate-client-full', false, dirname(plugin_basename(__FILE__)) . '/languages');
         
-        // Initialise components
+        // Initialize components
         if ($this->tracking_handler) {
             $this->tracking_handler->init();
         }
@@ -562,8 +562,8 @@ class AffiliateClientFull {
             wp_die(__('Permission denied.', 'affiliate-client-full'));
         }
 
-        update_option('affiliate_client_remote_url', Sanitise_url($_POST['remote_url']));
-        update_option('affiliate_client_api_key', Sanitise_text_field($_POST['api_key']));
+        update_option('affiliate_client_remote_url', sanitize_url($_POST['remote_url']));
+        update_option('affiliate_client_api_key', sanitize_text_field($_POST['api_key']));
         update_option('affiliate_client_tracking_enabled', isset($_POST['tracking_enabled']));
         update_option('affiliate_client_debug_mode', isset($_POST['debug_mode']));
 
@@ -602,7 +602,7 @@ class AffiliateClientFull {
      * REST: Track event
      */
     public function rest_track_event($request) {
-        $event = Sanitise_text_field($request->get_param('event'));
+        $event = sanitize_text_field($request->get_param('event'));
         $data = $request->get_param('data');
 
         if ($this->tracking_handler) {
@@ -618,7 +618,7 @@ class AffiliateClientFull {
      */
     public function rest_track_conversion($request) {
         $amount = $request->get_param('amount');
-        $reference = Sanitise_text_field($request->get_param('reference'));
+        $reference = sanitize_text_field($request->get_param('reference'));
 
         if ($this->conversion_tracker) {
             $result = $this->conversion_tracker->track_conversion($amount, $reference);
@@ -914,11 +914,11 @@ class AffiliateClientFull {
 }
 
 /**
- * Initialse the plugin
+ * Initialize the plugin
  */
 function affiliate_client_full() {
     return AffiliateClientFull::instance();
 }
 
-// Initialise plugin
+// Initialize plugin
 affiliate_client_full();

@@ -22,7 +22,7 @@
     queue: [],
 
     /**
-     * Initialse tracker
+     * Initialize tracker
      */
     init: function (config) {
       this.config = $.extend(

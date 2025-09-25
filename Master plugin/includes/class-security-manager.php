@@ -1,15 +1,13 @@
 <?php
 /**
  * Enhanced Security Manager for Affiliate Cross Domain System
- * 
+ *
  * Plugin: Affiliate Cross Domain System (Master)
- * File: /wp-content/plugins/affiliate-cross-domain-system/includes/class-security-manager.php
- * 
+ *
  * Handles advanced security features including rate limiting, fraud detection,
  * domain authorisation, and comprehensive security logging.
  */
 
-// Prevent direct access
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -19,16 +17,16 @@ class AFFCD_Security_Manager {
     private $rate_limit_table;
     private $security_logs_table;
     private $fraud_detection_table;
-    private $authorised_domains_table;
+    private $authorized_domains_table;
     private $cache_prefix = 'affcd_security_';
-    
+
     // Security thresholds
     private $rate_limits = [
-        'api_request' => ['limit' => 100, 'window' => 3600], // 100 per hour
-        'validate_code' => ['limit' => 50, 'window' => 3600], // 50 per hour
-        'create_vanity' => ['limit' => 10, 'window' => 3600], // 10 per hour
-        'failed_validation' => ['limit' => 5, 'window' => 300], // 5 per 5 minutes
-        'form_submission' => ['limit' => 20, 'window' => 3600] // 20 per hour
+        'api_request'       => ['limit' => 100, 'window' => 3600], // 100 per hour
+        'validate_code'     => ['limit' => 50,  'window' => 3600], // 50 per hour
+        'create_vanity'     => ['limit' => 10,  'window' => 3600], // 10 per hour
+        'failed_validation' => ['limit' => 5,   'window' => 300],  // 5 per 5 minutes
+        'form_submission'   => ['limit' => 20,  'window' => 3600], // 20 per hour
     ];
 
     /**
@@ -36,26 +34,26 @@ class AFFCD_Security_Manager {
      */
     public function __construct() {
         global $wpdb;
-        $this->rate_limit_table = $wpdb->prefix . 'affcd_rate_limiting';
-        $this->security_logs_table = $wpdb->prefix . 'affcd_security_logs';
-        $this->fraud_detection_table = $wpdb->prefix . 'affcd_fraud_detection';
-        $this->authorised_domains_table = $wpdb->prefix . 'affcd_authorised_domains';
-        
-        // Initialise hooks
+        $this->rate_limit_table         = $wpdb->prefix . 'affcd_rate_limiting';
+        $this->security_logs_table      = $wpdb->prefix . 'affcd_security_logs';
+        $this->fraud_detection_table    = $wpdb->prefix . 'affcd_fraud_detection';
+        $this->authorized_domains_table = $wpdb->prefix . 'affcd_authorized_domains';
+
+        // Initialize hooks
         add_action('init', [$this, 'init']);
         add_action('wp_ajax_affcd_security_test', [$this, 'ajax_security_test']);
         add_action('affcd_cleanup_security_logs', [$this, 'cleanup_old_logs']);
         add_action('affcd_analyze_fraud_patterns', [$this, 'analyze_fraud_patterns']);
-        
+
         // Security headers
         add_action('send_headers', [$this, 'add_security_headers']);
-        
+
         // API request filtering
         add_filter('affcd_api_request_allowed', [$this, 'filter_api_requests'], 10, 2);
     }
 
     /**
-     * Initialse security manager
+     * Initialize security manager
      */
     public function init() {
         $this->maybe_create_tables();
@@ -65,14 +63,12 @@ class AFFCD_Security_Manager {
     }
 
     /**
-     * Create security tables
+     * Create all required security tables
      */
     private function maybe_create_tables() {
         global $wpdb;
-        
         $charset_collate = $wpdb->get_charset_collate();
-        
-        // Rate limiting table
+
         $sql_rate_limit = "CREATE TABLE IF NOT EXISTS {$this->rate_limit_table} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             identifier varchar(255) NOT NULL,
@@ -89,7 +85,6 @@ class AFFCD_Security_Manager {
             KEY is_blocked (is_blocked)
         ) $charset_collate;";
 
-        // Security logs table
         $sql_security_logs = "CREATE TABLE IF NOT EXISTS {$this->security_logs_table} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             event_type varchar(100) NOT NULL,
@@ -110,8 +105,6 @@ class AFFCD_Security_Manager {
             KEY created_at (created_at)
         ) $charset_collate;";
 
-     
-            // Fraud detection table
         $sql_fraud_detection = "CREATE TABLE IF NOT EXISTS {$this->fraud_detection_table} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             identifier varchar(255) NOT NULL,
@@ -131,8 +124,7 @@ class AFFCD_Security_Manager {
             KEY is_active (is_active)
         ) $charset_collate;";
 
-        // authorised domains table
-        $sql_authorised_domains = "CREATE TABLE IF NOT EXISTS {$this->authorised_domains_table} (
+        $sql_authorized_domains = "CREATE TABLE IF NOT EXISTS {$this->authorized_domains_table} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             domain varchar(255) NOT NULL,
             domain_hash varchar(64) NOT NULL,
@@ -160,166 +152,134 @@ class AFFCD_Security_Manager {
         dbDelta($sql_rate_limit);
         dbDelta($sql_security_logs);
         dbDelta($sql_fraud_detection);
-        dbDelta($sql_authorised_domains);
+        dbDelta($sql_authorized_domains);
     }
 
-    /**
-     * Check rate limit for specific action
+    /* 
+     * Rate limiting
      */
+
     public function check_rate_limit($action_type, $identifier = null) {
         global $wpdb;
-        
+
+        // Use client IP consistently as the identifier
         if (!$identifier) {
-            $identifier = $this->get_client_identifier();
+            $identifier = $this->get_client_ip();
         }
-        
-        // Get rate limit configuration
-        $rate_config = $this->rate_limits[$action_type] ?? ['limit' => 60, 'window' => 3600];
-        
-        $window_start = date('Y-m-d H:i:s', time() - $rate_config['window']);
-        
-        // Check current count in window
-        $current_count = $wpdb->get_var($wpdb->prepare(
-            "SELECT request_count FROM {$this->rate_limit_table} 
-             WHERE identifier = %s AND action_type = %s AND window_start >= %s AND is_blocked = 0",
+
+        $rate_config  = $this->rate_limits[$action_type] ?? ['limit' => 60, 'window' => 3600];
+        $bucket       = (int) floor(time() / $rate_config['window']) * $rate_config['window'];
+        $window_start = date('Y-m-d H:i:s', $bucket);
+
+        $current_count = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COALESCE(SUM(request_count),0) FROM {$this->rate_limit_table}
+             WHERE identifier = %s AND action_type = %s
+               AND window_start = %s AND is_blocked = 0",
             $identifier, $action_type, $window_start
         ));
-        
+
         if ($current_count >= $rate_config['limit']) {
-            // Rate limit exceeded
             $this->handle_rate_limit_exceeded($identifier, $action_type, $current_count);
             return false;
         }
-        
-        // Update or insert rate limit record
+
         $this->update_rate_limit_record($identifier, $action_type, $window_start);
-        
         return true;
     }
 
-    /**
-     * Update rate limit record
-     */
     private function update_rate_limit_record($identifier, $action_type, $window_start) {
         global $wpdb;
-        
+
         $wpdb->query($wpdb->prepare(
-            "INSERT INTO {$this->rate_limit_table} 
-             (identifier, action_type, request_count, window_start) 
+            "INSERT INTO {$this->rate_limit_table}
+             (identifier, action_type, request_count, window_start)
              VALUES (%s, %s, 1, %s)
-             ON DUPLICATE KEY UPDATE 
-             request_count = request_count + 1, 
-             last_request = CURRENT_TIMESTAMP",
+             ON DUPLICATE KEY UPDATE
+                request_count = request_count + 1,
+                last_request = CURRENT_TIMESTAMP",
             $identifier, $action_type, $window_start
         ));
     }
 
-    /**
-     * Handle rate limit exceeded
-     */
     private function handle_rate_limit_exceeded($identifier, $action_type, $count) {
         global $wpdb;
-        
-        // Calculate block duration based on severity
         $block_duration = $this->calculate_block_duration($action_type, $count);
         $block_until = date('Y-m-d H:i:s', time() + $block_duration);
-        
-        // Update rate limit record to blocked status
+
         $wpdb->update(
             $this->rate_limit_table,
-            [
-                'is_blocked' => 1,
-                'block_until' => $block_until
-            ],
-            [
-                'identifier' => $identifier,
-                'action_type' => $action_type
-            ],
+            ['is_blocked' => 1, 'block_until' => $block_until],
+            ['identifier' => $identifier, 'action_type' => $action_type],
             ['%d', '%s'],
             ['%s', '%s']
         );
-        
-        // Log security event
+
         $this->log_security_event('rate_limit_exceeded', 'medium', [
-            'identifier' => $identifier,
-            'action_type' => $action_type,
-            'request_count' => $count,
-            'block_duration' => $block_duration
+            'identifier'     => $identifier,
+            'action_type'    => $action_type,
+            'request_count'  => $count,
+            'block_duration' => $block_duration,
         ]);
-        
-        // Check for fraud patterns
+
         $this->check_fraud_patterns($identifier, 'rate_limit_abuse', [
             'action_type' => $action_type,
-            'count' => $count
+            'count'       => $count,
         ]);
     }
 
-    /**
-     * Calculate block duration
-     */
     private function calculate_block_duration($action_type, $count) {
-        $base_duration = 300; // 5 minutes
-        
-        // Increase duration for repeated violations
-        $multiplier = min(floor($count / 10), 10); // Max 10x multiplier
-        
-        // Action-specific adjustments
+        $base_duration = 300; // 5 min
+        $multiplier = min(floor($count / 10), 10);
         $action_multipliers = [
             'failed_validation' => 2,
-            'api_request' => 1,
-            'create_vanity' => 3,
-            'form_submission' => 1.5
+            'api_request'       => 1,
+            'create_vanity'     => 3,
+            'form_submission'   => 1.5,
         ];
-        
         $action_multiplier = $action_multipliers[$action_type] ?? 1;
-        
-        return $base_duration * (1 + $multiplier) * $action_multiplier;
+
+        return (int) ($base_duration * (1 + $multiplier) * $action_multiplier);
     }
 
-    /**
-     * Check if domain is authorised
-     */
-    public function is_domain_authorised($domain) {
+    /* 
+     * Domain authorisation
+     **/
+
+    public function is_domain_authorized($domain) {
         global $wpdb;
-        
-        // Clean and validate domain
+
         $clean_domain = $this->clean_domain($domain);
         if (!$clean_domain) {
             return false;
         }
-        
-        // Check cache first
+
         $cache_key = $this->cache_prefix . 'domain_' . md5($clean_domain);
         $cached = wp_cache_get($cache_key, 'affcd_security');
         if ($cached !== false) {
-            return $cached === 'authorised';
+            return $cached === 'authorized';
         }
-        
-        // Check database
+
         $domain_hash = hash('sha256', $clean_domain);
         $domain_record = $wpdb->get_row($wpdb->prepare(
-            "SELECT status, security_settings FROM {$this->authorised_domains_table} 
+            "SELECT status FROM {$this->authorized_domains_table}
              WHERE domain_hash = %s",
             $domain_hash
         ));
-        
-        $is_authorised = $domain_record && $domain_record->status === 'active';
-        
-        // Cache result
-        wp_cache_set($cache_key, $is_authorised ? 'authorised' : 'unauthorised', 'affcd_security', 300);
-        
-        if ($is_authorised) {
-            // Update request count
+
+        $is_authorized = $domain_record && $domain_record->status === 'active';
+
+        wp_cache_set($cache_key, $is_authorized ? 'authorized' : 'unauthorized', 'affcd_security', 300);
+
+        if ($is_authorized) {
             $this->update_domain_stats($domain_hash, 'request');
         } else {
-            // Log unauthorised attempt
-            $this->log_security_event('unauthorised_domain', 'medium', [
+            $this->log_security_event('unauthorized_domain', 'medium', [
                 'domain' => $clean_domain,
-                'status' => $domain_record->status ?? 'not_found'
+                'status' => $domain_record->status ?? 'not_found',
             ]);
         }
-        
-        return $is_authorised;
+
+        return $is_authorized;
     }
 
     /**
@@ -341,13 +301,13 @@ class AFFCD_Security_Manager {
         $api_key = $this->generate_api_key();
         
         $result = $wpdb->insert(
-            $this->authorised_domains_table,
+            $this->authorized_domains_table,
             [
                 'domain' => $clean_domain,
                 'domain_hash' => $domain_hash,
                 'status' => 'active',
                 'api_key' => $api_key,
-                'security_settings' => json_encode($settings),
+                'security_settings' => wp_json_encode($settings, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
                 'created_by' => get_current_user_id()
             ],
             ['%s', '%s', '%s', '%s', '%s', '%d']
@@ -362,7 +322,7 @@ class AFFCD_Security_Manager {
         wp_cache_delete($cache_key, 'affcd_security');
         
         // Log authorisation
-        $this->log_security_event('domain_authorised', 'low', [
+        $this->log_security_event('domain_authorized', 'low', [
             'domain' => $clean_domain,
             'api_key' => substr($api_key, 0, 8) . '...'
         ]);
@@ -384,15 +344,15 @@ class AFFCD_Security_Manager {
             return false;
         }
         
-        // Check cache
-        $cache_key = $this->cache_prefix . 'api_key_' . md5($api_key);
+        // Cache key must consider domain filter too
+        $cache_key = $this->cache_prefix . 'api_key_' . md5($api_key . '|' . strtolower((string) $domain));
         $cached = wp_cache_get($cache_key, 'affcd_security');
         if ($cached !== false) {
             return $cached;
         }
         
         $sql = "SELECT d.domain, d.status, d.security_settings 
-                FROM {$this->authorised_domains_table} d 
+                FROM {$this->authorized_domains_table} d 
                 WHERE d.api_key = %s AND d.status = 'active'";
         $params = [$api_key];
         
@@ -403,12 +363,10 @@ class AFFCD_Security_Manager {
         
         $result = $wpdb->get_row($wpdb->prepare($sql, $params));
         
-        $is_valid = $result !== null;
-        
         // Cache result
         wp_cache_set($cache_key, $result ?: false, 'affcd_security', 300);
         
-        if (!$is_valid) {
+        if (!$result) {
             $this->log_security_event('invalid_api_key', 'medium', [
                 'api_key' => substr($api_key, 0, 8) . '...',
                 'domain' => $domain
@@ -447,7 +405,7 @@ class AFFCD_Security_Manager {
                 [
                     'detection_count' => $new_count,
                     'risk_score' => $new_risk_score,
-                    'pattern_data' => json_encode($data)
+                    'pattern_data' => wp_json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
                 ],
                 ['id' => $existing->id],
                 ['%d', '%d', '%s'],
@@ -461,14 +419,14 @@ class AFFCD_Security_Manager {
                     'identifier' => $identifier,
                     'fraud_type' => $pattern_type,
                     'risk_score' => $risk_score,
-                    'pattern_data' => json_encode($data)
+                    'pattern_data' => wp_json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
                 ],
                 ['%s', '%s', '%d', '%s']
             );
         }
         
         // Check if action needed
-        $final_risk_score = $new_risk_score ?? $risk_score;
+        $final_risk_score = isset($new_risk_score) ? $new_risk_score : $risk_score;
         if ($final_risk_score >= 70) {
             $this->handle_high_risk_fraud($identifier, $pattern_type, $final_risk_score, $data);
         }
@@ -490,9 +448,9 @@ class AFFCD_Security_Manager {
     private function calculate_risk_score($pattern_type, $data) {
         $base_scores = [
             'rate_limit_abuse' => 40,
-            'invalid_codes' => 30,
-            'suspicious_ip' => 50,
-            'bot_behavior' => 60,
+            'invalid_codes'    => 30,
+            'suspicious_ip'    => 50,
+            'bot_behavior'     => 60,
             'multiple_domains' => 35,
             'unusual_patterns' => 25
         ];
@@ -502,15 +460,15 @@ class AFFCD_Security_Manager {
         // Adjust based on data
         $multiplier = 1.0;
         
-        if (isset($data['count']) && $data['count'] > 10) {
+        if (isset($data['count']) && (int)$data['count'] > 10) {
             $multiplier += 0.5;
         }
         
-        if (isset($data['velocity']) && $data['velocity'] > 100) {
+        if (isset($data['velocity']) && (float)$data['velocity'] > 100) {
             $multiplier += 0.3;
         }
         
-        return min(100, round($base_score * $multiplier));
+        return min(100, (int) round($base_score * $multiplier));
     }
 
     /**
@@ -535,7 +493,7 @@ class AFFCD_Security_Manager {
         // Update fraud record with actions
         $wpdb->update(
             $this->fraud_detection_table,
-            ['actions_taken' => json_encode($actions_taken)],
+            ['actions_taken' => wp_json_encode($actions_taken, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)],
             [
                 'identifier' => $identifier,
                 'fraud_type' => $pattern_type,
@@ -560,7 +518,7 @@ class AFFCD_Security_Manager {
     private function block_identifier($identifier, $duration) {
         global $wpdb;
         
-        $block_until = date('Y-m-d H:i:s', time() + $duration);
+        $block_until = date('Y-m-d H:i:s', time() + (int)$duration);
         
         $wpdb->query($wpdb->prepare(
             "UPDATE {$this->rate_limit_table} 
@@ -577,21 +535,21 @@ class AFFCD_Security_Manager {
         global $wpdb;
         
         $source_ip = $this->get_client_ip();
-        $user_id = get_current_user_id() ?: null;
-        $domain = $this->get_current_domain();
+        $user_id   = get_current_user_id() ?: null;
+        $domain    = $this->get_current_domain();
         $user_agent = $_SERVER['HTTP_USER_AGENT'] ?? '';
         
         $wpdb->insert(
             $this->security_logs_table,
             [
-                'event_type' => $event_type,
-                'severity' => $severity,
-                'source_ip' => $source_ip,
-                'user_id' => $user_id,
-                'domain' => $domain,
-                'user_agent' => $user_agent,
-                'event_data' => json_encode($event_data),
-                'context_data' => json_encode($context)
+                'event_type'   => $event_type,
+                'severity'     => $severity,
+                'source_ip'    => $source_ip,
+                'user_id'      => $user_id,
+                'domain'       => $domain,
+                'user_agent'   => $user_agent,
+                'event_data'   => wp_json_encode($event_data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+                'context_data' => wp_json_encode($context, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
             ],
             ['%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s']
         );
@@ -607,13 +565,13 @@ class AFFCD_Security_Manager {
      */
     public function log_activity($activity_type, $data = []) {
         $severity_map = [
-            'vanity_code_created' => 'low',
-            'vanity_code_updated' => 'low',
-            'vanity_code_deleted' => 'medium',
+            'vanity_code_created'   => 'low',
+            'vanity_code_updated'   => 'low',
+            'vanity_code_deleted'   => 'medium',
             'code_validation_success' => 'low',
             'code_validation_failed' => 'medium',
-            'api_request' => 'low',
-            'unauthorised_access' => 'high'
+            'api_request'           => 'low',
+            'unauthorized_access'   => 'high'
         ];
         
         $severity = $severity_map[$activity_type] ?? 'medium';
@@ -648,12 +606,13 @@ class AFFCD_Security_Manager {
             $time_clause
         ), ARRAY_A);
         
-        // Get blocked IPs
-        $blocked_ips = $wpdb->get_results($wpdb->prepare(
+        // Get blocked IPs (no prepare needed: no placeholders)
+        $blocked_ips = $wpdb->get_results(
             "SELECT identifier, action_type, block_until 
              FROM {$this->rate_limit_table} 
-             WHERE is_blocked = 1 AND block_until > NOW()"
-        ), ARRAY_A);
+             WHERE is_blocked = 1 AND block_until > NOW()",
+            ARRAY_A
+        );
         
         // Get fraud detections
         $fraud_detections = $wpdb->get_results($wpdb->prepare(
@@ -684,10 +643,11 @@ class AFFCD_Security_Manager {
         
         header('X-Content-Type-Options: nosniff');
         header('X-Frame-Options: DENY');
-        header('X-XSS-Protection: 1; mode=block');
+        header('X-XSS-Protection: 1; mode=block'); // legacy; harmless
         header('Referrer-Policy: strict-origin-when-cross-origin');
         header('Permissions-Policy: geolocation=(), microphone=(), camera=()');
-        
+  
+
         // Add rate limit headers
         $remaining = $this->get_rate_limit_remaining();
         if ($remaining !== null) {
@@ -714,7 +674,7 @@ class AFFCD_Security_Manager {
             return false;
         }
         
-        // Check rate limits
+        // Check rate limits (use IP as identifier consistently)
         if (!$this->check_rate_limit('api_request', $client_ip)) {
             return false;
         }
@@ -732,6 +692,7 @@ class AFFCD_Security_Manager {
 
     /**
      * Get client identifier (IP + User Agent hash)
+     * (Kept for potential use in other contexts)
      */
     public function get_client_identifier() {
         $ip = $this->get_client_ip();
@@ -806,7 +767,7 @@ class AFFCD_Security_Manager {
         $field = $stat_type === 'block' ? 'blocked_requests' : 'total_requests';
         
         $wpdb->query($wpdb->prepare(
-            "UPDATE {$this->authorised_domains_table} 
+            "UPDATE {$this->authorized_domains_table} 
              SET {$field} = {$field} + 1 
              WHERE domain_hash = %s",
             $domain_hash
@@ -819,7 +780,7 @@ class AFFCD_Security_Manager {
     private function is_ip_blocked($ip) {
         global $wpdb;
         
-        $blocked = $wpdb->get_var($wpdb->prepare(
+        $blocked = (int) $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM {$this->rate_limit_table} 
              WHERE identifier = %s AND is_blocked = 1 AND block_until > NOW()",
             $ip
@@ -871,16 +832,19 @@ class AFFCD_Security_Manager {
     private function get_rate_limit_remaining() {
         global $wpdb;
         
-        $identifier = $this->get_client_identifier();
-        $window_start = date('Y-m-d H:i:s', time() - 3600); // 1 hour window
+        $identifier = $this->get_client_ip(); // consistent with rate limiting
+        $limit  = (int) ($this->rate_limits['api_request']['limit'] ?? 100);
+        $window = (int) ($this->rate_limits['api_request']['window'] ?? 3600);
+
+        $bucket       = (int) floor(time() / $window) * $window;
+        $window_start = date('Y-m-d H:i:s', $bucket);
         
-        $current_count = $wpdb->get_var($wpdb->prepare(
+        $current_count = (int) $wpdb->get_var($wpdb->prepare(
             "SELECT COALESCE(SUM(request_count), 0) FROM {$this->rate_limit_table} 
-             WHERE identifier = %s AND window_start >= %s",
-            $identifier, $window_start
+             WHERE identifier = %s AND action_type = %s AND window_start = %s",
+            $identifier, 'api_request', $window_start
         ));
         
-        $limit = $this->rate_limits['api_request']['limit'];
         return max(0, $limit - $current_count);
     }
 
@@ -902,15 +866,15 @@ class AFFCD_Security_Manager {
      * Get time clause for queries
      */
     private function get_time_clause($period) {
-        $intervals = [
-            '1h' => 'INTERVAL 1 HOUR',
-            '24h' => 'INTERVAL 24 HOUR',
-            '7d' => 'INTERVAL 7 DAY',
-            '30d' => 'INTERVAL 30 DAY'
-        ];
-        
-        $interval = $intervals[$period] ?? 'INTERVAL 24 HOUR';
-        return date('Y-m-d H:i:s', time() - (24 * 3600)); // Fallback to 24h
+        $now = time();
+        $seconds = match ($period) {
+            '1h'  => 3600,
+            '24h' => 24 * 3600,
+            '7d'  => 7 * 24 * 3600,
+            '30d' => 30 * 24 * 3600,
+            default => 24 * 3600,
+        };
+        return date('Y-m-d H:i:s', $now - $seconds);
     }
 
     /**
@@ -934,8 +898,18 @@ class AFFCD_Security_Manager {
      * Notify administrators
      */
     private function notify_administrators($identifier, $pattern_type, $risk_score, $data) {
-        $admin_emails = get_option('affcd_security_admin_emails', [get_option('admin_email')]);
+        $admin_emails = (array) get_option('affcd_security_admin_emails', []);
+        if (!$admin_emails) {
+            $fallback = get_option('admin_email');
+            if (!empty($fallback)) {
+                $admin_emails = [(string) $fallback];
+            }
+        }
         
+        if (!$admin_emails) {
+            return;
+        }
+
         $subject = sprintf(
             __('[SECURITY ALERT] High Risk Fraud Detection - %s', 'affiliatewp-cross-domain-plugin-suite'),
             $pattern_type
@@ -945,8 +919,8 @@ class AFFCD_Security_Manager {
             __("High risk fraud pattern detected:\n\nIdentifier: %s\nPattern: %s\nRisk Score: %d\nData: %s\n\nPlease review immediately.", 'affiliatewp-cross-domain-plugin-suite'),
             $identifier,
             $pattern_type,
-            $risk_score,
-            json_encode($data, JSON_PRETTY_PRINT)
+            (int) $risk_score,
+            wp_json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
         );
         
         foreach ($admin_emails as $email) {
@@ -995,7 +969,7 @@ class AFFCD_Security_Manager {
     public function cleanup_old_logs() {
         global $wpdb;
         
-        $retention_days = get_option('affcd_log_retention_days', 90);
+        $retention_days = (int) get_option('affcd_log_retention_days', 90);
         $cutoff_date = date('Y-m-d H:i:s', time() - ($retention_days * DAY_IN_SECONDS));
         
         // Clean security logs
@@ -1050,7 +1024,7 @@ class AFFCD_Security_Manager {
             $this->check_fraud_patterns($ip_data['source_ip'], 'suspicious_ip', [
                 'event_count' => $ip_data['event_count'],
                 'event_types' => $ip_data['event_types'],
-                'velocity' => $ip_data['event_count'] / 24 // events per hour
+                'velocity'    => $ip_data['event_count'] / 24 // events per hour
             ]);
         }
         
@@ -1059,7 +1033,7 @@ class AFFCD_Security_Manager {
             "SELECT domain, COUNT(*) as request_count
              FROM {$this->security_logs_table} 
              WHERE created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
-               AND event_type = 'unauthorised_domain'
+               AND event_type = 'unauthorized_domain'
              GROUP BY domain 
              HAVING request_count > 50
              ORDER BY request_count DESC",
@@ -1074,7 +1048,7 @@ class AFFCD_Security_Manager {
         
         // Log analysis completion
         $this->log_security_event('fraud_analysis_completed', 'low', [
-            'suspicious_ips' => count($suspicious_ips),
+            'suspicious_ips'     => count($suspicious_ips),
             'suspicious_domains' => count($suspicious_domains)
         ]);
     }
@@ -1089,8 +1063,8 @@ class AFFCD_Security_Manager {
             wp_die(__('Insufficient permissions.', 'affiliatewp-cross-domain-plugin-suite'));
         }
         
-        $test_type = Sanitise_text_field($_POST['test_type'] ?? '');
-        $test_target = Sanitise_text_field($_POST['test_target'] ?? '');
+        $test_type   = sanitize_text_field($_POST['test_type'] ?? '');
+        $test_target = sanitize_text_field($_POST['test_target'] ?? '');
         
         $results = [];
         
@@ -1122,20 +1096,20 @@ class AFFCD_Security_Manager {
         
         if (!$clean_domain) {
             return [
-                'status' => 'error',
+                'status'  => 'error',
                 'message' => __('Invalid domain format.', 'affiliatewp-cross-domain-plugin-suite')
             ];
         }
         
-        $is_authorised = $this->is_domain_authorised($clean_domain);
+        $is_authorized = $this->is_domain_authorized($clean_domain);
         
         return [
-            'status' => $is_authorised ? 'success' : 'failed',
-            'message' => $is_authorised ? 
-                __('Domain is authorised.', 'affiliatewp-cross-domain-plugin-suite') : 
-                __('Domain is not authorised.', 'affiliatewp-cross-domain-plugin-suite'),
-            'domain' => $clean_domain,
-            'authorised' => $is_authorised
+            'status'     => $is_authorized ? 'success' : 'failed',
+            'message'    => $is_authorized ? 
+                __('Domain is authorized.', 'affiliatewp-cross-domain-plugin-suite') : 
+                __('Domain is not authorized.', 'affiliatewp-cross-domain-plugin-suite'),
+            'domain'     => $clean_domain,
+            'authorized' => $is_authorized
         ];
     }
 
@@ -1146,13 +1120,13 @@ class AFFCD_Security_Manager {
         $validation_result = $this->validate_api_key($api_key);
         
         return [
-            'status' => $validation_result ? 'success' : 'failed',
+            'status'  => $validation_result ? 'success' : 'failed',
             'message' => $validation_result ? 
                 __('API key is valid.', 'affiliatewp-cross-domain-plugin-suite') : 
                 __('API key is invalid.', 'affiliatewp-cross-domain-plugin-suite'),
             'api_key' => substr($api_key, 0, 8) . '...',
-            'valid' => (bool) $validation_result,
-            'domain' => $validation_result->domain ?? null
+            'valid'   => (bool) $validation_result,
+            'domain'  => $validation_result->domain ?? null
         ];
     }
 
@@ -1172,11 +1146,11 @@ class AFFCD_Security_Manager {
         ), ARRAY_A);
         
         return [
-            'status' => 'success',
-            'message' => sprintf(__('Found %d rate limit records.', 'affiliatewp-cross-domain-plugin-suite'), count($current_limits)),
-            'identifier' => $identifier,
+            'status'         => 'success',
+            'message'        => sprintf(__('Found %d rate limit records.', 'affiliatewp-cross-domain-plugin-suite'), count($current_limits)),
+            'identifier'     => $identifier,
             'current_limits' => $current_limits,
-            'is_blocked' => $this->is_ip_blocked($identifier)
+            'is_blocked'     => $this->is_ip_blocked($identifier)
         ];
     }
 
@@ -1195,11 +1169,11 @@ class AFFCD_Security_Manager {
         ), ARRAY_A);
         
         return [
-            'status' => 'success',
-            'message' => sprintf(__('Found %d fraud detection records.', 'affiliatewp-cross-domain-plugin-suite'), count($fraud_records)),
-            'identifier' => $identifier,
-            'fraud_records' => $fraud_records,
-            'total_risk_score' => array_sum(array_column($fraud_records, 'risk_score'))
+            'status'            => 'success',
+            'message'           => sprintf(__('Found %d fraud detection records.', 'affiliatewp-cross-domain-plugin-suite'), count($fraud_records)),
+            'identifier'        => $identifier,
+            'fraud_records'     => $fraud_records,
+            'total_risk_score'  => array_sum(array_map('intval', wp_list_pluck($fraud_records, 'risk_score')))
         ];
     }
 
@@ -1212,27 +1186,27 @@ class AFFCD_Security_Manager {
         $time_clause = $this->get_time_clause($period);
         
         // Total events
-        $total_events = $wpdb->get_var($wpdb->prepare(
+        $total_events = (int) $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM {$this->security_logs_table} WHERE created_at >= %s",
             $time_clause
         ));
         
         // Blocked requests
-        $blocked_requests = $wpdb->get_var($wpdb->prepare(
+        $blocked_requests = (int) $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM {$this->rate_limit_table} 
              WHERE window_start >= %s AND is_blocked = 1",
             $time_clause
         ));
         
         // Fraud detections
-        $fraud_detections = $wpdb->get_var($wpdb->prepare(
+        $fraud_detections = (int) $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM {$this->fraud_detection_table} 
              WHERE first_detected >= %s",
             $time_clause
         ));
         
         // Average risk score
-        $avg_risk_score = $wpdb->get_var($wpdb->prepare(
+        $avg_risk_score = (float) $wpdb->get_var($wpdb->prepare(
             "SELECT AVG(risk_score) FROM {$this->fraud_detection_table} 
              WHERE first_detected >= %s AND is_active = 1",
             $time_clause
@@ -1250,12 +1224,12 @@ class AFFCD_Security_Manager {
         ), ARRAY_A);
         
         return [
-            'total_events' => (int) $total_events,
-            'blocked_requests' => (int) $blocked_requests,
-            'fraud_detections' => (int) $fraud_detections,
-            'avg_risk_score' => round($avg_risk_score, 2),
-            'top_attacked_domains' => $top_domains,
-            'period' => $period
+            'total_events'        => (int) $total_events,
+            'blocked_requests'    => (int) $blocked_requests,
+            'fraud_detections'    => (int) $fraud_detections,
+            'avg_risk_score'      => round($avg_risk_score, 2),
+            'top_attacked_domains'=> $top_domains,
+            'period'              => $period
         ];
     }
 
@@ -1308,7 +1282,7 @@ class AFFCD_Security_Manager {
         $csv_data = [];
         $csv_data[] = [
             'ID', 'Event Type', 'Severity', 'Source IP', 'User ID', 
-            'Domain', 'Event Data', 'Created At'
+            'Domain', 'User Agent', 'Event Data', 'Context Data', 'Created At'
         ];
         
         foreach ($logs as $log) {
@@ -1319,7 +1293,9 @@ class AFFCD_Security_Manager {
                 $log['source_ip'],
                 $log['user_id'],
                 $log['domain'],
+                $log['user_agent'],
                 $log['event_data'],
+                $log['context_data'],
                 $log['created_at']
             ];
         }
@@ -1364,7 +1340,7 @@ class AFFCD_Security_Manager {
         $result = $wpdb->update(
             $this->rate_limit_table,
             [
-                'is_blocked' => 0,
+                'is_blocked'  => 0,
                 'block_until' => null
             ],
             ['identifier' => $identifier],
@@ -1378,8 +1354,8 @@ class AFFCD_Security_Manager {
         
         // Log the unblock action
         $this->log_security_event('ip_unblocked', 'medium', [
-            'identifier' => $identifier,
-            'unblocked_by' => get_current_user_id()
+            'identifier'  => $identifier,
+            'unblocked_by'=> get_current_user_id()
         ]);
         
         return true;
@@ -1417,9 +1393,9 @@ class AFFCD_Security_Manager {
         
         $whitelisted_ips = get_option('affcd_whitelisted_ips', []);
         $whitelisted_ips[$ip] = [
-            'reason' => Sanitise_text_field($reason),
-            'added_by' => get_current_user_id(),
-            'added_at' => current_time('mysql')
+            'reason'    => sanitize_text_field($reason),
+            'added_by'  => get_current_user_id(),
+            'added_at'  => current_time('mysql')
         ];
         
         update_option('affcd_whitelisted_ips', $whitelisted_ips);
@@ -1428,8 +1404,8 @@ class AFFCD_Security_Manager {
         $this->unblock_ip($ip);
         
         $this->log_security_event('ip_whitelisted', 'low', [
-            'ip' => $ip,
-            'reason' => $reason,
+            'ip'       => $ip,
+            'reason'   => $reason,
             'added_by' => get_current_user_id()
         ]);
         

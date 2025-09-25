@@ -28,7 +28,7 @@
         validationCache: {},
 
         /**
-         * Initialse discount form functionality
+         * Initialize discount form functionality
          */
         init: function(config) {
             this.config = $.extend(this.config, config || {});
@@ -84,7 +84,7 @@
         },
 
         /**
-         * Initialse all discount forms on page
+         * Initialize all discount forms on page
          */
         initializeForms: function() {
             var self = this;
@@ -105,7 +105,7 @@
                     isSubmitting: false
                 };
 
-                // Initialise form state
+                // Initialize form state
                 self.resetFormState(formId);
             });
         },

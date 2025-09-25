@@ -68,7 +68,7 @@ $animation = !empty($animation) ? esc_attr($animation) : 'fadeIn';
     'use strict';
     
     $(document).ready(function() {
-        // Initialise popup trigger
+        // Initialize popup trigger
         $('#<?php echo $trigger_id; ?>').on('click', function(e) {
             e.preventDefault();
             
@@ -124,7 +124,7 @@ $animation = !empty($animation) ? esc_attr($animation) : 'fadeIn';
                         $popup.html(response.data.content);
                         showPopup($popup, options.animation);
                         
-                        // Initialise form handlers
+                        // Initialize form handlers
                         initializePopupForm($popup);
                     } else {
                         console.error('Failed to load popup content:', response.data);
@@ -194,7 +194,7 @@ $animation = !empty($animation) ? esc_attr($animation) : 'fadeIn';
         }
         
         /**
-         * Initialse popup form handlers
+         * Initialize popup form handlers
          */
         function initializePopupForm($popup) {
             const $form = $popup.find('.aci-affiliate-form');

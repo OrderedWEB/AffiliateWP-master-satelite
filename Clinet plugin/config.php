@@ -56,7 +56,7 @@ function affiliate_client_full_load_config() {
         $config = array_merge($config, $constants_config);
     }
     
-    // Validate and Sanitise configuration
+    // Validate and Sanitize configuration
     $config = affiliate_client_full_validate_config($config);
     
     return $config;
@@ -232,7 +232,7 @@ function affiliate_client_full_convert_env_value($value) {
 }
 
 /**
- * Validate and Sanitise configuration
+ * Validate and Sanitize configuration
  *
  * @param array $config Raw configuration
  * @return array Validated configuration
@@ -244,9 +244,9 @@ function affiliate_client_full_validate_config($config) {
     $validated['master_domain'] = affiliate_client_full_validate_domain($config['master_domain'] ?? '');
     
     // Validate API credentials
-    $validated['api_key'] = Sanitise_text_field($config['api_key'] ?? '');
-    $validated['api_secret'] = Sanitise_text_field($config['api_secret'] ?? '');
-    $validated['api_version'] = Sanitise_text_field($config['api_version'] ?? 'v1');
+    $validated['api_key'] = sanitize_text_field($config['api_key'] ?? '');
+    $validated['api_secret'] = sanitize_text_field($config['api_secret'] ?? '');
+    $validated['api_version'] = sanitize_text_field($config['api_version'] ?? 'v1');
     
     // Validate connection settings
     $validated['connection_timeout'] = absint($config['connection_timeout'] ?? 30);
@@ -257,7 +257,7 @@ function affiliate_client_full_validate_config($config) {
     // Validate caching settings
     $validated['cache_enabled'] = !empty($config['cache_enabled']);
     $validated['cache_duration'] = max(60, absint($config['cache_duration'] ?? 900));
-    $validated['cache_prefix'] = Sanitise_key($config['cache_prefix'] ?? 'aci_');
+    $validated['cache_prefix'] = sanitize_key($config['cache_prefix'] ?? 'aci_');
     
     // Validate form settings
     $validated['form_enabled'] = !empty($config['form_enabled']);
@@ -266,18 +266,18 @@ function affiliate_client_full_validate_config($config) {
     $validated['ajax_enabled'] = !empty($config['ajax_enabled']);
     
     // Validate UI settings
-    $validated['form_style'] = Sanitise_text_field($config['form_style'] ?? 'default');
-    $validated['popup_style'] = Sanitise_text_field($config['popup_style'] ?? 'modal');
-    $validated['button_text'] = Sanitise_text_field($config['button_text'] ?? __('Apply Discount Code', 'affiliate-client-full'));
-    $validated['placeholder_text'] = Sanitise_text_field($config['placeholder_text'] ?? __('Enter affiliate code', 'affiliate-client-full'));
-    $validated['success_message'] = Sanitise_text_field($config['success_message'] ?? __('Discount code applied successfully!', 'affiliate-client-full'));
-    $validated['error_message'] = Sanitise_text_field($config['error_message'] ?? __('Invalid or expired discount code.', 'affiliate-client-full'));
+    $validated['form_style'] = sanitize_text_field($config['form_style'] ?? 'default');
+    $validated['popup_style'] = sanitize_text_field($config['popup_style'] ?? 'modal');
+    $validated['button_text'] = sanitize_text_field($config['button_text'] ?? __('Apply Discount Code', 'affiliate-client-full'));
+    $validated['placeholder_text'] = sanitize_text_field($config['placeholder_text'] ?? __('Enter affiliate code', 'affiliate-client-full'));
+    $validated['success_message'] = sanitize_text_field($config['success_message'] ?? __('Discount code applied successfully!', 'affiliate-client-full'));
+    $validated['error_message'] = sanitize_text_field($config['error_message'] ?? __('Invalid or expired discount code.', 'affiliate-client-full'));
     
     // Validate code validation settings
     $validated['validate_format'] = !empty($config['validate_format']);
     $validated['min_code_length'] = max(1, absint($config['min_code_length'] ?? 3));
     $validated['max_code_length'] = min(100, max(3, absint($config['max_code_length'] ?? 50)));
-    $validated['allowed_characters'] = Sanitise_text_field($config['allowed_characters'] ?? 'alphanumeric_dash_underscore');
+    $validated['allowed_characters'] = sanitize_text_field($config['allowed_characters'] ?? 'alphanumeric_dash_underscore');
     
     // Validate tracking settings
     $validated['tracking_enabled'] = !empty($config['tracking_enabled']);
@@ -310,10 +310,10 @@ function affiliate_client_full_validate_config($config) {
     $validated['preload_api'] = !empty($config['preload_api']);
     
     // Validate localization settings
-    $validated['language'] = Sanitise_text_field($config['language'] ?? 'en');
-    $validated['date_format'] = Sanitise_text_field($config['date_format'] ?? 'Y-m-d');
-    $validated['time_format'] = Sanitise_text_field($config['time_format'] ?? 'H:i:s');
-    $validated['timezone'] = Sanitise_text_field($config['timezone'] ?? 'UTC');
+    $validated['language'] = sanitize_text_field($config['language'] ?? 'en');
+    $validated['date_format'] = sanitize_text_field($config['date_format'] ?? 'Y-m-d');
+    $validated['time_format'] = sanitize_text_field($config['time_format'] ?? 'H:i:s');
+    $validated['timezone'] = sanitize_text_field($config['timezone'] ?? 'UTC');
     
     // Validate advanced settings
     $validated['custom_css'] = wp_strip_all_tags($config['custom_css'] ?? '');
@@ -389,7 +389,7 @@ function affiliate_client_full_validate_email_list($emails) {
     
     $validated_emails = [];
     foreach ($emails as $email) {
-        $validated_email = Sanitise_email($email);
+        $validated_email = sanitize_email($email);
         if (!empty($validated_email) && is_email($validated_email)) {
             $validated_emails[] = $validated_email;
         }

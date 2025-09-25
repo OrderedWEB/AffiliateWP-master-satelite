@@ -23,7 +23,7 @@ class AFFILIATE_CLIENT_Conversion_Tracker {
      */
     private function get_current_visit_id() {
         $session_cookie = 'affiliate_client_visit_id';
-        return isset($_COOKIE[$session_cookie]) ? Sanitise_text_field($_COOKIE[$session_cookie]) : null;
+        return isset($_COOKIE[$session_cookie]) ? sanitize_text_field($_COOKIE[$session_cookie]) : null;
     }
 
     /**
@@ -77,7 +77,7 @@ class AFFILIATE_CLIENT_Conversion_Tracker {
         
         foreach ($ip_headers as $header) {
             if (isset($_SERVER[$header]) && !empty($_SERVER[$header])) {
-                $ip = Sanitise_text_field($_SERVER[$header]);
+                $ip = sanitize_text_field($_SERVER[$header]);
                 
                 if (strpos($ip, ',') !== false) {
                     $ip = trim(explode(',', $ip)[0]);
@@ -98,7 +98,7 @@ class AFFILIATE_CLIENT_Conversion_Tracker {
      * @return string User agent
      */
     private function get_user_agent() {
-        return isset($_SERVER['HTTP_USER_AGENT']) ? Sanitise_text_field($_SERVER['HTTP_USER_AGENT']) : '';
+        return isset($_SERVER['HTTP_USER_AGENT']) ? sanitize_text_field($_SERVER['HTTP_USER_AGENT']) : '';
     }
 
     /**
@@ -516,7 +516,7 @@ class AFFILIATE_CLIENT_Conversion_Tracker {
     }
 
     /**
-     * Initialse conversion tracker
+     * Initialize conversion tracker
      */
     public function init() {
         if (!$this->config['tracking_enabled']) {
@@ -642,7 +642,7 @@ class AFFILIATE_CLIENT_Conversion_Tracker {
      */
     public function rest_track_conversion($request) {
         $amount = floatval($request->get_param('amount'));
-        $reference = Sanitise_text_field($request->get_param('reference'));
+        $reference = sanitize_text_field($request->get_param('reference'));
         $data = $request->get_param('data') ?: [];
 
         $result = $this->track_conversion($amount, $reference, $data);
@@ -660,11 +660,11 @@ class AFFILIATE_CLIENT_Conversion_Tracker {
         }
 
         $amount = floatval($_POST['amount'] ?? 0);
-        $reference = Sanitise_text_field($_POST['reference'] ?? '');
+        $reference = sanitize_text_field($_POST['reference'] ?? '');
         $data = $_POST['data'] ?? [];
 
-        // Sanitise data
-        $data = $this->Sanitise_conversion_data($data);
+        // Sanitize data
+        $data = $this->sanitize_conversion_data($data);
 
         $result = $this->track_conversion($amount, $reference, $data);
         
@@ -960,27 +960,27 @@ class AFFILIATE_CLIENT_Conversion_Tracker {
     }
 
     /**
-     * Sanitise conversion data
+     * Sanitize conversion data
      *
      * @param array $data Raw conversion data
-     * @return array Sanitised data
+     * @return array Sanitized data
      */
-    private function Sanitise_conversion_data($data) {
-        $Sanitised = [];
+    private function sanitize_conversion_data($data) {
+        $Sanitized = [];
         
         foreach ($data as $key => $value) {
             if (is_string($value)) {
-                $Sanitised[$key] = Sanitise_text_field($value);
+                $Sanitized[$key] = sanitize_text_field($value);
             } elseif (is_numeric($value)) {
-                $Sanitised[$key] = is_float($value) ? floatval($value) : intval($value);
+                $Sanitized[$key] = is_float($value) ? floatval($value) : intval($value);
             } elseif (is_array($value)) {
-                $Sanitised[$key] = $this->Sanitise_conversion_data($value);
+                $Sanitized[$key] = $this->sanitize_conversion_data($value);
             } else {
-                $Sanitised[$key] = Sanitise_text_field($value);
+                $Sanitized[$key] = sanitize_text_field($value);
             }
         }
         
-        return $Sanitised;
+        return $Sanitized;
     }
 
     /**

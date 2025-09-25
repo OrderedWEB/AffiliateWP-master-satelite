@@ -1,16 +1,14 @@
 <?php
 /**
- * Domain Management for WP Affiliate Cross Domain Plugin Suite
+ * Rate Limiter Class
  *
- * Administrative interface for managing authorised client domains,
- * API keys, webhook configurations, and domain-specific settings.
+ * Handles API rate limiting, request throttling, IP blocking, and advanced
+ * traffic management for the affiliate cross-domain validation system.
  *
- * Filename: admin/domain-management.php
- * Plugin: WP Affiliate Cross Domain Plugin Suite (Master)
- *
- * @package AffiliateWP_Cross_Domain_Plugin_Suite_Master
+ * @package AffiliateWP_Cross_Domain_Full
  * @version 1.0.0
- * @author Richard King, Starne Consulting
+ * @author Richard King, starneconsulting.com
+ * @since 1.0.0
  */
 
 // Prevent direct access
@@ -18,1222 +16,1276 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class AFFCD_Domain_Management {
+class AFFCD_Rate_Limiter {
 
     /**
-     * Domain manager instance
+     * Database table name for rate limiting
      *
-     * @var AFFCD_Domain_Manager
+     * @var string
      */
-    private $domain_manager;
+    private $rate_limit_table;
+
+    /**
+     * Cache group for rate limiting data
+     *
+     * @var string
+     */
+    private $cache_group = 'affcd_rate_limits';
+
+    /**
+     * Default rate limits per action type
+     *
+     * @var array
+     */
+    private $default_limits = [
+        'validate_code' => ['per_minute' => 30, 'per_hour' => 500],
+        'api_request' => ['per_minute' => 60, 'per_hour' => 1000],
+        'form_submission' => ['per_minute' => 10, 'per_hour' => 100],
+        'failed_validation' => ['per_minute' => 5, 'per_hour' => 50],
+        'create_vanity' => ['per_minute' => 2, 'per_hour' => 20],
+        'webhook_request' => ['per_minute' => 20, 'per_hour' => 200],
+        'domain_verification' => ['per_minute' => 1, 'per_hour' => 10],
+        'analytics_query' => ['per_minute' => 100, 'per_hour' => 2000]
+    ];
+
+    /**
+     * Rate limited actions that require checking
+     *
+     * @var array
+     */
+    private $rate_limited_actions = [
+        'validate_code',
+        'api_request',
+        'form_submission',
+        'failed_validation',
+        'create_vanity',
+        'webhook_request',
+        'domain_verification',
+        'analytics_query'
+    ];
 
     /**
      * Constructor
      */
     public function __construct() {
-        add_action('admin_menu', [$this, 'add_admin_menu']);
-        add_action('admin_post_affcd_save_domain_settings', [$this, 'save_domain_settings']);
-        add_action('admin_post_affcd_add_domain', [$this, 'add_domain']);
-        add_action('admin_post_affcd_remove_domain', [$this, 'remove_domain']);
-        add_action('wp_ajax_affcd_test_domain_connection', [$this, 'ajax_test_domain_connection']);
-        add_action('wp_ajax_affcd_generate_api_key', [$this, 'ajax_generate_api_key']);
-        add_action('wp_ajax_affcd_send_test_webhook', [$this, 'ajax_send_test_webhook']);
-        add_action('wp_ajax_affcd_verify_domain', [$this, 'ajax_verify_domain']);
-        add_action('wp_ajax_affcd_toggle_domain_status', [$this, 'ajax_toggle_domain_status']);
-        add_action('wp_ajax_affcd_delete_domain', [$this, 'ajax_delete_domain']);
-        add_action('wp_ajax_affcd_bulk_domain_action', [$this, 'ajax_bulk_domain_action']);
-        add_action('wp_ajax_affcd_refresh_domain_list', [$this, 'ajax_refresh_domain_list']);
-        add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_scripts']);
+        global $wpdb;
         
-        // Initialise domain manager
-        $this->domain_manager = new AFFCD_Domain_Manager();
+        $this->rate_limit_table = $wpdb->prefix . 'affcd_rate_limiting';
+        
+        add_action('rest_api_init', [$this, 'init']);
+        add_action('wp_ajax_affcd_reset_rate_limits', [$this, 'ajax_reset_rate_limits']);
+        add_action('wp_ajax_affcd_get_rate_stats', [$this, 'ajax_get_rate_statistics']);
+        add_action('affcd_cleanup_rate_limits', [$this, 'cleanup_old_records']);
     }
 
     /**
-     * Add admin menu
+     * Initialize rate limiter hooks
      */
-    public function add_admin_menu() {
-        add_submenu_page(
-            'affiliate-wp',
-            __('Domain Management', 'affiliatewp-cross-domain-plugin-suite'),
-            __('Domain Management', 'affiliatewp-cross-domain-plugin-suite'),
-            'manage_affiliates',
-            'affcd-domain-management',
-            [$this, 'render_domain_management_page']
+    public function init() {
+        add_filter('rest_pre_dispatch', [$this, 'check_rate_limit'], 10, 3);
+        add_filter('affcd_should_block_request', [$this, 'filter_should_block_request'], 10, 3);
+    }
+
+    /**
+     * Check rate limit for REST API requests
+     *
+     * @param mixed $result Response data
+     * @param WP_REST_Server $server REST server instance
+     * @param WP_REST_Request $request Request object
+     * @return mixed Original result or WP_Error
+     */
+    public function check_rate_limit($result, $server, $request) {
+        // Only check for our API endpoints
+        if (strpos($request->get_route(), '/affcd/') === false) {
+            return $result;
+        }
+
+        $identifier = $this->get_rate_limit_identifier($request);
+        $action_type = $this->determine_action_type($request);
+
+        // Check if this action should be rate limited
+        if (!$this->should_rate_limit($action_type)) {
+            return $result;
+        }
+
+        // Check if identifier is blocked
+        if ($this->is_identifier_blocked($identifier)) {
+            return new WP_Error(
+                'rate_limit_blocked',
+                __('Your access has been temporarily blocked due to rate limit violations.', 'affiliate-cross-domain-full'),
+                ['status' => 429, 'blocked_until' => $this->get_block_expiry($identifier)]
+            );
+        }
+
+        // Check rate limits
+        if (!$this->is_within_limits($identifier, $action_type)) {
+            $this->handle_rate_limit_exceeded($identifier, $action_type, $request);
+            
+            return new WP_Error(
+                'rate_limit_exceeded',
+                __('Rate limit exceeded. Please try again later.', 'affiliate-cross-domain-full'),
+                [
+                    'status' => 429,
+                    'retry_after' => $this->get_retry_after($identifier, $action_type),
+                    'rate_limit_info' => $this->get_rate_limit_headers($identifier, $action_type)
+                ]
+            );
+        }
+
+        // Record successful request
+        $this->record_request($identifier, $action_type, $request);
+        
+        return $result;
+    }
+
+    /**
+     * Get rate limit identifier from request
+     *
+     * @param WP_REST_Request $request Request object
+     * @return string Rate limit identifier
+     */
+    private function get_rate_limit_identifier($request) {
+        // Try API key first for more generous limits
+        $api_key = $request->get_header('X-API-Key') ?: $request->get_param('api_key');
+        if ($api_key && $this->validate_api_key($api_key)) {
+            return 'api_key:' . substr(hash('sha256', $api_key), 0, 16);
+        }
+
+        // Use authenticated user ID if available
+        $user_id = get_current_user_id();
+        if ($user_id > 0) {
+            return 'user:' . $user_id;
+        }
+
+        // Fall back to IP address
+        return 'ip:' . $this->get_client_ip();
+    }
+
+    /**
+     * Determine action type from request
+     *
+     * @param WP_REST_Request $request Request object
+     * @return string Action type
+     */
+    private function determine_action_type($request) {
+        $route = $request->get_route();
+        $method = $request->get_method();
+
+        // Map routes to action types
+        $route_mappings = [
+            '/affcd/v1/validate-code' => 'validate_code',
+            '/affcd/v1/domains' => $method === 'POST' ? 'create_domain' : 'api_request',
+            '/affcd/v1/vanity-codes' => $method === 'POST' ? 'create_vanity' : 'api_request',
+            '/affcd/v1/webhook' => 'webhook_request',
+            '/affcd/v1/analytics' => 'analytics_query'
+        ];
+
+        foreach ($route_mappings as $pattern => $action) {
+            if (strpos($route, $pattern) !== false) {
+                return $action;
+            }
+        }
+
+        return 'api_request';
+    }
+
+    /**
+     * Check if identifier is within rate limits
+     *
+     * @param string $identifier Rate limit identifier
+     * @param string $action_type Action being performed
+     * @return bool Within limits
+     */
+    private function is_within_limits($identifier, $action_type) {
+        $limits = $this->get_action_rate_limits($action_type);
+        
+        // Check minute limit
+        if (!$this->check_minute_limit($identifier, $action_type, $limits['per_minute'])) {
+            return false;
+        }
+
+        // Check hour limit
+        if (!$this->check_hour_limit($identifier, $action_type, $limits['per_hour'])) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Check minute-based rate limit
+     *
+     * @param string $identifier Rate limit identifier
+     * @param string $action_type Action type
+     * @param int $limit Requests per minute limit
+     * @return bool Within limit
+     */
+    private function check_minute_limit($identifier, $action_type, $limit) {
+        $cache_key = "minute:{$identifier}:{$action_type}";
+        $current_count = wp_cache_get($cache_key, $this->cache_group);
+        
+        if ($current_count === false) {
+            // Check database for current minute
+            $current_count = $this->get_minute_count_from_db($identifier, $action_type);
+            wp_cache_set($cache_key, $current_count, $this->cache_group, 60);
+        }
+
+        return $current_count < $limit;
+    }
+
+    /**
+     * Check hour-based rate limit
+     *
+     * @param string $identifier Rate limit identifier
+     * @param string $action_type Action type
+     * @param int $limit Requests per hour limit
+     * @return bool Within limit
+     */
+    private function check_hour_limit($identifier, $action_type, $limit) {
+        $cache_key = "hour:{$identifier}:{$action_type}";
+        $current_count = wp_cache_get($cache_key, $this->cache_group);
+        
+        if ($current_count === false) {
+            // Check database for current hour
+            $current_count = $this->get_hour_count_from_db($identifier, $action_type);
+            wp_cache_set($cache_key, $current_count, $this->cache_group, 3600);
+        }
+
+        return $current_count < $limit;
+    }
+
+    /**
+     * Get current minute count from database
+     *
+     * @param string $identifier Rate limit identifier
+     * @param string $action_type Action type
+     * @return int Request count
+     */
+    private function get_minute_count_from_db($identifier, $action_type) {
+        global $wpdb;
+        
+        $minute_start = date('Y-m-d H:i:00');
+        
+        $count = $wpdb->get_var($wpdb->prepare(
+            "SELECT SUM(request_count) FROM {$this->rate_limit_table} 
+             WHERE identifier = %s 
+             AND action_type = %s 
+             AND window_start >= %s
+             AND is_blocked = 0",
+            $identifier,
+            $action_type,
+            $minute_start
+        ));
+
+        return intval($count);
+    }
+
+    /**
+     * Get current hour count from database
+     *
+     * @param string $identifier Rate limit identifier
+     * @param string $action_type Action type
+     * @return int Request count
+     */
+    private function get_hour_count_from_db($identifier, $action_type) {
+        global $wpdb;
+        
+        $hour_start = date('Y-m-d H:00:00');
+        
+        $count = $wpdb->get_var($wpdb->prepare(
+            "SELECT SUM(request_count) FROM {$this->rate_limit_table} 
+             WHERE identifier = %s 
+             AND action_type = %s 
+             AND window_start >= %s
+             AND is_blocked = 0",
+            $identifier,
+            $action_type,
+            $hour_start
+        ));
+
+        return intval($count);
+    }
+
+    /**
+     * Record a request in rate limiting system
+     *
+     * @param string $identifier Rate limit identifier
+     * @param string $action_type Action type
+     * @param WP_REST_Request $request Request object
+     */
+    private function record_request($identifier, $action_type, $request) {
+        // Update cache counters
+        $this->increment_cache_counters($identifier, $action_type);
+        
+        // Update database record
+        $this->update_database_record($identifier, $action_type, $request);
+        
+        // Log analytics event
+        $this->log_rate_limit_event($identifier, 'request', $action_type, [
+            'endpoint' => $request->get_route(),
+            'method' => $request->get_method(),
+            'user_agent' => $request->get_header('User-Agent'),
+            'referer' => $request->get_header('Referer')
+        ]);
+    }
+
+    /**
+     * Increment cache counters for rate limiting
+     *
+     * @param string $identifier Rate limit identifier
+     * @param string $action_type Action type
+     */
+    private function increment_cache_counters($identifier, $action_type) {
+        // Increment minute counter
+        $minute_key = "minute:{$identifier}:{$action_type}";
+        $minute_count = wp_cache_get($minute_key, $this->cache_group) ?: 0;
+        wp_cache_set($minute_key, $minute_count + 1, $this->cache_group, 60);
+        
+        // Increment hour counter
+        $hour_key = "hour:{$identifier}:{$action_type}";
+        $hour_count = wp_cache_get($hour_key, $this->cache_group) ?: 0;
+        wp_cache_set($hour_key, $hour_count + 1, $this->cache_group, 3600);
+    }
+
+    /**
+     * Update database rate limit record
+     *
+     * @param string $identifier Rate limit identifier
+     * @param string $action_type Action type
+     * @param WP_REST_Request $request Request object
+     */
+    private function update_database_record($identifier, $action_type, $request) {
+        global $wpdb;
+        
+        $current_minute = date('Y-m-d H:i:00');
+        $current_hour = date('Y-m-d H:00:00');
+        
+        // Update or insert minute window record
+        $wpdb->query($wpdb->prepare(
+            "INSERT INTO {$this->rate_limit_table} 
+             (identifier, action_type, request_count, window_start, window_end, time_window, endpoint) 
+             VALUES (%s, %s, 1, %s, %s, 'minute', %s)
+             ON DUPLICATE KEY UPDATE 
+             request_count = request_count + 1, 
+             last_request = CURRENT_TIMESTAMP",
+            $identifier,
+            $action_type,
+            $current_minute,
+            date('Y-m-d H:i:59'),
+            $request->get_route()
+        ));
+
+        // Update or insert hour window record
+        $wpdb->query($wpdb->prepare(
+            "INSERT INTO {$this->rate_limit_table} 
+             (identifier, action_type, request_count, window_start, window_end, time_window, endpoint) 
+             VALUES (%s, %s, 1, %s, %s, 'hour', %s)
+             ON DUPLICATE KEY UPDATE 
+             request_count = request_count + 1, 
+             last_request = CURRENT_TIMESTAMP",
+            $identifier,
+            $action_type,
+            $current_hour,
+            date('Y-m-d H:59:59'),
+            $request->get_route()
+        ));
+    }
+
+    /**
+     * Handle rate limit exceeded situation
+     *
+     * @param string $identifier Rate limit identifier
+     * @param string $action_type Action type
+     * @param WP_REST_Request $request Request object
+     */
+    private function handle_rate_limit_exceeded($identifier, $action_type, $request) {
+        // Log violation
+        $this->log_rate_limit_event($identifier, 'violation', $action_type, [
+            'endpoint' => $request->get_route(),
+            'method' => $request->get_method(),
+            'user_agent' => $request->get_header('User-Agent'),
+            'ip_address' => $this->get_client_ip()
+        ]);
+
+        // Check for repeated violations
+        $violation_count = $this->get_recent_violation_count($identifier);
+        
+        // Progressive blocking based on violation severity
+        if ($violation_count >= $this->get_block_threshold($action_type)) {
+            $this->block_identifier($identifier, $action_type, $violation_count);
+        }
+
+        // Send security notification if needed
+        $this->maybe_send_security_notification($identifier, $action_type, $violation_count);
+    }
+
+    /**
+     * Get recent violation count for identifier
+     *
+     * @param string $identifier Rate limit identifier
+     * @return int Violation count
+     */
+    private function get_recent_violation_count($identifier) {
+        global $wpdb;
+        
+        $analytics_table = $wpdb->prefix . 'affcd_analytics';
+        
+        return intval($wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$analytics_table} 
+             WHERE event_type = 'rate_limit_violation' 
+             AND JSON_UNQUOTE(JSON_EXTRACT(event_data, '$.identifier')) = %s 
+             AND created_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)",
+            $identifier
+        )));
+    }
+
+    /**
+     * Block identifier for rate limit violations
+     *
+     * @param string $identifier Rate limit identifier
+     * @param string $action_type Action type
+     * @param int $violation_count Number of violations
+     */
+    private function block_identifier($identifier, $action_type, $violation_count) {
+        global $wpdb;
+        
+        $block_duration = $this->calculate_block_duration($violation_count, $action_type);
+        $block_until = date('Y-m-d H:i:s', time() + $block_duration);
+        
+        $result = $wpdb->insert(
+            $this->rate_limit_table,
+            [
+                'identifier' => $identifier,
+                'action_type' => 'blocked',
+                'request_count' => 0,
+                'window_start' => current_time('mysql'),
+                'window_end' => $block_until,
+                'is_blocked' => 1,
+                'block_until' => $block_until,
+                'block_reason' => sprintf('Rate limit violations: %d', $violation_count),
+                'violation_level' => min($violation_count, 10),
+                'time_window' => 'block'
+            ],
+            ['%s', '%s', '%d', '%s', '%s', '%d', '%s', '%s', '%d', '%s']
+        );
+
+        if ($result !== false) {
+            // Clear cache for this identifier
+            wp_cache_delete("minute:{$identifier}:*", $this->cache_group);
+            wp_cache_delete("hour:{$identifier}:*", $this->cache_group);
+
+            // Log block event
+            $this->log_rate_limit_event($identifier, 'block', $action_type, [
+                'block_duration' => $block_duration,
+                'violation_count' => $violation_count,
+                'block_until' => $block_until
+            ]);
+        }
+    }
+
+    /**
+     * Calculate block duration based on violation count
+     *
+     * @param int $violation_count Number of violations
+     * @param string $action_type Action type
+     * @return int Block duration in seconds
+     */
+    private function calculate_block_duration($violation_count, $action_type) {
+        $base_duration = 300; // 5 minutes
+        
+        // Progressive blocking - exponential backoff
+        $multiplier = min(pow(2, $violation_count - 3), 128); // Max 128x multiplier
+        
+        // Critical actions get longer blocks
+        $critical_actions = ['failed_validation', 'create_vanity'];
+        if (in_array($action_type, $critical_actions)) {
+            $multiplier *= 2;
+        }
+        
+        return $base_duration * $multiplier;
+    }
+
+    /**
+     * Check if identifier is blocked
+     *
+     * @param string $identifier Rate limit identifier
+     * @return bool Is blocked
+     */
+    public function is_identifier_blocked($identifier) {
+        global $wpdb;
+        
+        // Check cache first
+        $cache_key = "blocked:{$identifier}";
+        $cached = wp_cache_get($cache_key, $this->cache_group);
+        if ($cached !== false) {
+            return $cached === 'yes';
+        }
+        
+        $current_time = current_time('mysql');
+        
+        $blocked = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$this->rate_limit_table} 
+             WHERE identifier = %s 
+             AND is_blocked = 1 
+             AND (block_until IS NULL OR block_until > %s)",
+            $identifier,
+            $current_time
+        ));
+        
+        $is_blocked = $blocked > 0;
+        
+        // Cache result for 1 minute
+        wp_cache_set($cache_key, $is_blocked ? 'yes' : 'no', $this->cache_group, 60);
+        
+        return $is_blocked;
+    }
+
+    /**
+     * Get block expiry time for identifier
+     *
+     * @param string $identifier Rate limit identifier
+     * @return string|null Block expiry time
+     */
+    private function get_block_expiry($identifier) {
+        global $wpdb;
+        
+        return $wpdb->get_var($wpdb->prepare(
+            "SELECT block_until FROM {$this->rate_limit_table} 
+             WHERE identifier = %s 
+             AND is_blocked = 1 
+             AND block_until > NOW()
+             ORDER BY block_until DESC
+             LIMIT 1",
+            $identifier
+        ));
+    }
+
+    /**
+     * Get retry after time in seconds
+     *
+     * @param string $identifier Rate limit identifier
+     * @param string $action_type Action type
+     * @return int Seconds to wait
+     */
+    private function get_retry_after($identifier, $action_type) {
+        // For minute limits, suggest retry after current minute ends
+        $minute_count = wp_cache_get("minute:{$identifier}:{$action_type}", $this->cache_group);
+        if ($minute_count !== false) {
+            return 60 - (time() % 60);
+        }
+        
+        // Default retry after 1 minute
+        return 60;
+    }
+
+    /**
+     * Get rate limit headers for response
+     *
+     * @param string $identifier Rate limit identifier
+     * @param string $action_type Action type
+     * @return array Rate limit headers
+     */
+    private function get_rate_limit_headers($identifier, $action_type) {
+        $limits = $this->get_action_rate_limits($action_type);
+        $minute_count = wp_cache_get("minute:{$identifier}:{$action_type}", $this->cache_group) ?: 0;
+        $hour_count = wp_cache_get("hour:{$identifier}:{$action_type}", $this->cache_group) ?: 0;
+        
+        return [
+            'X-RateLimit-Limit-Minute' => $limits['per_minute'],
+            'X-RateLimit-Remaining-Minute' => max(0, $limits['per_minute'] - $minute_count),
+            'X-RateLimit-Limit-Hour' => $limits['per_hour'],
+            'X-RateLimit-Remaining-Hour' => max(0, $limits['per_hour'] - $hour_count),
+            'X-RateLimit-Reset' => time() + (60 - (time() % 60))
+        ];
+    }
+
+    /**
+     * Get client IP address
+     *
+     * @return string Client IP address
+     */
+    private function get_client_ip() {
+        $headers_to_check = [
+            'HTTP_CF_CONNECTING_IP',
+            'HTTP_X_FORWARDED_FOR',
+            'HTTP_X_REAL_IP',
+            'HTTP_CLIENT_IP',
+            'REMOTE_ADDR'
+        ];
+        
+        foreach ($headers_to_check as $header) {
+            if (!empty($_SERVER[$header])) {
+                $ip = trim(explode(',', $_SERVER[$header])[0]);
+                if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+                    return $ip;
+                }
+            }
+        }
+        
+        return $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+    }
+
+    /**
+     * Validate API key
+     *
+     * @param string $api_key API key to validate
+     * @return bool Is valid
+     */
+    private function validate_api_key($api_key) {
+        if (empty($api_key) || strlen($api_key) < 32) {
+            return false;
+        }
+        
+        global $wpdb;
+        $domains_table = $wpdb->prefix . 'affcd_authorized_domains';
+        
+        $valid = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$domains_table} 
+             WHERE api_key = %s AND status = 'active'",
+            $api_key
+        ));
+        
+        return $valid > 0;
+    }
+
+    /**
+     * Check if action should be rate limited
+     *
+     * @param string $action_type Action type
+     * @return bool Should be rate limited
+     */
+    private function should_rate_limit($action_type) {
+        return in_array($action_type, $this->rate_limited_actions);
+    }
+
+    /**
+     * Get rate limit settings for action
+     *
+     * @param string $action_type Action type
+     * @return array Rate limit settings
+     */
+    private function get_action_rate_limits($action_type) {
+        $settings = get_option('affcd_api_settings', []);
+        $custom_limits = $settings['custom_rate_limits'][$action_type] ?? [];
+        
+        $defaults = $this->default_limits[$action_type] ?? $this->default_limits['api_request'];
+        
+        return array_merge($defaults, $custom_limits);
+    }
+
+    /**
+     * Get block threshold for action type
+     *
+     * @param string $action_type Action type
+     * @return int Violations before blocking
+     */
+    private function get_block_threshold($action_type) {
+        $thresholds = [
+            'failed_validation' => 3,
+            'create_vanity' => 5,
+            'webhook_request' => 10,
+            'validate_code' => 15,
+            'api_request' => 20
+        ];
+        
+        return $thresholds[$action_type] ?? 10;
+    }
+
+    /**
+     * Log rate limit event
+     *
+     * @param string $identifier Rate limit identifier
+     * @param string $event_type Event type
+     * @param string $action_type Action type
+     * @param array $details Event details
+     */
+    private function log_rate_limit_event($identifier, $event_type, $action_type, $details = []) {
+        global $wpdb;
+        
+        $analytics_table = $wpdb->prefix . 'affcd_analytics';
+        
+        $event_data = [
+            'identifier' => $identifier,
+            'action_type' => $action_type,
+            'details' => $details,
+            'ip_address' => $this->get_client_ip(),
+            'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? '',
+            'timestamp' => time()
+        ];
+        
+        $wpdb->insert(
+            $analytics_table,
+            [
+                'event_type' => 'rate_limit_' . $event_type,
+                'event_data' => wp_json_encode($event_data),
+                'status' => 'completed',
+                'created_at' => current_time('mysql')
+            ],
+            ['%s', '%s', '%s', '%s']
         );
     }
 
     /**
-     * Enqueue admin scripts and styles
+     * Send security notification for severe violations
+     *
+     * @param string $identifier Rate limit identifier
+     * @param string $action_type Action type
+     * @param int $violation_count Violation count
      */
-    public function enqueue_admin_scripts($hook) {
-        if ('affiliate-wp_page_affcd-domain-management' !== $hook) {
+    private function maybe_send_security_notification($identifier, $action_type, $violation_count) {
+        // Only send for severe violations
+        if ($violation_count < 10) {
             return;
         }
-
-        wp_enqueue_script('jquery');
-        wp_enqueue_script('jquery-ui-dialog');
-        wp_enqueue_script('affcd-domain-management', 
-            AFFCD_PLUGIN_URL . 'assets/js/domain-management.js', 
-            ['jquery', 'jquery-ui-dialog'], 
-            AFFCD_VERSION, 
-            true
+        
+        $admin_email = get_option('admin_email');
+        $site_name = get_bloginfo('name');
+        
+        $subject = sprintf('[%s] Rate Limit Security Alert', $site_name);
+        
+        $message = sprintf(
+            "Security Alert: High rate limit violations detected\n\n" .
+            "Identifier: %s\n" .
+            "Action: %s\n" .
+            "Violations: %d\n" .
+            "Time: %s\n" .
+            "IP: %s\n\n" .
+            "Please review and take appropriate action if necessary.",
+            $identifier,
+            $action_type,
+            $violation_count,
+            current_time('mysql'),
+            $this->get_client_ip()
         );
-
-        wp_enqueue_style('wp-jquery-ui-dialog');
-        wp_enqueue_style('affcd-domain-management', 
-            AFFCD_PLUGIN_URL . 'assets/css/domain-management.css', 
-            [], 
-            AFFCD_VERSION
-        );
-
-        wp_localize_script('affcd-domain-management', 'affcdAjax', [
-            'ajaxurl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('affcd_ajax_nonce'),
-            'strings' => [
-                'testing' => __('Testing...', 'affiliatewp-cross-domain-plugin-suite'),
-                'success' => __('Success!', 'affiliatewp-cross-domain-plugin-suite'),
-                'error' => __('Error', 'affiliatewp-cross-domain-plugin-suite'),
-                'confirmRemove' => __('Are you sure you want to remove this domain?', 'affiliatewp-cross-domain-plugin-suite'),
-                'confirmBulkAction' => __('Are you sure you want to apply "%s" to %d selected domains?', 'affiliatewp-cross-domain-plugin-suite'),
-                'selectBulkAction' => __('Please select a bulk action.', 'affiliatewp-cross-domain-plugin-suite'),
-                'selectDomains' => __('Please select at least one domain.', 'affiliatewp-cross-domain-plugin-suite'),
-                'processing' => __('Processing...', 'affiliatewp-cross-domain-plugin-suite'),
-                'verifying' => __('Verifying...', 'affiliatewp-cross-domain-plugin-suite'),
-                'verified' => __('Verified', 'affiliatewp-cross-domain-plugin-suite'),
-                'verificationFailed' => __('Verification failed', 'affiliatewp-cross-domain-plugin-suite'),
-                'verificationError' => __('Verification error occurred', 'affiliatewp-cross-domain-plugin-suite'),
-                'addDomain' => __('Add Domain', 'affiliatewp-cross-domain-plugin-suite'),
-                'updateDomain' => __('Update Domain', 'affiliatewp-cross-domain-plugin-suite'),
-                'updating' => __('Updating...', 'affiliatewp-cross-domain-plugin-suite'),
-                'deleting' => __('Deleting...', 'affiliatewp-cross-domain-plugin-suite'),
-                'delete' => __('Delete', 'affiliatewp-cross-domain-plugin-suite'),
-                'verify' => __('Verify', 'affiliatewp-cross-domain-plugin-suite'),
-                'statusUpdateFailed' => __('Failed to update domain status', 'affiliatewp-cross-domain-plugin-suite'),
-                'statusUpdateError' => __('Error updating domain status', 'affiliatewp-cross-domain-plugin-suite'),
-                'bulkActionFailed' => __('Bulk action failed', 'affiliatewp-cross-domain-plugin-suite'),
-                'bulkActionError' => __('Error performing bulk action', 'affiliatewp-cross-domain-plugin-suite'),
-                'addDomainFailed' => __('Failed to add domain', 'affiliatewp-cross-domain-plugin-suite'),
-                'addDomainError' => __('Error adding domain', 'affiliatewp-cross-domain-plugin-suite'),
-                'updateDomainFailed' => __('Failed to update domain', 'affiliatewp-cross-domain-plugin-suite'),
-                'updateDomainError' => __('Error updating domain', 'affiliatewp-cross-domain-plugin-suite'),
-                'deleteDomainFailed' => __('Failed to delete domain', 'affiliatewp-cross-domain-plugin-suite'),
-                'deleteDomainError' => __('Error deleting domain', 'affiliatewp-cross-domain-plugin-suite'),
-            ]
-        ]);
+        
+        wp_mail($admin_email, $subject, $message);
     }
 
     /**
-     * Render domain management page
+     * Unblock identifier
+     *
+     * @param string $identifier Rate limit identifier
+     * @return bool Success
      */
-    public function render_domain_management_page() {
-        $active_tab = $_GET['tab'] ?? 'domains';
-        $domains = $this->domain_manager->get_all_domains();
-        $domain_stats = $this->get_domain_statistics();
+    public function unblock_identifier($identifier) {
+        global $wpdb;
         
-        ?>
-        <div class="wrap">
-            <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+        $result = $wpdb->update(
+            $this->rate_limit_table,
+            [
+                'is_blocked' => 0,
+                'block_until' => null
+            ],
+            ['identifier' => $identifier, 'is_blocked' => 1],
+            ['%d', '%s'],
+            ['%s', '%d']
+        );
+        
+        if ($result !== false) {
+            // Clear cache
+            wp_cache_delete("blocked:{$identifier}", $this->cache_group);
             
-            <?php $this->render_notices(); ?>
+            // Log unblock event
+            $this->log_rate_limit_event($identifier, 'unblock', 'manual', [
+                'unblocked_by' => get_current_user_id(),
+                'unblocked_at' => current_time('mysql')
+            ]);
+        }
+        
+        return $result !== false;
+    }
+
+    /**
+     * Reset rate limits for identifier
+     *
+     * @param string $identifier Rate limit identifier
+     * @return bool Success
+     */
+    public function reset_rate_limits($identifier) {
+        // Clear cache entries
+        wp_cache_flush_group($this->cache_group);
+        
+        // Unblock if blocked
+        $this->unblock_identifier($identifier);
+        
+        // Log reset event
+        $this->log_rate_limit_event($identifier, 'reset', 'manual', [
+            'reset_by' => get_current_user_id(),
+            'reset_at' => current_time('mysql')
+        ]);
+        
+        return true;
+    }
+
+    /**
+     * Get rate limit status for identifier
+     *
+     * @param string $identifier Rate limit identifier
+     * @param string $action_type Action type
+     * @return array Status information
+     */
+    public function get_rate_limit_status($identifier, $action_type = 'api_request') {
+        $limits = $this->get_action_rate_limits($action_type);
+        
+        $minute_count = wp_cache_get("minute:{$identifier}:{$action_type}", $this->cache_group);
+        if ($minute_count === false) {
+            $minute_count = $this->get_minute_count_from_db($identifier, $action_type);
+        }
+        
+        $hour_count = wp_cache_get("hour:{$identifier}:{$action_type}", $this->cache_group);
+        if ($hour_count === false) {
+            $hour_count = $this->get_hour_count_from_db($identifier, $action_type);
+        }
+        
+        return [
+            'identifier' => $identifier,
+            'action_type' => $action_type,
+            'minute_count' => intval($minute_count),
+            'minute_limit' => $limits['per_minute'],
+            'minute_remaining' => max(0, $limits['per_minute'] - intval($minute_count)),
+            'hour_count' => intval($hour_count),
+            'hour_limit' => $limits['per_hour'],
+            'hour_remaining' => max(0, $limits['per_hour'] - intval($hour_count)),
+            'is_blocked' => $this->is_identifier_blocked($identifier),
+            'block_until' => $this->get_block_expiry($identifier),
+            'next_reset' => date('Y-m-d H:i:00', strtotime('+1 minute'))
+        ];
+    }
+
+    /**
+     * Get comprehensive rate limit statistics
+     *
+     * @return array Statistics
+     */
+    public function get_statistics() {
+        global $wpdb;
+        
+        $stats = [
+            'total_requests_today' => 0,
+            'blocked_identifiers' => 0,
+            'top_consumers' => [],
+            'most_blocked_actions' => [],
+            'hourly_breakdown' => [],
+            'violation_trends' => []
+        ];
+        
+        $today = date('Y-m-d');
+        $current_time = current_time('mysql');
+        
+        // Get total requests today
+        $stats['total_requests_today'] = intval($wpdb->get_var($wpdb->prepare(
+            "SELECT SUM(request_count) FROM {$this->rate_limit_table} 
+             WHERE DATE(window_start) = %s AND is_blocked = 0",
+            $today
+        )));
+        
+        // Get blocked identifiers count
+        $stats['blocked_identifiers'] = intval($wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(DISTINCT identifier) FROM {$this->rate_limit_table} 
+             WHERE is_blocked = 1 AND (block_until IS NULL OR block_until > %s)",
+            $current_time
+        )));
+        
+        // Get top consumers
+        $stats['top_consumers'] = $wpdb->get_results($wpdb->prepare(
+            "SELECT identifier, SUM(request_count) as total_requests,
+                    COUNT(DISTINCT action_type) as action_types
+             FROM {$this->rate_limit_table} 
+             WHERE DATE(window_start) = %s AND is_blocked = 0
+             GROUP BY identifier 
+             ORDER BY total_requests DESC 
+             LIMIT 10",
+            $today
+        ), ARRAY_A);
+        
+        // Get most blocked actions
+        $stats['most_blocked_actions'] = $wpdb->get_results(
+            "SELECT action_type, COUNT(*) as block_count,
+                    AVG(violation_level) as avg_severity
+             FROM {$this->rate_limit_table} 
+             WHERE is_blocked = 1 AND DATE(window_start) = CURDATE()
+             GROUP BY action_type 
+             ORDER BY block_count DESC 
+             LIMIT 10",
+            ARRAY_A
+        );
+        
+        // Get hourly breakdown for today
+        $stats['hourly_breakdown'] = $wpdb->get_results($wpdb->prepare(
+            "SELECT HOUR(window_start) as hour, 
+                    SUM(request_count) as requests,
+                    COUNT(CASE WHEN is_blocked = 1 THEN 1 END) as blocks
+             FROM {$this->rate_limit_table} 
+             WHERE DATE(window_start) = %s
+             GROUP BY HOUR(window_start) 
+             ORDER BY hour",
+            $today
+        ), ARRAY_A);
+        
+        // Get violation trends (last 7 days)
+        $analytics_table = $wpdb->prefix . 'affcd_analytics';
+        $stats['violation_trends'] = $wpdb->get_results(
+            "SELECT DATE(created_at) as date, COUNT(*) as violations
+             FROM {$analytics_table} 
+             WHERE event_type = 'rate_limit_violation' 
+             AND created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+             GROUP BY DATE(created_at) 
+             ORDER BY date",
+            ARRAY_A
+        );
+        
+        return $stats;
+    }
+
+    /**
+     * Clean up old rate limit records
+     *
+     * @param int $days_old Days to keep records
+     * @return int Records deleted
+     */
+    public function cleanup_old_records($days_old = 7) {
+        global $wpdb;
+        
+        $cutoff_date = date('Y-m-d H:i:s', strtotime("-{$days_old} days"));
+        
+        // Delete old non-blocked records
+        $deleted = $wpdb->query($wpdb->prepare(
+            "DELETE FROM {$this->rate_limit_table} 
+             WHERE window_end < %s AND is_blocked = 0",
+            $cutoff_date
+        ));
+        
+        // Delete expired blocks
+        $deleted += $wpdb->query($wpdb->prepare(
+            "DELETE FROM {$this->rate_limit_table} 
+             WHERE is_blocked = 1 AND block_until < %s",
+            current_time('mysql')
+        ));
+        
+        return intval($deleted);
+    }
+
+    /**
+     * Check advanced rate limiting with burst allowance
+     *
+     * @param string $identifier Rate limit identifier
+     * @param string $action_type Action type
+     * @param int $burst_allowance Additional requests allowed
+     * @return bool Within limits including burst
+     */
+    public function check_advanced_rate_limit($identifier, $action_type, $burst_allowance = 0) {
+        $limits = $this->get_action_rate_limits($action_type);
+        
+        // Check regular limits first
+        if ($this->is_within_limits($identifier, $action_type)) {
+            return true;
+        }
+        
+        // Check if burst allowance is available
+        if ($burst_allowance > 0) {
+            $burst_key = "burst:{$identifier}:{$action_type}";
+            $burst_used = wp_cache_get($burst_key, $this->cache_group) ?: 0;
             
-            <nav class="nav-tab-wrapper">
-                <a href="<?php echo esc_url(admin_url('admin.php?page=affcd-domain-management&tab=domains')); ?>" 
-                   class="nav-tab <?php echo $active_tab === 'domains' ? 'nav-tab-active' : ''; ?>">
-                    <?php _e('Domains', 'affiliatewp-cross-domain-plugin-suite'); ?>
-                </a>
-                <a href="<?php echo esc_url(admin_url('admin.php?page=affcd-domain-management&tab=settings')); ?>" 
-                   class="nav-tab <?php echo $active_tab === 'settings' ? 'nav-tab-active' : ''; ?>">
-                    <?php _e('Settings', 'affiliatewp-cross-domain-plugin-suite'); ?>
-                </a>
-                <a href="<?php echo esc_url(admin_url('admin.php?page=affcd-domain-management&tab=security')); ?>" 
-                   class="nav-tab <?php echo $active_tab === 'security' ? 'nav-tab-active' : ''; ?>">
-                    <?php _e('Security', 'affiliatewp-cross-domain-plugin-suite'); ?>
-                </a>
-                <a href="<?php echo esc_url(admin_url('admin.php?page=affcd-domain-management&tab=analytics')); ?>" 
-                   class="nav-tab <?php echo $active_tab === 'analytics' ? 'nav-tab-active' : ''; ?>">
-                    <?php _e('Analytics', 'affiliatewp-cross-domain-plugin-suite'); ?>
-                </a>
-            </nav>
-            
-            <div class="tab-content">
-                <?php
-                switch ($active_tab) {
-                    case 'settings':
-                        $this->render_settings_tab();
-                        break;
-                    case 'security':
-                        $this->render_security_tab();
-                        break;
-                    case 'analytics':
-                        $this->render_analytics_tab($domain_stats);
-                        break;
-                    case 'domains':
-                    default:
-                        $this->render_domains_tab($domains);
-                        break;
+            if ($burst_used < $burst_allowance) {
+                // Allow request and consume burst allowance
+                wp_cache_set($burst_key, $burst_used + 1, $this->cache_group, 3600);
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    /**
+     * Update rate limit settings
+     *
+     * @param array $settings Rate limit settings
+     * @return bool Success
+     */
+    public function update_rate_limit_settings($settings) {
+        $current_settings = get_option('affcd_api_settings', []);
+        
+        $rate_limit_settings = [
+            'rate_limit_per_minute' => absint($settings['rate_limit_per_minute'] ?? 60),
+            'rate_limit_per_hour' => absint($settings['rate_limit_per_hour'] ?? 1000),
+            'rate_limit_enabled' => !empty($settings['rate_limit_enabled']),
+            'custom_rate_limits' => $settings['custom_rate_limits'] ?? []
+        ];
+        
+        $updated_settings = array_merge($current_settings, $rate_limit_settings);
+        
+        // Clear cache when settings change
+        wp_cache_flush_group($this->cache_group);
+        
+        return update_option('affcd_api_settings', $updated_settings);
+    }
+
+    /**
+     * Filter to determine if request should be blocked
+     *
+     * @param bool $should_block Current block status
+     * @param string $identifier Rate limit identifier
+     * @param string $action_type Action type
+     * @return bool Should block request
+     */
+    public function filter_should_block_request($should_block, $identifier, $action_type) {
+        if ($should_block) {
+            return true;
+        }
+        
+        // Check if identifier is blocked by rate limiter
+        return $this->is_identifier_blocked($identifier);
+    }
+
+    /**
+     * AJAX handler for resetting rate limits
+     */
+    public function ajax_reset_rate_limits() {
+        // Verify nonce and permissions
+        if (!current_user_can('manage_options') || !check_ajax_referer('affcd_admin_nonce', 'nonce', false)) {
+            wp_die('Unauthorised access');
+        }
+        
+        $identifier = sanitize_text_field($_POST['identifier'] ?? '');
+        
+        if (empty($identifier)) {
+            wp_send_json_error('Invalid identifier');
+        }
+        
+        $success = $this->reset_rate_limits($identifier);
+        
+        if ($success) {
+            wp_send_json_success([
+                'message' => 'Rate limits reset successfully',
+                'status' => $this->get_rate_limit_status($identifier)
+            ]);
+        } else {
+            wp_send_json_error('Failed to reset rate limits');
+        }
+    }
+
+    /**
+     * AJAX handler for getting rate limit statistics
+     */
+    public function ajax_get_rate_statistics() {
+        // Verify nonce and permissions
+        if (!current_user_can('manage_options') || !check_ajax_referer('affcd_admin_nonce', 'nonce', false)) {
+            wp_die('Unauthorised access');
+        }
+        
+        $stats = $this->get_statistics();
+        wp_send_json_success($stats);
+    }
+
+    /**
+     * Get whitelist status for identifier
+     *
+     * @param string $identifier Rate limit identifier
+     * @return bool Is whitelisted
+     */
+    public function is_whitelisted($identifier) {
+        $whitelist = get_option('affcd_rate_limit_whitelist', []);
+        
+        // Check exact match
+        if (in_array($identifier, $whitelist)) {
+            return true;
+        }
+        
+        // Check IP ranges for IP identifiers
+        if (strpos($identifier, 'ip:') === 0) {
+            $ip = substr($identifier, 3);
+            foreach ($whitelist as $whitelisted) {
+                if (strpos($whitelisted, '/') !== false && $this->ip_in_range($ip, $whitelisted)) {
+                    return true;
                 }
-                ?>
-            </div>
-        </div>
-        <?php
-    }
-
-    /**
-     * Render notices
-     */
-    private function render_notices() {
-        $message = $_GET['message'] ?? '';
-        
-        switch ($message) {
-            case 'domain_added':
-                echo '<div class="notice notice-success is-dismissible"><p>' . __('Domain added successfully.', 'affiliatewp-cross-domain-plugin-suite') . '</p></div>';
-                break;
-            case 'domain_updated':
-                echo '<div class="notice notice-success is-dismissible"><p>' . __('Domain updated successfully.', 'affiliatewp-cross-domain-plugin-suite') . '</p></div>';
-                break;
-            case 'domain_removed':
-                echo '<div class="notice notice-success is-dismissible"><p>' . __('Domain removed successfully.', 'affiliatewp-cross-domain-plugin-suite') . '</p></div>';
-                break;
-            case 'invalid_domain':
-                echo '<div class="notice notice-error is-dismissible"><p>' . __('Invalid domain URL provided.', 'affiliatewp-cross-domain-plugin-suite') . '</p></div>';
-                break;
-            case 'domain_exists':
-                echo '<div class="notice notice-error is-dismissible"><p>' . __('Domain already exists.', 'affiliatewp-cross-domain-plugin-suite') . '</p></div>';
-                break;
-            case 'settings_saved':
-                echo '<div class="notice notice-success is-dismissible"><p>' . __('Settings saved successfully.', 'affiliatewp-cross-domain-plugin-suite') . '</p></div>';
-                break;
-        }
-    }
-
-    /**
-     * Render domains tab
-     */
-    private function render_domains_tab($domains) {
-        ?>
-        <div class="domain-management-content">
-            <div class="domain-stats-summary">
-                <div class="stats-grid">
-                    <div class="stat-item">
-                        <span class="stat-number"><?php echo count($domains); ?></span>
-                        <span class="stat-label"><?php _e('Total Domains', 'affiliatewp-cross-domain-plugin-suite'); ?></span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-number"><?php echo count(array_filter($domains, function($d) { return $d->status === 'active'; })); ?></span>
-                        <span class="stat-label"><?php _e('Active Domains', 'affiliatewp-cross-domain-plugin-suite'); ?></span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-number"><?php echo count(array_filter($domains, function($d) { return $d->verification_status === 'verified'; })); ?></span>
-                        <span class="stat-label"><?php _e('Verified Domains', 'affiliatewp-cross-domain-plugin-suite'); ?></span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="domain-management-section">
-                <h2><?php _e('Add New Domain', 'affiliatewp-cross-domain-plugin-suite'); ?></h2>
-                
-                <form id="add-domain-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                    <?php wp_nonce_field('affcd_add_domain', 'affcd_nonce'); ?>
-                    <input type="hidden" name="action" value="affcd_add_domain">
-                    
-                    <table class="form-table">
-                        <tr>
-                            <th scope="row">
-                                <label for="domain_url"><?php _e('Domain URL', 'affiliatewp-cross-domain-plugin-suite'); ?></label>
-                            </th>
-                            <td>
-                                <input type="url" 
-                                       id="domain_url" 
-                                       name="domain_url" 
-                                       class="regular-text" 
-                                       placeholder="https://example.com"
-                                       required>
-                                <p class="description"><?php _e('Enter the full domain URL including https://', 'affiliatewp-cross-domain-plugin-suite'); ?></p>
-                            </td>
-                        </tr>
-                        
-                        <tr>
-                            <th scope="row">
-                                <label for="domain_name"><?php _e('Domain Name', 'affiliatewp-cross-domain-plugin-suite'); ?></label>
-                            </th>
-                            <td>
-                                <input type="text" 
-                                       id="domain_name" 
-                                       name="domain_name" 
-                                       class="regular-text" 
-                                       placeholder="Example Site">
-                                <p class="description"><?php _e('Friendly name for this domain', 'affiliatewp-cross-domain-plugin-suite'); ?></p>
-                            </td>
-                        </tr>
-                        
-                        <tr>
-                            <th scope="row">
-                                <label for="owner_email"><?php _e('Owner Email', 'affiliatewp-cross-domain-plugin-suite'); ?></label>
-                            </th>
-                            <td>
-                                <input type="email" 
-                                       id="owner_email" 
-                                       name="owner_email" 
-                                       class="regular-text" 
-                                       placeholder="owner@example.com">
-                            </td>
-                        </tr>
-                        
-                        <tr>
-                            <th scope="row">
-                                <label for="owner_name"><?php _e('Owner Name', 'affiliatewp-cross-domain-plugin-suite'); ?></label>
-                            </th>
-                            <td>
-                                <input type="text" 
-                                       id="owner_name" 
-                                       name="owner_name" 
-                                       class="regular-text" 
-                                       placeholder="John Doe">
-                            </td>
-                        </tr>
-                        
-                        <tr>
-                            <th scope="row">
-                                <label for="status"><?php _e('Initial Status', 'affiliatewp-cross-domain-plugin-suite'); ?></label>
-                            </th>
-                            <td>
-                                <select id="status" name="status">
-                                    <option value="pending"><?php _e('Pending', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
-                                    <option value="active"><?php _e('Active', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
-                                    <option value="inactive"><?php _e('Inactive', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
-                                </select>
-                            </td>
-                        </tr>
-                    </table>
-                    
-                    <?php submit_button(__('Add Domain', 'affiliatewp-cross-domain-plugin-suite')); ?>
-                </form>
-            </div>
-
-            <div class="domain-management-section">
-                <h2><?php _e('authorised Domains', 'affiliatewp-cross-domain-plugin-suite'); ?></h2>
-                
-                <?php if (empty($domains)): ?>
-                    <p><?php _e('No domains configured yet. Add your first domain above.', 'affiliatewp-cross-domain-plugin-suite'); ?></p>
-                <?php else: ?>
-                    <div class="tablenav top">
-                        <div class="alignleft actions bulkactions">
-                            <select id="bulk-actions" name="action">
-                                <option value="-1"><?php _e('Bulk Actions', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
-                                <option value="activate"><?php _e('Activate', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
-                                <option value="deactivate"><?php _e('Deactivate', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
-                                <option value="verify"><?php _e('Verify', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
-                                <option value="delete"><?php _e('Delete', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
-                            </select>
-                            <button type="button" id="apply-bulk-action" class="button action">
-                                <?php _e('Apply', 'affiliatewp-cross-domain-plugin-suite'); ?>
-                            </button>
-                        </div>
-                        <div class="tablenav-pages">
-                            <span class="displaying-num"><?php printf(_n('%s item', '%s items', count($domains), 'affiliatewp-cross-domain-plugin-suite'), count($domains)); ?></span>
-                        </div>
-                    </div>
-                    
-                    <table class="wp-list-table widefat fixed striped">
-                        <thead>
-                            <tr>
-                                <td class="manage-column column-cb check-column">
-                                    <input type="checkbox" id="select-all-domains">
-                                </td>
-                                <th class="manage-column"><?php _e('Domain', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                                <th class="manage-column"><?php _e('Status', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                                <th class="manage-column"><?php _e('Verification', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                                <th class="manage-column"><?php _e('API Key', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                                <th class="manage-column"><?php _e('Last Activity', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                                <th class="manage-column"><?php _e('Actions', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($domains as $domain): ?>
-                                <tr class="domain-list-item" data-domain-id="<?php echo esc_attr($domain->id); ?>">
-                                    <th class="check-column">
-                                        <input type="checkbox" name="domain_ids[]" value="<?php echo esc_attr($domain->id); ?>" class="domain-select">
-                                    </th>
-                                    <td>
-                                        <strong><?php echo esc_html($domain->domain_name ?: $domain->domain_url); ?></strong>
-                                        <div class="domain-info">
-                                            <code><?php echo esc_html($domain->domain_url); ?></code>
-                                            <?php if ($domain->owner_name): ?>
-                                                <br><small><?php echo esc_html($domain->owner_name); ?></small>
-                                            <?php endif; ?>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="status-badge status-<?php echo esc_attr($domain->status); ?>">
-                                            <?php echo esc_html(ucfirst($domain->status)); ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="verification-badge verification-<?php echo esc_attr($domain->verification_status); ?>">
-                                            <?php echo esc_html(ucfirst($domain->verification_status)); ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <code class="api-key-display">
-                                            <?php echo esc_html(substr($domain->api_key, 0, 8) . '...'); ?>
-                                        </code>
-                                        <button type="button" class="button-link copy-api-key" data-api-key="<?php echo esc_attr($domain->api_key); ?>">
-                                            <?php _e('Copy Full Key', 'affiliatewp-cross-domain-plugin-suite'); ?>
-                                        </button>
-                                    </td>
-                                    <td>
-                                        <?php 
-                                        if ($domain->last_activity_at) {
-                                            echo esc_html(affcd_time_ago($domain->last_activity_at));
-                                        } else {
-                                            _e('Never', 'affiliatewp-cross-domain-plugin-suite');
-                                        }
-                                        ?>
-                                    </td>
-                                    <td>
-                                        <div class="domain-actions">
-                                            <button type="button" class="button button-small test-domain-connection" 
-                                                    data-domain-id="<?php echo esc_attr($domain->id); ?>">
-                                                <?php _e('Test', 'affiliatewp-cross-domain-plugin-suite'); ?>
-                                            </button>
-                                            <button type="button" class="button button-small verify-domain" 
-                                                    data-domain-id="<?php echo esc_attr($domain->id); ?>">
-                                                <?php _e('Verify', 'affiliatewp-cross-domain-plugin-suite'); ?>
-                                            </button>
-                                            <button type="button" class="button button-small edit-domain" 
-                                                    data-domain-id="<?php echo esc_attr($domain->id); ?>">
-                                                <?php _e('Edit', 'affiliatewp-cross-domain-plugin-suite'); ?>
-                                            </button>
-                                            <?php if ($domain->status !== 'active'): ?>
-                                                <button type="button" class="button button-small activate-domain" 
-                                                        data-domain-id="<?php echo esc_attr($domain->id); ?>">
-                                                    <?php _e('Activate', 'affiliatewp-cross-domain-plugin-suite'); ?>
-                                                </button>
-                                            <?php else: ?>
-                                                <button type="button" class="button button-small deactivate-domain" 
-                                                        data-domain-id="<?php echo esc_attr($domain->id); ?>">
-                                                    <?php _e('Deactivate', 'affiliatewp-cross-domain-plugin-suite'); ?>
-                                                </button>
-                                            <?php endif; ?>
-                                            <button type="button" class="button button-small button-link-delete delete-domain" 
-                                                    data-domain-id="<?php echo esc_attr($domain->id); ?>"
-                                                    data-domain-name="<?php echo esc_attr($domain->domain_name ?: $domain->domain_url); ?>">
-                                                <?php _e('Delete', 'affiliatewp-cross-domain-plugin-suite'); ?>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                <?php endif; ?>
-            </div>
-        </div>
-        
-        <!-- Edit Domain Modal -->
-        <div id="edit-domain-modal" class="domain-modal" style="display: none;">
-            <div class="domain-modal-content">
-                <span class="domain-modal-close">&times;</span>
-                <h2><?php _e('Edit Domain', 'affiliatewp-cross-domain-plugin-suite'); ?></h2>
-                <form id="edit-domain-form">
-                    <input type="hidden" id="edit-domain-id" name="domain_id">
-                    
-                    <table class="form-table">
-                        <tr>
-                            <th scope="row">
-                                <label for="edit-domain-name"><?php _e('Domain Name', 'affiliatewp-cross-domain-plugin-suite'); ?></label>
-                            </th>
-                            <td>
-                                <input type="text" id="edit-domain-name" name="domain_name" class="regular-text">
-                            </td>
-                        </tr>
-                        
-                        <tr>
-                            <th scope="row">
-                                <label for="edit-owner-email"><?php _e('Owner Email', 'affiliatewp-cross-domain-plugin-suite'); ?></label>
-                            </th>
-                            <td>
-                                <input type="email" id="edit-owner-email" name="owner_email" class="regular-text">
-                            </td>
-                        </tr>
-                        
-                        <tr>
-                            <th scope="row">
-                                <label for="edit-owner-name"><?php _e('Owner Name', 'affiliatewp-cross-domain-plugin-suite'); ?></label>
-                            </th>
-                            <td>
-                                <input type="text" id="edit-owner-name" name="owner_name" class="regular-text">
-                            </td>
-                        </tr>
-                        
-                        <tr>
-                            <th scope="row">
-                                <label for="edit-status"><?php _e('Status', 'affiliatewp-cross-domain-plugin-suite'); ?></label>
-                            </th>
-                            <td>
-                                <select id="edit-status" name="status">
-                                    <option value="active"><?php _e('Active', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
-                                    <option value="inactive"><?php _e('Inactive', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
-                                    <option value="suspended"><?php _e('Suspended', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
-                                    <option value="pending"><?php _e('Pending', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
-                                </select>
-                            </td>
-                        </tr>
-                    </table>
-                    
-                    <p class="submit">
-                        <button type="submit" class="button button-primary"><?php _e('Update Domain', 'affiliatewp-cross-domain-plugin-suite'); ?></button>
-                        <button type="button" class="button" onclick="closeDomainModal()"><?php _e('Cancel', 'affiliatewp-cross-domain-plugin-suite'); ?></button>
-                    </p>
-                </form>
-            </div>
-        </div>
-        <?php
-    }
-
-    /**
-     * Render settings tab
-     */
-    private function render_settings_tab() {
-        $settings = get_option('affcd_domain_settings', []);
-        ?>
-        <div class="domain-settings-content">
-            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                <?php wp_nonce_field('affcd_save_domain_settings', 'affcd_nonce'); ?>
-                <input type="hidden" name="action" value="affcd_save_domain_settings">
-                
-                <h2><?php _e('Global Domain Settings', 'affiliatewp-cross-domain-plugin-suite'); ?></h2>
-                
-                <table class="form-table">
-                    <tr>
-                        <th scope="row"><?php _e('Default Rate Limits', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                        <td>
-                            <fieldset>
-                                <label>
-                                    <input type="number" name="default_rate_limit_minute" value="<?php echo esc_attr($settings['default_rate_limit_minute'] ?? 60); ?>" min="1" max="1000">
-                                    <?php _e('Requests per minute', 'affiliatewp-cross-domain-plugin-suite'); ?>
-                                </label>
-                                <br>
-                                <label>
-                                    <input type="number" name="default_rate_limit_hour" value="<?php echo esc_attr($settings['default_rate_limit_hour'] ?? 1000); ?>" min="1" max="10000">
-                                    <?php _e('Requests per hour', 'affiliatewp-cross-domain-plugin-suite'); ?>
-                                </label>
-                                <br>
-                                <label>
-                                    <input type="number" name="default_rate_limit_daily" value="<?php echo esc_attr($settings['default_rate_limit_daily'] ?? 10000); ?>" min="1" max="100000">
-                                    <?php _e('Requests per day', 'affiliatewp-cross-domain-plugin-suite'); ?>
-                                </label>
-                            </fieldset>
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <th scope="row"><?php _e('Security Settings', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                        <td>
-                            <fieldset>
-                                <label>
-                                    <input type="checkbox" name="require_https" value="1" <?php checked(!empty($settings['require_https'])); ?>>
-                                    <?php _e('Require HTTPS for all API requests', 'affiliatewp-cross-domain-plugin-suite'); ?>
-                                </label>
-                                <br>
-                                <label>
-                                    <input type="checkbox" name="enable_ip_whitelist" value="1" <?php checked(!empty($settings['enable_ip_whitelist'])); ?>>
-                                    <?php _e('Enable IP address whitelisting', 'affiliatewp-cross-domain-plugin-suite'); ?>
-                                </label>
-                                <br>
-                                <label>
-                                    <input type="checkbox" name="log_all_requests" value="1" <?php checked(!empty($settings['log_all_requests'])); ?>>
-                                    <?php _e('Log all API requests', 'affiliatewp-cross-domain-plugin-suite'); ?>
-                                </label>
-                            </fieldset>
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <th scope="row"><?php _e('Webhook Settings', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                        <td>
-                            <fieldset>
-                                <label>
-                                    <input type="number" name="webhook_timeout" value="<?php echo esc_attr($settings['webhook_timeout'] ?? 30); ?>" min="5" max="120">
-                                    <?php _e('Webhook timeout (seconds)', 'affiliatewp-cross-domain-plugin-suite'); ?>
-                                </label>
-                                <br>
-                                <label>
-                                    <input type="number" name="webhook_retry_attempts" value="<?php echo esc_attr($settings['webhook_retry_attempts'] ?? 3); ?>" min="1" max="10">
-                                    <?php _e('Retry attempts on failure', 'affiliatewp-cross-domain-plugin-suite'); ?>
-                                </label>
-                            </fieldset>
-                        </td>
-                    </tr>
-                </table>
-                
-                <?php submit_button(__('Save Settings', 'affiliatewp-cross-domain-plugin-suite')); ?>
-            </form>
-        </div>
-        <?php
-    }
-
-    /**
-     * Render security tab
-     */
-    private function render_security_tab() {
-        $security_logs = $this->get_security_logs();
-        $blocked_ips = get_option('affcd_blocked_ips', []);
-        ?>
-        <div class="security-content">
-            <h2><?php _e('Security Dashboard', 'affiliatewp-cross-domain-plugin-suite'); ?></h2>
-            
-            <div class="security-stats">
-                <div class="stats-grid">
-                    <div class="stat-item">
-                        <span class="stat-number"><?php echo count($security_logs); ?></span>
-                        <span class="stat-label"><?php _e('Security Events (24h)', 'affiliatewp-cross-domain-plugin-suite'); ?></span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-number"><?php echo count($blocked_ips); ?></span>
-                        <span class="stat-label"><?php _e('Blocked IPs', 'affiliatewp-cross-domain-plugin-suite'); ?></span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-number"><?php echo $this->get_failed_requests_count(); ?></span>
-                        <span class="stat-label"><?php _e('Failed Requests', 'affiliatewp-cross-domain-plugin-suite'); ?></span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="security-section">
-                <h3><?php _e('IP Whitelist Management', 'affiliatewp-cross-domain-plugin-suite'); ?></h3>
-                <form id="ip-whitelist-form">
-                    <?php wp_nonce_field('affcd_manage_ips', 'affcd_nonce'); ?>
-                    <table class="form-table">
-                        <tr>
-                            <th scope="row">
-                                <label for="new-ip-address"><?php _e('Add IP Address', 'affiliatewp-cross-domain-plugin-suite'); ?></label>
-                            </th>
-                            <td>
-                                <input type="text" id="new-ip-address" name="ip_address" class="regular-text" 
-                                       pattern="^(\d{1,3}\.){3}\d{1,3}$" placeholder="192.168.1.1">
-                                <button type="button" id="add-ip-address" class="button"><?php _e('Add', 'affiliatewp-cross-domain-plugin-suite'); ?></button>
-                            </td>
-                        </tr>
-                    </table>
-                    
-                    <?php if (!empty($blocked_ips)): ?>
-                        <h4><?php _e('Current IP Whitelist', 'affiliatewp-cross-domain-plugin-suite'); ?></h4>
-                        <table class="wp-list-table widefat">
-                            <thead>
-                                <tr>
-                                    <th><?php _e('IP Address', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                                    <th><?php _e('Added', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                                    <th><?php _e('Actions', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($blocked_ips as $ip => $data): ?>
-                                    <tr>
-                                        <td><code><?php echo esc_html($ip); ?></code></td>
-                                        <td><?php echo esc_html(date_i18n(get_option('date_format'), $data['added'])); ?></td>
-                                        <td>
-                                            <button type="button" class="button button-small remove-ip" data-ip="<?php echo esc_attr($ip); ?>">
-                                                <?php _e('Remove', 'affiliatewp-cross-domain-plugin-suite'); ?>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    <?php endif; ?>
-                </form>
-            </div>
-            
-            <div class="security-section">
-                <h3><?php _e('Security Event Log', 'affiliatewp-cross-domain-plugin-suite'); ?></h3>
-                <table class="wp-list-table widefat striped">
-                    <thead>
-                        <tr>
-                            <th><?php _e('Timestamp', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                            <th><?php _e('Event Type', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                            <th><?php _e('Domain', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                            <th><?php _e('IP Address', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                            <th><?php _e('Status', 'affiliatewp-cross-domain-plugin-suite'); ?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (empty($security_logs)): ?>
-                            <tr>
-                                <td colspan="5"><?php _e('No security events recorded', 'affiliatewp-cross-domain-plugin-suite'); ?></td>
-                            </tr>
-                        <?php else: ?>
-                            <?php foreach ($security_logs as $log): ?>
-                                <tr>
-                                    <td><?php echo esc_html(date('Y-m-d H:i:s', strtotime($log['timestamp']))); ?></td>
-                                    <td><?php echo esc_html($log['event']); ?></td>
-                                    <td><?php echo esc_html($log['domain']); ?></td>
-                                    <td><?php echo esc_html($log['ip_address']); ?></td>
-                                    <td>
-                                        <span class="status-<?php echo esc_attr($log['status']); ?>">
-                                            <?php echo esc_html(ucfirst($log['status'])); ?>
-                                        </span>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-                
-                <?php if (!empty($security_logs)): ?>
-                    <p style="margin-top: 15px;">
-                        <button type="button" class="button" onclick="affcdClearSecurityLogs()">
-                            <?php _e('Clear Logs', 'affiliatewp-cross-domain-plugin-suite'); ?>
-                        </button>
-                        <button type="button" class="button" onclick="affcdExportSecurityLogs()">
-                            <?php _e('Export Logs', 'affiliatewp-cross-domain-plugin-suite'); ?>
-                        </button>
-                    </p>
-                <?php endif; ?>
-            </div>
-        </div>
-        <?php
-    }
-
-    /**
-     * Render analytics tab
-     */
-    private function render_analytics_tab($stats) {
-        ?>
-        <div class="analytics-content">
-            <h2><?php _e('Domain Analytics', 'affiliatewp-cross-domain-plugin-suite'); ?></h2>
-            
-            <div class="analytics-filters">
-                <form id="analytics-filter-form">
-                    <label for="date-range"><?php _e('Date Range:', 'affiliatewp-cross-domain-plugin-suite'); ?></label>
-                    <select id="date-range" name="date_range">
-                        <option value="7"><?php _e('Last 7 days', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
-                        <option value="30" selected><?php _e('Last 30 days', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
-                        <option value="90"><?php _e('Last 90 days', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
-                        <option value="365"><?php _e('Last year', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
-                    </select>
-                    
-                    <label for="domain-filter"><?php _e('Domain:', 'affiliatewp-cross-domain-plugin-suite'); ?></label>
-                    <select id="domain-filter" name="domain">
-                        <option value=""><?php _e('All Domains', 'affiliatewp-cross-domain-plugin-suite'); ?></option>
-                        <?php
-                        $domains = $this->domain_manager->get_all_domains();
-                        foreach ($domains as $domain): ?>
-                            <option value="<?php echo esc_attr($domain->id); ?>">
-                                <?php echo esc_html($domain->domain_name ?: $domain->domain_url); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                    
-                    <button type="button" id="update-analytics" class="button"><?php _e('Update', 'affiliatewp-cross-domain-plugin-suite'); ?></button>
-                </form>
-            </div>
-            
-            <div class="analytics-dashboard">
-                <div class="analytics-grid">
-                    <div class="analytics-card">
-                        <h3><?php _e('API Requests', 'affiliatewp-cross-domain-plugin-suite'); ?></h3>
-                        <div class="metric-value"><?php echo number_format($stats['total_requests'] ?? 0); ?></div>
-                        <div class="metric-change positive">+12.5% <?php _e('from last period', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
-                    </div>
-                    
-                    <div class="analytics-card">
-                        <h3><?php _e('Successful Validations', 'affiliatewp-cross-domain-plugin-suite'); ?></h3>
-                        <div class="metric-value"><?php echo number_format($stats['successful_validations'] ?? 0); ?></div>
-                        <div class="metric-change positive">+8.3% <?php _e('from last period', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
-                    </div>
-                    
-                    <div class="analytics-card">
-                        <h3><?php _e('Error Rate', 'affiliatewp-cross-domain-plugin-suite'); ?></h3>
-                        <div class="metric-value"><?php echo number_format(($stats['error_rate'] ?? 0) * 100, 2); ?>%</div>
-                        <div class="metric-change negative">-2.1% <?php _e('from last period', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
-                    </div>
-                    
-                    <div class="analytics-card">
-                        <h3><?php _e('Avg Response Time', 'affiliatewp-cross-domain-plugin-suite'); ?></h3>
-                        <div class="metric-value"><?php echo number_format($stats['avg_response_time'] ?? 0); ?>ms</div>
-                        <div class="metric-change positive">-15ms <?php _e('from last period', 'affiliatewp-cross-domain-plugin-suite'); ?></div>
-                    </div>
-                </div>
-                
-                <div class="analytics-charts">
-                    <div class="chart-container">
-                        <h4><?php _e('Request Volume Over Time', 'affiliatewp-cross-domain-plugin-suite'); ?></h4>
-                        <div id="requests-chart" style="height: 300px; background: #f9f9f9; display: flex; align-items: center; justify-content: center;">
-                            <p><?php _e('Chart will be rendered here via JavaScript', 'affiliatewp-cross-domain-plugin-suite'); ?></p>
-                        </div>
-                    </div>
-                    
-                    <div class="chart-container">
-                        <h4><?php _e('Top Performing Domains', 'affiliatewp-cross-domain-plugin-suite'); ?></h4>
-                        <div id="domains-chart" style="height: 300px; background: #f9f9f9; display: flex; align-items: center; justify-content: center;">
-                            <p><?php _e('Chart will be rendered here via JavaScript', 'affiliatewp-cross-domain-plugin-suite'); ?></p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <?php
-    }
-
-    /**
-     * Add domain
-     */
-    public function add_domain() {
-        if (!current_user_can('manage_affiliates') || !wp_verify_nonce($_POST['affcd_nonce'], 'affcd_add_domain')) {
-            wp_die(__('Permission denied.', 'affiliatewp-cross-domain-plugin-suite'));
-        }
-
-        $domain_url = Sanitise_url($_POST['domain_url']);
-        $domain_name = Sanitise_text_field($_POST['domain_name']);
-        $owner_email = Sanitise_email($_POST['owner_email']);
-        $owner_name = Sanitise_text_field($_POST['owner_name']);
-        $status = Sanitise_text_field($_POST['status']);
-
-        if (!filter_var($domain_url, FILTER_VALIDATE_URL)) {
-            wp_redirect(add_query_arg('message', 'invalid_domain', wp_get_referer()));
-            exit;
-        }
-
-        // Check if domain already exists
-        $existing_domain = $this->domain_manager->get_domain_by_url($domain_url);
-        if ($existing_domain) {
-            wp_redirect(add_query_arg('message', 'domain_exists', wp_get_referer()));
-            exit;
-        }
-
-        $domain_data = [
-            'domain_url' => $domain_url,
-            'domain_name' => $domain_name,
-            'owner_email' => $owner_email,
-            'owner_name' => $owner_name,
-            'status' => $status,
-        ];
-
-        $result = $this->domain_manager->add_domain($domain_data);
-
-        if (is_wp_error($result)) {
-            wp_redirect(add_query_arg('message', 'add_failed', wp_get_referer()));
-        } else {
-            wp_redirect(add_query_arg('message', 'domain_added', wp_get_referer()));
-        }
-        exit;
-    }
-
-    /**
-     * Remove domain
-     */
-    public function remove_domain() {
-        if (!current_user_can('manage_affiliates') || !wp_verify_nonce($_POST['affcd_nonce'], 'affcd_remove_domain')) {
-            wp_die(__('Permission denied.', 'affiliatewp-cross-domain-plugin-suite'));
-        }
-
-        $domain_id = absint($_POST['domain_id']);
-        $result = $this->domain_manager->delete_domain($domain_id);
-
-        if (is_wp_error($result)) {
-            wp_redirect(add_query_arg('message', 'remove_failed', wp_get_referer()));
-        } else {
-            wp_redirect(add_query_arg('message', 'domain_removed', wp_get_referer()));
-        }
-        exit;
-    }
-
-    /**
-     * Save domain settings
-     */
-    public function save_domain_settings() {
-        if (!current_user_can('manage_affiliates') || !wp_verify_nonce($_POST['affcd_nonce'], 'affcd_save_domain_settings')) {
-            wp_die(__('Permission denied.', 'affiliatewp-cross-domain-plugin-suite'));
-        }
-
-        $settings = [
-            'default_rate_limit_minute' => absint($_POST['default_rate_limit_minute'] ?? 60),
-            'default_rate_limit_hour' => absint($_POST['default_rate_limit_hour'] ?? 1000),
-            'default_rate_limit_daily' => absint($_POST['default_rate_limit_daily'] ?? 10000),
-            'require_https' => !empty($_POST['require_https']),
-            'enable_ip_whitelist' => !empty($_POST['enable_ip_whitelist']),
-            'log_all_requests' => !empty($_POST['log_all_requests']),
-            'webhook_timeout' => absint($_POST['webhook_timeout'] ?? 30),
-            'webhook_retry_attempts' => absint($_POST['webhook_retry_attempts'] ?? 3),
-        ];
-
-        update_option('affcd_domain_settings', $settings);
-        wp_redirect(add_query_arg('message', 'settings_saved', wp_get_referer()));
-        exit;
-    }
-
-    /**
-     * AJAX: Test domain connection
-     */
-    public function ajax_test_domain_connection() {
-        check_ajax_referer('affcd_ajax_nonce', 'nonce');
-
-        if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
-        }
-
-        $domain_id = absint($_POST['domain_id'] ?? 0);
-        $domain = $this->domain_manager->get_domain($domain_id);
-
-        if (!$domain) {
-            wp_send_json_error(__('Domain not found', 'affiliatewp-cross-domain-plugin-suite'));
-        }
-
-        $test_result = $this->test_domain_connection($domain);
-        
-        if ($test_result['success']) {
-            wp_send_json_success($test_result);
-        } else {
-            wp_send_json_error($test_result);
-        }
-    }
-
-    /**
-     * AJAX: Generate API key
-     */
-    public function ajax_generate_api_key() {
-        check_ajax_referer('affcd_ajax_nonce', 'nonce');
-
-        if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
-        }
-
-        $domain_id = absint($_POST['domain_id'] ?? 0);
-        $new_api_key = $this->domain_manager->regenerate_api_key($domain_id);
-
-        if (is_wp_error($new_api_key)) {
-            wp_send_json_error($new_api_key->get_error_message());
-        }
-
-        wp_send_json_success([
-            'api_key' => $new_api_key,
-            'message' => __('API key regenerated successfully', 'affiliatewp-cross-domain-plugin-suite')
-        ]);
-    }
-
-    /**
-     * AJAX: Send test webhook
-     */
-    public function ajax_send_test_webhook() {
-        check_ajax_referer('affcd_ajax_nonce', 'nonce');
-
-        if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
-        }
-
-        $domain_id = absint($_POST['domain_id'] ?? 0);
-        $domain = $this->domain_manager->get_domain($domain_id);
-
-        if (!$domain || !$domain->webhook_url) {
-            wp_send_json_error(__('Domain or webhook URL not found', 'affiliatewp-cross-domain-plugin-suite'));
-        }
-
-        $test_payload = [
-            'event' => 'test_webhook',
-            'timestamp' => time(),
-            'domain_id' => $domain_id,
-            'test_data' => 'This is a test webhook from AffiliateWP Cross Domain'
-        ];
-
-        $result = $this->send_webhook($domain->webhook_url, $test_payload, $domain->webhook_secret);
-        
-        if ($result['success']) {
-            wp_send_json_success([
-                'message' => __('Test webhook sent successfully', 'affiliatewp-cross-domain-plugin-suite'),
-                'response_code' => $result['response_code']
-            ]);
-        } else {
-            wp_send_json_error([
-                'message' => $result['message'],
-                'response_code' => $result['response_code'] ?? 0
-            ]);
-        }
-    }
-
-    /**
-     * AJAX: Verify domain
-     */
-    public function ajax_verify_domain() {
-        check_ajax_referer('affcd_ajax_nonce', 'nonce');
-
-        if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
-        }
-
-        $domain_id = absint($_POST['domain_id'] ?? 0);
-        $result = $this->domain_manager->verify_domain($domain_id);
-
-        if ($result['success']) {
-            wp_send_json_success($result);
-        } else {
-            wp_send_json_error($result);
-        }
-    }
-
-    /**
-     * AJAX: Toggle domain status
-     */
-    public function ajax_toggle_domain_status() {
-        check_ajax_referer('affcd_ajax_nonce', 'nonce');
-
-        if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
-        }
-
-        $domain_id = absint($_POST['domain_id'] ?? 0);
-        $status = Sanitise_text_field($_POST['status'] ?? '');
-
-        if (!in_array($status, ['active', 'inactive'])) {
-            wp_send_json_error(__('Invalid status', 'affiliatewp-cross-domain-plugin-suite'));
-        }
-
-        $result = $this->domain_manager->update_domain($domain_id, ['status' => $status]);
-
-        if (is_wp_error($result)) {
-            wp_send_json_error($result->get_error_message());
-        }
-
-        wp_send_json_success([
-            'message' => sprintf(__('Domain status updated to %s', 'affiliatewp-cross-domain-plugin-suite'), $status)
-        ]);
-    }
-
-    /**
-     * AJAX: Delete domain
-     */
-    public function ajax_delete_domain() {
-        check_ajax_referer('affcd_ajax_nonce', 'nonce');
-
-        if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
-        }
-
-        $domain_id = absint($_POST['domain_id'] ?? 0);
-        $result = $this->domain_manager->delete_domain($domain_id);
-
-        if (is_wp_error($result)) {
-            wp_send_json_error($result->get_error_message());
-        }
-
-        wp_send_json_success([
-            'message' => __('Domain deleted successfully', 'affiliatewp-cross-domain-plugin-suite')
-        ]);
-    }
-
-    /**
-     * AJAX: Bulk domain action
-     */
-    public function ajax_bulk_domain_action() {
-        check_ajax_referer('affcd_ajax_nonce', 'nonce');
-
-        if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
-        }
-
-        $action = Sanitise_text_field($_POST['bulk_action'] ?? '');
-        $domain_ids = array_map('absint', $_POST['domain_ids'] ?? []);
-
-        if (empty($action) || empty($domain_ids)) {
-            wp_send_json_error(__('Invalid action or no domains selected', 'affiliatewp-cross-domain-plugin-suite'));
-        }
-
-        $success_count = 0;
-        $total_count = count($domain_ids);
-
-        foreach ($domain_ids as $domain_id) {
-            $result = false;
-            
-            switch ($action) {
-                case 'activate':
-                    $result = $this->domain_manager->update_domain($domain_id, ['status' => 'active']);
-                    break;
-                case 'deactivate':
-                    $result = $this->domain_manager->update_domain($domain_id, ['status' => 'inactive']);
-                    break;
-                case 'verify':
-                    $verify_result = $this->domain_manager->verify_domain($domain_id);
-                    $result = $verify_result['success'] ? true : false;
-                    break;
-                case 'delete':
-                    $result = $this->domain_manager->delete_domain($domain_id);
-                    break;
-            }
-            
-            if (!is_wp_error($result) && $result !== false) {
-                $success_count++;
             }
         }
-
-        if ($success_count === $total_count) {
-            wp_send_json_success([
-                'message' => sprintf(__('Bulk action completed successfully on %d domains', 'affiliatewp-cross-domain-plugin-suite'), $success_count)
-            ]);
-        } else {
-            wp_send_json_success([
-                'message' => sprintf(__('Bulk action completed on %d of %d domains', 'affiliatewp-cross-domain-plugin-suite'), $success_count, $total_count)
-            ]);
-        }
-    }
-
-    /**
-     * AJAX: Refresh domain list
-     */
-    public function ajax_refresh_domain_list() {
-        check_ajax_referer('affcd_ajax_nonce', 'nonce');
-
-        if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
-        }
-
-        $domains = $this->domain_manager->get_all_domains();
         
-        ob_start();
-        foreach ($domains as $domain) {
-            // Render domain row HTML
-            echo '<tr class="domain-list-item" data-domain-id="' . esc_attr($domain->id) . '">';
-            // ... domain row content (same as in render_domains_tab)
-            echo '</tr>';
-        }
-        $html = ob_get_clean();
-
-        wp_send_json_success([
-            'html' => $html,
-            'total_domains' => count($domains)
-        ]);
+        return false;
     }
 
     /**
-     * Test domain connection
+     * Check if IP is in CIDR range
+     *
+     * @param string $ip IP address
+     * @param string $range CIDR range
+     * @return bool Is in range
      */
-    private function test_domain_connection($domain) {
-        $test_url = trailingslashit($domain->domain_url) . 'wp-json/affiliate-client/v1/health';
+    private function ip_in_range($ip, $range) {
+        if (strpos($range, '/') === false) {
+            return $ip === $range;
+        }
         
-        $response = wp_remote_get($test_url, [
-            'timeout' => 15,
-            'headers' => [
-                'authorisation' => 'Bearer ' . $domain->api_key,
-                'User-Agent' => 'AffiliateWP-CrossDomain/' . AFFCD_VERSION
-            ]
-        ]);
-
-        if (is_wp_error($response)) {
-            return [
-                'success' => false,
-                'message' => __('Connection failed: ', 'affiliatewp-cross-domain-plugin-suite') . $response->get_error_message(),
-                'details' => $response->get_error_code()
-            ];
-        }
-
-        $response_code = wp_remote_retrieve_response_code($response);
-        $response_body = wp_remote_retrieve_body($response);
-
-        if ($response_code === 200) {
-            $data = json_decode($response_body, true);
-            if (isset($data['status']) && $data['status'] === 'ok') {
-                return [
-                    'success' => true,
-                    'message' => __('Connection successful', 'affiliatewp-cross-domain-plugin-suite'),
-                    'response_time' => $data['response_time'] ?? null,
-                    'plugin_version' => $data['plugin_version'] ?? null
-                ];
-            }
-        }
-
-        return [
-            'success' => false,
-            'message' => sprintf(__('Connection failed with response code: %d', 'affiliatewp-cross-domain-plugin-suite'), $response_code),
-            'response_code' => $response_code
-        ];
-    }
-
-    /**
-     * Send webhook
-     */
-    private function send_webhook($webhook_url, $payload, $secret = '') {
-        $body = json_encode($payload);
-        $headers = [
-            'Content-Type' => 'application/json',
-            'User-Agent' => 'AffiliateWP-CrossDomain/' . AFFCD_VERSION
-        ];
-
-        if ($secret) {
-            $signature = hash_hmac('sha256', $body, $secret);
-            $headers['X-Signature-SHA256'] = 'sha256=' . $signature;
-        }
-
-        $response = wp_remote_post($webhook_url, [
-            'timeout' => 30,
-            'headers' => $headers,
-            'body' => $body
-        ]);
-
-        if (is_wp_error($response)) {
-            return [
-                'success' => false,
-                'message' => $response->get_error_message()
-            ];
-        }
-
-        $response_code = wp_remote_retrieve_response_code($response);
+        list($subnet, $mask) = explode('/', $range);
         
-        return [
-            'success' => $response_code >= 200 && $response_code < 300,
-            'response_code' => $response_code,
-            'message' => $response_code >= 200 && $response_code < 300 
-                ? __('Webhook sent successfully', 'affiliatewp-cross-domain-plugin-suite')
-                : sprintf(__('Webhook failed with code: %d', 'affiliatewp-cross-domain-plugin-suite'), $response_code)
-        ];
+        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+            return $this->ipv4_in_range($ip, $subnet, $mask);
+        } elseif (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
+            return $this->ipv6_in_range($ip, $subnet, $mask);
+        }
+        
+        return false;
     }
 
     /**
-     * Get domain statistics
+     * Check if IPv4 is in range
+     *
+     * @param string $ip IPv4 address
+     * @param string $subnet Subnet address
+     * @param int $mask Subnet mask
+     * @return bool Is in range
      */
-    private function get_domain_statistics() {
+    private function ipv4_in_range($ip, $subnet, $mask) {
+        $ip_long = ip2long($ip);
+        $subnet_long = ip2long($subnet);
+        $mask_long = -1 << (32 - $mask);
+        
+        return ($ip_long & $mask_long) === ($subnet_long & $mask_long);
+    }
+
+    /**
+     * Check if IPv6 is in range
+     *
+     * @param string $ip IPv6 address
+     * @param string $subnet Subnet address
+     * @param int $mask Subnet mask
+     * @return bool Is in range
+     */
+    private function ipv6_in_range($ip, $subnet, $mask) {
+        $ip_bin = inet_pton($ip);
+        $subnet_bin = inet_pton($subnet);
+        
+        if ($ip_bin === false || $subnet_bin === false) {
+            return false;
+        }
+        
+        $mask_bytes = intval($mask / 8);
+        $mask_bits = $mask % 8;
+        
+        // Compare full bytes
+        if ($mask_bytes > 0 && substr($ip_bin, 0, $mask_bytes) !== substr($subnet_bin, 0, $mask_bytes)) {
+            return false;
+        }
+        
+        // Compare partial byte
+        if ($mask_bits > 0 && $mask_bytes < 16) {
+            $ip_byte = ord($ip_bin[$mask_bytes]);
+            $subnet_byte = ord($subnet_bin[$mask_bytes]);
+            $byte_mask = 0xFF << (8 - $mask_bits);
+            
+            return ($ip_byte & $byte_mask) === ($subnet_byte & $byte_mask);
+        }
+        
+        return true;
+    }
+
+    /**
+     * Export rate limit data for analysis
+     *
+     * @param string $format Export format (csv, json)
+     * @param int $days Number of days to export
+     * @return string|array Export data
+     */
+    public function export_rate_limit_data($format = 'csv', $days = 30) {
         global $wpdb;
-
-        $table_name = $wpdb->prefix . 'affcd_api_logs';
         
-        return [
-            'total_requests' => $wpdb->get_var("SELECT COUNT(*) FROM {$table_name} WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)"),
-            'successful_validations' => $wpdb->get_var("SELECT COUNT(*) FROM {$table_name} WHERE status = 'success' AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)"),
-            'error_rate' => $wpdb->get_var("SELECT COUNT(*) / (SELECT COUNT(*) FROM {$table_name} WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)) FROM {$table_name} WHERE status = 'error' AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)"),
-            'avg_response_time' => $wpdb->get_var("SELECT AVG(response_time) FROM {$table_name} WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)")
-        ];
-    }
-
-    /**
-     * Get security logs
-     */
-    private function get_security_logs($limit = 50) {
-        global $wpdb;
-
-        $table_name = $wpdb->prefix . 'affcd_security_logs';
+        $cutoff_date = date('Y-m-d H:i:s', strtotime("-{$days} days"));
         
-        return $wpdb->get_results($wpdb->prepare("
-            SELECT * FROM {$table_name} 
-            WHERE created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
-            ORDER BY created_at DESC 
-            LIMIT %d
-        ", $limit), ARRAY_A);
-    }
-
-    /**
-     * Get failed requests count
-     */
-    private function get_failed_requests_count() {
-        global $wpdb;
-
-        $table_name = $wpdb->prefix . 'affcd_api_logs';
+        $data = $wpdb->get_results($wpdb->prepare(
+            "SELECT identifier, action_type, request_count, window_start, window_end,
+                    time_window, is_blocked, block_until, violation_level, endpoint,
+                    last_request, created_at
+             FROM {$this->rate_limit_table} 
+             WHERE created_at >= %s
+             ORDER BY created_at DESC",
+            $cutoff_date
+        ), ARRAY_A);
         
-        return $wpdb->get_var("
-            SELECT COUNT(*) FROM {$table_name} 
-            WHERE status IN ('error', 'blocked', 'rate_limited') 
-            AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
-        ");
+        if ($format === 'json') {
+            return wp_json_encode($data);
+        }
+        
+        // CSV format
+        if (empty($data)) {
+            return '';
+        }
+        
+        $csv = fopen('php://temp', 'r+');
+        
+        // Add header row
+        fputcsv($csv, array_keys($data[0]));
+        
+        // Add data rows
+        foreach ($data as $row) {
+            fputcsv($csv, $row);
+        }
+        
+        rewind($csv);
+        $csv_string = stream_get_contents($csv);
+        fclose($csv);
+        
+        return $csv_string;
     }
 }
 
-// Initialise the domain management class
-new AFFCD_Domain_Management();
+/**
+ * Helper function to get rate limiter instance
+ *
+ * @return AFFCD_Rate_Limiter
+ */
+function affcd_get_rate_limiter() {
+    static $instance = null;
+    
+    if (null === $instance) {
+        $instance = new AFFCD_Rate_Limiter();
+    }
+    
+    return $instance;
+}
+
+/**
+ * Helper function to check rate limits
+ *
+ * @param string $action_type Action type
+ * @param string $identifier Optional identifier
+ * @return bool Within limits
+ */
+function affcd_check_rate_limit($action_type, $identifier = null) {
+    $rate_limiter = affcd_get_rate_limiter();
+    
+    if (!$identifier) {
+        // Create mock request to determine identifier
+        $request = new stdClass();
+        $request->headers = getallheaders();
+        $identifier = $rate_limiter->get_rate_limit_identifier($request);
+    }
+    
+    return !$rate_limiter->is_identifier_blocked($identifier) && 
+           $rate_limiter->is_within_limits($identifier, $action_type);
+}
+
+/**
+ * Helper function to get client IP safely
+ *
+ * @return string Client IP address
+ */
+function affcd_get_client_ip() {
+    $headers_to_check = [
+        'HTTP_CF_CONNECTING_IP',
+        'HTTP_X_FORWARDED_FOR',
+        'HTTP_X_REAL_IP',
+        'HTTP_CLIENT_IP',
+        'REMOTE_ADDR'
+    ];
+    
+    foreach ($headers_to_check as $header) {
+        if (!empty($_SERVER[$header])) {
+            $ip = trim(explode(',', $_SERVER[$header])[0]);
+            if (filter_var($ip, FILTER_VALIDATE_IP)) {
+                return $ip;
+            }
+        }
+    }
+    
+    return $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+}

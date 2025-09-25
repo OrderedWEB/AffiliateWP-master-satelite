@@ -32,7 +32,7 @@ class AFFCI_API_Client {
         $endpoint = $this->api_endpoint . 'validate-code';
         
         $body = [
-            'code' => Sanitise_text_field($code),
+            'code' => sanitize_text_field($code),
             'domain' => home_url(),
             'session_id' => $session_id
         ];
@@ -68,7 +68,7 @@ class AFFCI_API_Client {
         $endpoint = $this->api_endpoint . 'track-usage';
         
         $body = [
-            'code' => Sanitise_text_field($code),
+            'code' => sanitize_text_field($code),
             'domain' => home_url(),
             'conversion' => (bool) $conversion,
             'conversion_value' => $conversion_value ? (float) $conversion_value : null,
@@ -176,8 +176,8 @@ class AFFCI_API_Client {
     public function ajax_validate_code() {
         check_ajax_referer('affci_nonce', 'nonce');
         
-        $code = Sanitise_text_field($_POST['code'] ?? '');
-        $session_id = Sanitise_text_field($_POST['session_id'] ?? '');
+        $code = sanitize_text_field($_POST['code'] ?? '');
+        $session_id = sanitize_text_field($_POST['session_id'] ?? '');
         
         if (empty($code)) {
             wp_send_json_error(['message' => __('Code is required', 'affiliate-client-integration')]);
@@ -195,7 +195,7 @@ class AFFCI_API_Client {
     public function ajax_track_conversion() {
         check_ajax_referer('affci_nonce', 'nonce');
         
-        $code = Sanitise_text_field($_POST['code'] ?? '');
+        $code = sanitize_text_field($_POST['code'] ?? '');
         $conversion_value = floatval($_POST['conversion_value'] ?? 0);
         $metadata = $_POST['metadata'] ?? [];
         
@@ -203,9 +203,9 @@ class AFFCI_API_Client {
             wp_send_json_error(['message' => __('Code is required', 'affiliate-client-integration')]);
         }
         
-        // Sanitise metadata
+        // Sanitize metadata
         if (is_array($metadata)) {
-            $metadata = array_map('Sanitise_text_field', $metadata);
+            $metadata = array_map('sanitize_text_field', $metadata);
         }
         
         $result = $this->track_usage($code, true, $conversion_value, $metadata);

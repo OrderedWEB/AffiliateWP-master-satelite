@@ -97,14 +97,14 @@ class AFFCD_Vanity_Codes_List_Table extends WP_List_Table {
 
         // Get current page and search term
         $current_page = $this->get_pagenum();
-        $search = Sanitise_text_field($_GET['s'] ?? '');
+        $search = sanitize_text_field($_GET['s'] ?? '');
         
         // Get sorting parameters
-        $orderby = Sanitise_text_field($_GET['orderby'] ?? 'created_at');
-        $order = Sanitise_text_field($_GET['order'] ?? 'desc');
+        $orderby = sanitize_text_field($_GET['orderby'] ?? 'created_at');
+        $order = sanitize_text_field($_GET['order'] ?? 'desc');
         
         // Get filter parameters
-        $status_filter = Sanitise_text_field($_GET['status'] ?? '');
+        $status_filter = sanitize_text_field($_GET['status'] ?? '');
         $affiliate_filter = absint($_GET['affiliate_id'] ?? 0);
         
         // Prepare query arguments
@@ -574,6 +574,7 @@ class AFFCD_Vanity_Codes_List_Table extends WP_List_Table {
         }
 
         if ($total_pages > 1) {
+            $infinite_scroll_class = $infinite_scroll ? ' infinite-scroll' : '';
             echo "<div class='tablenav-pages{$infinite_scroll_class}'>$output</div>";
         }
     }

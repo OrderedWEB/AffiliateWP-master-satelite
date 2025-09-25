@@ -48,36 +48,36 @@ class ACI_Settings_Page {
     }
 
     /**
-     * Initialse settings
+     * Initialize settings
      */
     public function init_settings() {
         // Register settings
         register_setting('aci_settings', 'aci_master_domain', [
-            'Sanitise_callback' => 'esc_url_raw'
+            'sanitize_callback' => 'esc_url_raw'
         ]);
         register_setting('aci_settings', 'aci_api_key', [
-            'Sanitise_callback' => 'Sanitise_text_field'
+            'sanitize_callback' => 'sanitize_text_field'
         ]);
         register_setting('aci_settings', 'aci_api_secret', [
-            'Sanitise_callback' => 'Sanitise_text_field'
+            'sanitize_callback' => 'sanitize_text_field'
         ]);
         register_setting('aci_settings', 'aci_cache_duration', [
-            'Sanitise_callback' => 'intval'
+            'sanitize_callback' => 'intval'
         ]);
         register_setting('aci_settings', 'aci_enable_logging', [
-            'Sanitise_callback' => 'rest_Sanitise_boolean'
+            'sanitize_callback' => 'rest_sanitize_boolean'
         ]);
         register_setting('aci_settings', 'aci_auto_apply_discounts', [
-            'Sanitise_callback' => 'rest_Sanitise_boolean'
+            'sanitize_callback' => 'rest_sanitize_boolean'
         ]);
         register_setting('aci_settings', 'aci_popup_settings', [
-            'Sanitise_callback' => [$this, 'Sanitise_popup_settings']
+            'sanitize_callback' => [$this, 'sanitize_popup_settings']
         ]);
         register_setting('aci_settings', 'aci_display_settings', [
-            'Sanitise_callback' => [$this, 'Sanitise_display_settings']
+            'sanitize_callback' => [$this, 'sanitize_display_settings']
         ]);
         register_setting('aci_settings', 'aci_zoho_settings', [
-            'Sanitise_callback' => [$this, 'Sanitise_zoho_settings']
+            'sanitize_callback' => [$this, 'sanitize_zoho_settings']
         ]);
 
         // Define sections
@@ -810,49 +810,49 @@ class ACI_Settings_Page {
     }
 
     /**
-     * Sanitise popup settings
+     * Sanitize popup settings
      */
-    public function Sanitise_popup_settings($input) {
-        $Sanitised = [];
+    public function sanitize_popup_settings($input) {
+        $Sanitized = [];
         
-        $Sanitised['enabled'] = !empty($input['enabled']);
-        $Sanitised['trigger'] = Sanitise_text_field($input['trigger'] ?? 'exit_intent');
-        $Sanitised['delay'] = intval($input['delay'] ?? 5);
-        $Sanitised['show_once'] = !empty($input['show_once']);
-        $Sanitised['popup_title'] = Sanitise_text_field($input['popup_title'] ?? '');
-        $Sanitised['popup_message'] = Sanitise_textarea_field($input['popup_message'] ?? '');
-        $Sanitised['popup_style'] = Sanitise_text_field($input['popup_style'] ?? 'default');
+        $Sanitized['enabled'] = !empty($input['enabled']);
+        $Sanitized['trigger'] = sanitize_text_field($input['trigger'] ?? 'exit_intent');
+        $Sanitized['delay'] = intval($input['delay'] ?? 5);
+        $Sanitized['show_once'] = !empty($input['show_once']);
+        $Sanitized['popup_title'] = sanitize_text_field($input['popup_title'] ?? '');
+        $Sanitized['popup_message'] = sanitize_textarea_field($input['popup_message'] ?? '');
+        $Sanitized['popup_style'] = sanitize_text_field($input['popup_style'] ?? 'default');
 
-        return $Sanitised;
+        return $Sanitized;
     }
 
     /**
-     * Sanitise display settings
+     * Sanitize display settings
      */
-    public function Sanitise_display_settings($input) {
-        $Sanitised = [];
+    public function sanitize_display_settings($input) {
+        $Sanitized = [];
         
-        $Sanitised['show_affiliate_notice'] = !empty($input['show_affiliate_notice']);
-        $Sanitised['show_discount_amount'] = !empty($input['show_discount_amount']);
-        $Sanitised['affiliate_notice_position'] = Sanitise_text_field($input['affiliate_notice_position'] ?? 'top');
-        $Sanitised['custom_css_class'] = Sanitise_text_field($input['custom_css_class'] ?? '');
+        $Sanitized['show_affiliate_notice'] = !empty($input['show_affiliate_notice']);
+        $Sanitized['show_discount_amount'] = !empty($input['show_discount_amount']);
+        $Sanitized['affiliate_notice_position'] = sanitize_text_field($input['affiliate_notice_position'] ?? 'top');
+        $Sanitized['custom_css_class'] = sanitize_text_field($input['custom_css_class'] ?? '');
 
-        return $Sanitised;
+        return $Sanitized;
     }
 
     /**
-     * Sanitise Zoho settings
+     * Sanitize Zoho settings
      */
-    public function Sanitise_zoho_settings($input) {
-        $Sanitised = [];
+    public function sanitize_zoho_settings($input) {
+        $Sanitized = [];
         
-        $Sanitised['enabled'] = !empty($input['enabled']);
-        $Sanitised['client_id'] = Sanitise_text_field($input['client_id'] ?? '');
-        $Sanitised['client_secret'] = Sanitise_text_field($input['client_secret'] ?? '');
-        $Sanitised['refresh_token'] = Sanitise_text_field($input['refresh_token'] ?? '');
-        $Sanitised['api_domain'] = esc_url_raw($input['api_domain'] ?? 'https://www.zohoapis.com');
-        $Sanitised['books_org_id'] = Sanitise_text_field($input['books_org_id'] ?? '');
+        $Sanitized['enabled'] = !empty($input['enabled']);
+        $Sanitized['client_id'] = sanitize_text_field($input['client_id'] ?? '');
+        $Sanitized['client_secret'] = sanitize_text_field($input['client_secret'] ?? '');
+        $Sanitized['refresh_token'] = sanitize_text_field($input['refresh_token'] ?? '');
+        $Sanitized['api_domain'] = esc_url_raw($input['api_domain'] ?? 'https://www.zohoapis.com');
+        $Sanitized['books_org_id'] = sanitize_text_field($input['books_org_id'] ?? '');
 
-        return $Sanitised;
+        return $Sanitized;
     }
 }

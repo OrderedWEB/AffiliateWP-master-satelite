@@ -100,7 +100,7 @@ class ACI_Shortcode_Manager {
         ], $atts);
 
         // Generate unique form ID
-        $form_id = Sanitise_html_class($atts['id']);
+        $form_id = sanitize_html_class($atts['id']);
         
         // Mark that we need shortcode assets
         $this->mark_shortcode_assets_needed();
@@ -936,8 +936,8 @@ class ACI_Shortcode_Manager {
     public function ajax_validate_code() {
         check_ajax_referer('aci_shortcode_nonce', 'aci_nonce');
         
-        $affiliate_code = Sanitise_text_field($_POST['affiliate_code'] ?? '');
-        $form_id = Sanitise_text_field($_POST['form_id'] ?? '');
+        $affiliate_code = sanitize_text_field($_POST['affiliate_code'] ?? '');
+        $form_id = sanitize_text_field($_POST['form_id'] ?? '');
         
         if (empty($affiliate_code)) {
             wp_send_json_error([
@@ -977,9 +977,9 @@ class ACI_Shortcode_Manager {
         check_ajax_referer('aci_shortcode_nonce', 'aci_nonce');
         
         $form_data = [
-            'affiliate_code' => Sanitise_text_field($_POST['affiliate_code'] ?? ''),
-            'user_email' => Sanitise_email($_POST['user_email'] ?? ''),
-            'form_id' => Sanitise_text_field($_POST['form_id'] ?? ''),
+            'affiliate_code' => sanitize_text_field($_POST['affiliate_code'] ?? ''),
+            'user_email' => sanitize_email($_POST['user_email'] ?? ''),
+            'form_id' => sanitize_text_field($_POST['form_id'] ?? ''),
             'source' => 'shortcode_form'
         ];
 

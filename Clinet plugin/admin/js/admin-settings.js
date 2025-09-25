@@ -26,7 +26,7 @@
     },
 
     /**
-     * Initialse admin functionality
+     * Initialize admin functionality
      */
     init: function () {
       this.bindEvents();
@@ -78,19 +78,19 @@
     },
 
     /**
-     * Initialse components
+     * Initialize components
      */
     initializeComponents: function () {
-      // Initialise tooltips
+      // Initialize tooltips
       this.initializeTooltips();
 
-      // Initialise progress indicators
+      // Initialize progress indicators
       this.initializeProgressIndicators();
 
-      // Initialise status indicators
+      // Initialize status indicators
       this.updateConnectionStatus();
 
-      // Initialise form state
+      // Initialize form state
       this.saveFormState();
     },
 
@@ -744,7 +744,7 @@
     },
 
     /**
-     * Initialse tooltips
+     * Initialize tooltips
      */
     initializeTooltips: function () {
       $("[title]").each(function () {
@@ -770,7 +770,7 @@
     },
 
     /**
-     * Initialse progress indicators
+     * Initialize progress indicators
      */
     initializeProgressIndicators: function () {
       // Add CSS for spinners
@@ -900,7 +900,7 @@
     },
   };
 
-  // Initialise when document is ready
+  // Initialize when document is ready
   $(document).ready(function () {
     ACI_Admin.init();
 
