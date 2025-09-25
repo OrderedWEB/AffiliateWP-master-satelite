@@ -232,25 +232,25 @@ class ACI_AJAX_Handler {
         }
 
         // Sanitize event data
-        $Sanitized_data = [];
+        $sanitized_data = [];
         if (is_array($event_data)) {
             foreach ($event_data as $key => $value) {
-                $Sanitized_data[sanitize_key($key)] = sanitize_text_field($value);
+                $sanitized_data[sanitize_key($key)] = sanitize_text_field($value);
             }
         }
 
         // Add context data
-        $Sanitized_data['timestamp'] = sanitize_text_field($_POST['timestamp'] ?? '');
-        $Sanitized_data['url'] = esc_url_raw($_POST['url'] ?? '');
-        $Sanitized_data['user_agent'] = sanitize_text_field($_POST['user_agent'] ?? '');
+        $sanitized_data['timestamp'] = sanitize_text_field($_POST['timestamp'] ?? '');
+        $sanitized_data['url'] = esc_url_raw($_POST['url'] ?? '');
+        $sanitized_data['user_agent'] = sanitize_text_field($_POST['user_agent'] ?? '');
 
         // Log the event
-        aci_log_activity($event_type, $Sanitized_data);
+        aci_log_activity($event_type, $sanitized_data);
 
         // Track with API if needed
         $code = $this->session_manager->get_affiliate_data('code');
         if (!empty($code) && in_array($event_type, ['impression', 'click', 'view'])) {
-            $this->api_client->track_impression($code, $Sanitized_data);
+            $this->api_client->track_impression($code, $sanitized_data);
         }
 
         wp_send_json_success(['message' => __('Event tracked successfully.', 'affiliate-client-integration')]);
@@ -401,7 +401,7 @@ class ACI_AJAX_Handler {
         }
 
         // Sanitize settings
-        $Sanitized_settings = [];
+        $sanitized_settings = [];
         $allowed_settings = [
             'master_domain', 'api_key', 'api_secret', 'popup_enabled', 
             'popup_style', 'auto_apply_discount', 'track_conversions',
@@ -412,33 +412,33 @@ class ACI_AJAX_Handler {
             if (isset($settings[$key])) {
                 switch ($key) {
                     case 'master_domain':
-                        $Sanitized_settings[$key] = esc_url_raw($settings[$key]);
+                        $sanitized_settings[$key] = esc_url_raw($settings[$key]);
                         break;
                     case 'popup_enabled':
                     case 'auto_apply_discount':
                     case 'track_conversions':
                     case 'debug_mode':
-                        $Sanitized_settings[$key] = filter_var($settings[$key], FILTER_VALIDATE_BOOLEAN);
+                        $sanitized_settings[$key] = filter_var($settings[$key], FILTER_VALIDATE_BOOLEAN);
                         break;
                     case 'cache_duration':
                     case 'timeout':
                     case 'retry_attempts':
-                        $Sanitized_settings[$key] = intval($settings[$key]);
+                        $sanitized_settings[$key] = intval($settings[$key]);
                         break;
                     default:
-                        $Sanitized_settings[$key] = sanitize_text_field($settings[$key]);
+                        $sanitized_settings[$key] = sanitize_text_field($settings[$key]);
                         break;
                 }
             }
         }
 
         // Update settings
-        $this->plugin->update_settings($Sanitized_settings);
+        $this->plugin->update_settings($sanitized_settings);
 
         // Log settings update
         aci_log_activity('settings_updated', [
             'updated_by' => get_current_user_id(),
-            'updated_fields' => array_keys($Sanitized_settings)
+            'updated_fields' => array_keys($sanitized_settings)
         ]);
 
         wp_send_json_success([

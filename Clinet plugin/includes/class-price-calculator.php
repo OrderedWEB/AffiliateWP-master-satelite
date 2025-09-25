@@ -622,13 +622,13 @@ class ACI_Price_Calculator {
             return [];
         }
 
-        $Sanitized = [];
+        $sanitized = [];
         foreach ($items as $item) {
             if (!is_array($item)) {
                 continue;
             }
             
-            $Sanitized[] = [
+            $sanitized[] = [
                 'name' => sanitize_text_field($item['name'] ?? ''),
                 'price' => floatval($item['price'] ?? 0),
                 'quantity' => intval($item['quantity'] ?? 1),
@@ -641,7 +641,7 @@ class ACI_Price_Calculator {
             ];
         }
 
-        return $Sanitized;
+        return $sanitized;
     }
 
     /**

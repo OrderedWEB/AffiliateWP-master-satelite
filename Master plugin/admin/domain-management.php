@@ -1354,6 +1354,3 @@ class AFFCD_Domain_Management {
 		);
 	}
 }
-
-// Initialize the domain management class
-new AFFCD_Domain_Management();

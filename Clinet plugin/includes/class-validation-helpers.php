@@ -528,23 +528,23 @@ class ACI_Validation_Helpers {
      * Sanitize and validate form data
      */
     public static function sanitize_and_validate($data, $rules, $sanitize_rules = []) {
-        $Sanitized_data = [];
+        $sanitized_data = [];
         $validation_results = [];
         
         foreach ($data as $field_name => $value) {
             // Sanitize first
             if (isset($sanitize_rules[$field_name])) {
                 $sanitize_function = $sanitize_rules[$field_name];
-                $Sanitized_data[$field_name] = call_user_func($sanitize_function, $value);
+                $sanitized_data[$field_name] = call_user_func($sanitize_function, $value);
             } else {
                 // Default sanitization
-                $Sanitized_data[$field_name] = sanitize_text_field($value);
+                $sanitized_data[$field_name] = sanitize_text_field($value);
             }
             
             // Then validate
             if (isset($rules[$field_name])) {
                 $validation_results[$field_name] = self::validate_field(
-                    $Sanitized_data[$field_name], 
+                    $sanitized_data[$field_name], 
                     $rules[$field_name], 
                     $field_name
                 );
@@ -561,7 +561,7 @@ class ACI_Validation_Helpers {
         
         return [
             'valid' => $all_valid,
-            'data' => $Sanitized_data,
+            'data' => $sanitized_data,
             'validation' => $validation_results
         ];
     }

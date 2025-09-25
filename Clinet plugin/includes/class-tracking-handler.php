@@ -450,21 +450,21 @@ class AFFILIATE_CLIENT_Tracking_Handler {
      * @return array Sanitized data
      */
     private function sanitize_event_data($data) {
-        $Sanitized = [];
+        $sanitized = [];
         
         foreach ($data as $key => $value) {
             if (is_string($value)) {
-                $Sanitized[$key] = sanitize_text_field($value);
+                $sanitized[$key] = sanitize_text_field($value);
             } elseif (is_numeric($value)) {
-                $Sanitized[$key] = is_float($value) ? floatval($value) : intval($value);
+                $sanitized[$key] = is_float($value) ? floatval($value) : intval($value);
             } elseif (is_array($value)) {
-                $Sanitized[$key] = $this->sanitize_event_data($value);
+                $sanitized[$key] = $this->sanitize_event_data($value);
             } else {
-                $Sanitized[$key] = sanitize_text_field($value);
+                $sanitized[$key] = sanitize_text_field($value);
             }
         }
         
-        return $Sanitized;
+        return $sanitized;
     }
 
     /**

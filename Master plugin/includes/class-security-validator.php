@@ -13,6 +13,28 @@
 if (!defined('ABSPATH')) {
     exit;
 }
+if ( ! class_exists('AFFCD_Security_Manager') ) {
+    // Normal path (this file is in /includes/)
+    $candidate = dirname(__DIR__) . '/includes/class-security-manager.php';
+    if ( is_readable($candidate) ) {
+        require_once $candidate;
+    }
+
+    // Legacy/alternate class names → alias to the expected one
+    if ( ! class_exists('AFFCD_Security_Manager') ) {
+        if ( class_exists('AFFCD_Security') ) {
+            class_alias('AFFCD_Security', 'AFFCD_Security_Manager');
+        } elseif ( class_exists('AffiliateWP_Cross_Domain_Security_Manager') ) {
+            class_alias('AffiliateWP_Cross_Domain_Security_Manager', 'AFFCD_Security_Manager');
+        }
+    }
+}
+
+// Last-resort soft-fail to avoid a hard fatal during activation
+if ( ! class_exists('AFFCD_Security_Manager') ) {
+    error_log('[AFFCD] Security Manager class missing; Security Validator will run in disabled mode.');
+}
+
 
 class AFFCD_Security_Validator {
 

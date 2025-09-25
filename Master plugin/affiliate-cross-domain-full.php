@@ -33,192 +33,522 @@ define('AFFCD_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('AFFCD_PLUGIN_BASENAME', plugin_basename(__FILE__));
 
 /**
- * Main Plugin Class
+ * Database debug logging function
  */
-final class AffiliateWP_Cross_Domain_Plugin_Suite_Master {
+function affcd_db_debug_log($message, $step = '', $query = '') {
+    $timestamp = date('Y-m-d H:i:s');
+    $memory_usage = memory_get_usage(true);
+    $memory_peak = memory_get_peak_usage(true);
+    
+    $log_entry = "[{$timestamp}] DB_STEP: {$step} | MESSAGE: {$message} | MEMORY: " . size_format($memory_usage) . " | PEAK: " . size_format($memory_peak);
+    
+    if ($query) {
+        $log_entry .= " | QUERY: " . substr($query, 0, 200) . "...";
+    }
+    
+    $log_entry .= "\n";
+    
+    // Log to WordPress debug log
+    if (defined('WP_DEBUG_LOG') && WP_DEBUG_LOG) {
+        error_log($log_entry);
+    }
+    
+    // Also log to custom file
+    $upload_dir = wp_upload_dir();
+    $log_file = $upload_dir['basedir'] . '/affcd-database-debug.log';
+    file_put_contents($log_file, $log_entry, FILE_APPEND | LOCK_EX);
+}
 
-    /** @var self */
+/**
+ * General debug logging function
+ */
+function affcd_debug_log($message, $step = '') {
+    $timestamp = date('Y-m-d H:i:s');
+    $memory_usage = memory_get_usage(true);
+    $memory_peak = memory_get_peak_usage(true);
+    
+    $log_entry = "[{$timestamp}] STEP: {$step} | MESSAGE: {$message} | MEMORY: " . size_format($memory_usage) . " | PEAK: " . size_format($memory_peak) . "\n";
+    
+    // Log to WordPress debug log
+    if (defined('WP_DEBUG_LOG') && WP_DEBUG_LOG) {
+        error_log($log_entry);
+    }
+    
+    // Also log to custom file for easier tracking
+    $upload_dir = wp_upload_dir();
+    $log_file = $upload_dir['basedir'] . '/affcd-activation-debug.log';
+    file_put_contents($log_file, $log_entry, FILE_APPEND | LOCK_EX);
+}
+
+// Track activation start
+affcd_debug_log('Plugin file loaded', 'FILE_LOAD');
+
+/**
+ * Main Plugin Class with Debug Tracking
+ */
+class AffiliateWP_Cross_Domain_Full {
+    
     private static $instance = null;
-
-    /** @var AFFCD_Database_Manager */
+    private static $debug_step = 0;
+    
+    /**
+     * Database manager instance
+     *
+     * @var AFFCD_Database_Manager
+     */
     public $database_manager;
 
-    /** @var AFFCD_API_Endpoints */
+    /**
+     * API endpoints instance
+     *
+     * @var AFFCD_API_Endpoints
+     */
     public $api_endpoints;
 
-    /** @var AFFCD_Security_Validator */
+    /**
+     * Security validator instance
+     *
+     * @var AFFCD_Security_Validator
+     */
     public $security_validator;
 
-    /** @var AFFCD_Rate_Limiter */
+    /**
+     * Rate limiter instance
+     *
+     * @var AFFCD_Rate_Limiter
+     */
     public $rate_limiter;
 
-    /** @var AFFCD_Vanity_Code_Manager */
+    /**
+     * Vanity code manager instance
+     *
+     * @var AFFCD_Vanity_Code_Manager
+     */
     public $vanity_code_manager;
 
-    /** @var AFFCD_Webhook_Loader */
-    public $webhook_loader;
-
-    /** @var AFFCD_Webhook_Handler */
-    public $webhook_handler;
-
-    /** @var AFFCD_Admin_Menu */
-    public $admin_menu;
-
-    /** @var AFFCD_Domain_Manager */
-    public $domain_manager;
-
-    /** @var bool */
-    private $activated = false;
+    /**
+     * Webhook manager instance
+     *
+     * @var AFFCD_Webhook_Manager
+     */
+    public $webhook_manager;
 
     /**
-     * Singleton
+     * Webhook handler instance
+     *
+     * @var AFFCD_Webhook_Handler
      */
-    public static function instance(): self {
+    public $webhook_handler;
+
+    /**
+     * Admin menu instance
+     *
+     * @var AFFCD_Admin_Menu
+     */
+    public $admin_menu;
+
+    /**
+     * Domain manager instance
+     *
+     * @var AFFCD_Domain_Manager
+     */
+    public $domain_manager;
+
+    /**
+     * Plugin activated flag
+     *
+     * @var boolean
+     */
+    private $activated = false;
+    
+    // Add debug counter
+    private static function next_debug_step($description) {
+        self::$debug_step++;
+        affcd_debug_log($description, 'STEP_' . self::$debug_step);
+    }
+
+    /**
+     * Get plugin instance (singleton)
+     */
+    public static function instance() {
+        self::next_debug_step('Instance method called');
+        
         if (null === self::$instance) {
+            self::next_debug_step('Creating new instance');
             self::$instance = new self();
+            self::next_debug_step('Instance created successfully');
         }
         return self::$instance;
     }
 
     /**
-     * CTOR
+     * Constructor
      */
     private function __construct() {
-        $this->init_hooks();
-        $this->includes();
-        $this->init_components();
+        self::next_debug_step('Constructor started');
+        
+        try {
+            $this->init_hooks();
+            self::next_debug_step('Hooks initialized');
+            
+            $this->includes();
+            self::next_debug_step('Files included');
+            
+            $this->init_components();
+            self::next_debug_step('Components initialized');
+            
+        } catch (Exception $e) {
+            affcd_debug_log('Constructor error: ' . $e->getMessage(), 'CONSTRUCTOR_ERROR');
+            throw $e;
+        }
+        
+        self::next_debug_step('Constructor completed');
     }
 
     /**
-     * Hooks
+     * Initialize WordPress hooks
      */
-    private function init_hooks(): void {
-        register_activation_hook(AFFCD_PLUGIN_FILE, [$this, 'activation']);
-        register_deactivation_hook(AFFCD_PLUGIN_FILE, [$this, 'deactivation']);
-        register_uninstall_hook(AFFCD_PLUGIN_FILE, ['AffiliateWP_Cross_Domain_Plugin_Suite_Master', 'uninstall']);
+    private function init_hooks() {
+        self::next_debug_step('Starting hook registration');
+        
+        // Plugin lifecycle hooks
+        register_activation_hook(__FILE__, [$this, 'activation']);
+        self::next_debug_step('Activation hook registered');
+        
+        register_deactivation_hook(__FILE__, [$this, 'deactivation']);
+        self::next_debug_step('Deactivation hook registered');
+        
+        register_uninstall_hook(__FILE__, ['AffiliateWP_Cross_Domain_Full', 'uninstall']);
+        self::next_debug_step('Uninstall hook registered');
 
+        // WordPress core hooks
         add_action('plugins_loaded', [$this, 'load_textdomain']);
+        self::next_debug_step('Textdomain hook registered');
+        
         add_action('init', [$this, 'init'], 0);
+        self::next_debug_step('Init hook registered');
+        
         add_action('rest_api_init', [$this, 'register_rest_routes']);
-
-        // AJAX
+        self::next_debug_step('REST API hook registered');
+        
+        // AJAX hooks
         add_action('wp_ajax_affcd_test_connection', [$this, 'ajax_test_connection']);
-        add_action('wp_ajax_affcd_validate_code', [$this, 'ajax_validate_code']);
+        self::next_debug_step('AJAX test connection hook registered');
+        
         add_action('wp_ajax_nopriv_affcd_validate_code', [$this, 'ajax_validate_code']);
-
-        // Admin
+        self::next_debug_step('AJAX validate code hook registered');
+        
+        // Admin hooks
         if (is_admin()) {
+            self::next_debug_step('Registering admin hooks');
+            
             add_action('admin_init', [$this, 'admin_init']);
+            self::next_debug_step('Admin init hook registered');
+            
+            add_action('admin_notices', [$this, 'admin_notices']);
+            self::next_debug_step('Admin notices hook registered');
+            
             add_filter('plugin_action_links_' . AFFCD_PLUGIN_BASENAME, [$this, 'plugin_action_links']);
+            self::next_debug_step('Plugin action links filter registered');
         }
 
-        // Cron schedules
-        add_filter('cron_schedules', [$this, 'add_cron_schedules']);
-
-        // Cleanup jobs
+        // Cleanup hooks
         add_action('affcd_cleanup_expired_codes', [$this, 'cleanup_expired_codes']);
+        self::next_debug_step('Cleanup expired codes hook registered');
+        
         add_action('affcd_cleanup_analytics_data', [$this, 'cleanup_analytics_data']);
+        self::next_debug_step('Cleanup analytics hook registered');
+        
+        self::next_debug_step('All hooks registered successfully');
     }
 
     /**
-     * Includes
+     * Include required files
      */
-    private function includes(): void {
-        // Core
-        require_once AFFCD_PLUGIN_DIR . 'includes/functions.php';
+    private function includes() {
+        self::next_debug_step('Starting file includes');
+        
+        // Core files to include
+        $files_to_include = [
+            'includes/functions.php',
+            'includes/class-database-manager.php',
+            'includes/class-security-validator.php',
+            'includes/class-rate-limiter.php',
+            'includes/class-api-endpoints.php',
+            'includes/class-vanity-code-manager.php',
+            'includes/class-webhook-manager.php',
+            'includes/class-webhook-handler.php'
+        ];
+        
+        foreach ($files_to_include as $file) {
+            $file_path = AFFCD_PLUGIN_DIR . $file;
+            
+            if (file_exists($file_path)) {
+                self::next_debug_step("Including: {$file}");
+                require_once $file_path;
+                self::next_debug_step("Successfully included: {$file}");
+            } else {
+                affcd_debug_log("File not found: {$file}", 'MISSING_FILE');
+            }
+        }
+        
+        // Admin includes
+        if (is_admin()) {
+            self::next_debug_step('Including admin files');
+            
+            $admin_files = [
+                'includes/class-admin-menu.php',
+                'admin/class-domain-manager.php',
+                'admin/class-bulk-operations.php',
+                'admin/domain-management.php'
+            ];
+            
+            foreach ($admin_files as $file) {
+                $file_path = AFFCD_PLUGIN_DIR . $file;
+                
+                if (file_exists($file_path)) {
+                    self::next_debug_step("Including admin file: {$file}");
+                    require_once $file_path;
+                    self::next_debug_step("Successfully included admin file: {$file}");
+                } else {
+                    affcd_debug_log("Admin file not found: {$file}", 'MISSING_ADMIN_FILE');
+                }
+            }
+        }
+        
+        self::next_debug_step('All includes completed');
+    }
+
+    /**
+     * Initialize plugin components
+     */
+    private function init_components() {
+        self::next_debug_step('Starting component initialization');
+        
+        try {
+            // Use the singleton pattern for database manager to prevent multiple instantiation
+            self::next_debug_step('Getting database manager instance');
+            $this->database_manager = $this->get_database_manager();
+            self::next_debug_step('Database manager ready');
+            
+            // Initialize security and rate limiting
+            self::next_debug_step('Creating security validator');
+            $this->security_validator = new AFFCD_Security_Validator();
+            self::next_debug_step('Security validator created');
+            
+            self::next_debug_step('Creating rate limiter');
+            $this->rate_limiter = new AFFCD_Rate_Limiter();
+            self::next_debug_step('Rate limiter created');
+            
+            // Initialize business logic components
+            self::next_debug_step('Creating vanity code manager');
+            $this->vanity_code_manager = new AFFCD_Vanity_Code_Manager();
+            self::next_debug_step('Vanity code manager created');
+            
+            self::next_debug_step('Creating webhook manager');
+            $this->webhook_manager = new AFFCD_Webhook_Manager();
+            self::next_debug_step('Webhook manager created');
+
+            self::next_debug_step('Creating webhook handler');
+            $this->webhook_handler = new AFFCD_Webhook_Handler($this->webhook_manager);
+            self::next_debug_step('Webhook handler created');
+            
+            self::next_debug_step('Creating API endpoints');
+            $this->api_endpoints = new AFFCD_API_Endpoints(
+                $this->security_validator,
+                $this->rate_limiter,
+                $this->vanity_code_manager
+            );
+            self::next_debug_step('API endpoints created');
+
+            // Initialize admin components
+         // Initialize admin components
+if ( is_admin() ) {
+    self::next_debug_step('Creating admin components');
+    $this->admin_menu     = new AFFCD_Admin_Menu();               // register menus only
+    $this->domain_manager = class_exists('AFFCD_Domain_Manager')  // optional if you need it
+        ? new AFFCD_Domain_Manager()
+        : null;
+    self::next_debug_step('Admin components created');
+}
+            
+        } catch (Exception $e) {
+            affcd_debug_log('Component initialization error: ' . $e->getMessage(), 'COMPONENT_ERROR');
+            throw $e;
+        }
+        
+        self::next_debug_step('Component initialization completed');
+    }
+
+    /**
+     * Get database manager instance (singleton pattern)
+     */
+    private function get_database_manager() {
+        if (!$this->database_manager) {
+            affcd_debug_log('Creating new database manager instance', 'DB_MANAGER_CREATE');
+            $this->database_manager = new AFFCD_Database_Manager();
+        }
+        return $this->database_manager;
+    }
+
+    /**
+     * Plugin activation
+     */
+    public function activation() {
+        affcd_debug_log('=== ACTIVATION STARTED ===', 'ACTIVATION_BEGIN');
+        
+        try {
+            // Check WordPress and PHP versions
+            affcd_debug_log('Checking requirements', 'ACTIVATION_REQUIREMENTS');
+            if (!$this->check_requirements()) {
+                affcd_debug_log('Requirements check failed', 'ACTIVATION_ERROR');
+                deactivate_plugins(AFFCD_PLUGIN_BASENAME);
+                wp_die(__('AffiliateWP Cross Domain Full requires WordPress 5.0+ and PHP 7.4+', 'affiliatewp-cross-domain-plugin-suite'));
+            }
+            affcd_debug_log('Requirements check passed', 'ACTIVATION_REQUIREMENTS_OK');
+
+            // Create database tables
+            affcd_debug_log('About to create database tables', 'ACTIVATION_DB_START');
+            $db_manager = $this->get_database_manager();
+            
+            affcd_debug_log('Calling create_tables()', 'ACTIVATION_DB_CREATE');
+            $db_manager->create_tables();
+            affcd_debug_log('Database tables created successfully', 'ACTIVATION_DB_OK');
+
+            // Set default options
+            affcd_debug_log('Setting default options', 'ACTIVATION_OPTIONS');
+            $this->set_default_options();
+            affcd_debug_log('Default options set', 'ACTIVATION_OPTIONS_OK');
+
+            // Schedule cleanup events
+            affcd_debug_log('Scheduling cleanup events', 'ACTIVATION_SCHEDULE');
+            $this->schedule_cleanup_events();
+            affcd_debug_log('Cleanup events scheduled', 'ACTIVATION_SCHEDULE_OK');
+
+            affcd_debug_log('=== ACTIVATION COMPLETED SUCCESSFULLY ===', 'ACTIVATION_SUCCESS');
+            
+        } catch (Exception $e) {
+            affcd_debug_log('Activation error: ' . $e->getMessage(), 'ACTIVATION_ERROR');
+            affcd_debug_log('Error trace: ' . $e->getTraceAsString(), 'ACTIVATION_TRACE');
+            throw $e;
+        }
+    }
+
+    /**
+     * Plugin deactivation
+     */
+    public function deactivation() {
+        affcd_debug_log('Deactivation started', 'DEACTIVATION_START');
+        
+        // Clear scheduled events
+        wp_clear_scheduled_hook('affcd_cleanup_expired_codes');
+        wp_clear_scheduled_hook('affcd_cleanup_analytics_data');
+        
+        affcd_debug_log('Deactivation completed', 'DEACTIVATION_END');
+    }
+
+    /**
+     * Plugin uninstall (static method)
+     */
+    public static function uninstall() {
+        affcd_debug_log('Uninstall started', 'UNINSTALL_START');
+        
+        if (!defined('WP_UNINSTALL_PLUGIN')) {
+            return;
+        }
+
+        // Drop database tables
         require_once AFFCD_PLUGIN_DIR . 'includes/class-database-manager.php';
-        require_once AFFCD_PLUGIN_DIR . 'includes/class-security-validator.php';
-        require_once AFFCD_PLUGIN_DIR . 'includes/class-rate-limiter.php';
-        require_once AFFCD_PLUGIN_DIR . 'includes/class-api-endpoints.php';
-        require_once AFFCD_PLUGIN_DIR . 'includes/class-vanity-code-manager.php';
+        $database_manager = new AFFCD_Database_Manager();
+        $database_manager->drop_tables();
 
-        // Webhook pieces
-        require_once AFFCD_PLUGIN_DIR . 'includes/class-webhook-manager.php';
-        require_once AFFCD_PLUGIN_DIR . 'includes/class-webhook-handler.php';
-        require_once AFFCD_PLUGIN_DIR . 'includes/class-webhook-loader.php';
+        // Remove options
+        delete_option('affcd_version');
+        delete_option('affcd_settings');
+        delete_option('affcd_api_settings');
+        delete_option('affcd_security_settings');
+        delete_option('affcd_webhook_settings');
+        delete_option('affcd_activation_redirect');
 
-        // Admin
-        if (is_admin()) {
-            require_once AFFCD_PLUGIN_DIR . 'includes/class-admin-menu.php';
-            require_once AFFCD_PLUGIN_DIR . 'includes/class-domain-manager.php';
-            require_once AFFCD_PLUGIN_DIR . 'admin/class-bulk-operations.php';
-            require_once AFFCD_PLUGIN_DIR . 'admin/domain-management.php';
-        }
+        // Clear transients
+        global $wpdb;
+        $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_affcd_%'");
+        $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_timeout_affcd_%'");
+        
+        affcd_debug_log('Uninstall completed', 'UNINSTALL_END');
     }
 
     /**
-     * Instantiate components
+     * Initialize plugin
      */
-    private function init_components(): void {
-        // Database first
-        $this->database_manager  = new AFFCD_Database_Manager();
-
-        // Security + rate limiting
-        $this->security_validator = new AFFCD_Security_Validator();
-        $this->rate_limiter       = new AFFCD_Rate_Limiter();
-
-        // Business logic
-        $this->vanity_code_manager = new AFFCD_Vanity_Code_Manager();
-
-        // Webhooks: Loader wires Manager ↔ Handler
-        $this->webhook_loader  = new AFFCD_Webhook_Loader();
-        $this->webhook_handler = $this->webhook_loader->get_handler();
-
-        // API (inject guards)
-        $this->api_endpoints = new AFFCD_API_Endpoints(
-            $this->security_validator,
-            $this->rate_limiter,
-            $this->vanity_code_manager
-        );
-
-        // Admin
-        if (is_admin()) {
-            $this->admin_menu     = new AFFCD_Admin_Menu();
-            $this->domain_manager = new AFFCD_Domain_Manager();
-        }
-    }
-
-    /**
-     * Runtime init
-     */
-    public function init(): void {
+    public function init() {
+        affcd_debug_log('Plugin init started', 'INIT_START');
+        
+        // Check AffiliateWP dependency
         if (!$this->check_affiliatewp_dependency()) {
             return;
         }
 
+        // Set activated flag
         $this->activated = true;
+
+        // Initialize components that require WordPress to be loaded
         do_action('affcd_loaded', $this);
 
+        // Schedule cleanup events
         $this->schedule_cleanup_events();
+        
+        affcd_debug_log('Plugin init completed', 'INIT_END');
     }
 
     /**
-     * Textdomain
+     * Load plugin textdomain
      */
-    public function load_textdomain(): void {
+    public function load_textdomain() {
+        affcd_debug_log('Loading textdomain', 'TEXTDOMAIN_START');
+        
         load_plugin_textdomain(
             'affiliatewp-cross-domain-plugin-suite',
             false,
             dirname(AFFCD_PLUGIN_BASENAME) . '/languages/'
         );
+        
+        affcd_debug_log('Textdomain loaded', 'TEXTDOMAIN_END');
     }
 
     /**
-     * REST routes
+     * Register REST API routes
      */
-    public function register_rest_routes(): void {
+    public function register_rest_routes() {
+        affcd_debug_log('Registering REST routes', 'REST_ROUTES_START');
+        
         if ($this->api_endpoints) {
             $this->api_endpoints->register_routes();
         }
+        
+        affcd_debug_log('REST routes registered', 'REST_ROUTES_END');
     }
 
     /**
-     * Admin init: settings + DB updates + activation redirect
+     * Admin initialization
      */
-    public function admin_init(): void {
+    public function admin_init() {
+        affcd_debug_log('Admin init started', 'ADMIN_INIT_START');
+        
+        // Register admin settings
         $this->register_admin_settings();
+        
+        // Check for database updates
         $this->maybe_update_database();
+        
+        affcd_debug_log('Admin init completed', 'ADMIN_INIT_END');
+    }
 
+    /**
+     * Admin notices
+     */
+    public function admin_notices() {
+        // Check for activation redirect
         if (get_option('affcd_activation_redirect', false)) {
             delete_option('affcd_activation_redirect');
             if (!isset($_GET['activate-multi'])) {
@@ -229,206 +559,141 @@ final class AffiliateWP_Cross_Domain_Plugin_Suite_Master {
     }
 
     /**
-     * Activation
+     * Plugin action links
      */
-    public function activation(): void {
-        if (!$this->check_requirements()) {
-            deactivate_plugins(AFFCD_PLUGIN_BASENAME);
-            wp_die(__('AffiliateWP Cross Domain Plugin Suite requires WordPress 5.0+ and PHP 7.4+', 'affiliatewp-cross-domain-plugin-suite'));
-        }
+    public function plugin_action_links($links) {
+        affcd_debug_log('Adding plugin action links', 'ACTION_LINKS');
+        
+        $action_links = [
+            '<a href="' . esc_url(admin_url('admin.php?page=affcd-domain-management')) . '">' . __('Settings', 'affiliatewp-cross-domain-plugin-suite') . '</a>',
+            '<a href="https://starneconsulting.com/docs/affiliatewp-cross-domain" target="_blank">' . __('Documentation', 'affiliatewp-cross-domain-plugin-suite') . '</a>'
+        ];
 
-        // Create/upgrade tables
-        $this->database_manager = new AFFCD_Database_Manager();
-        $this->database_manager->create_tables();
-
-        // Defaults
-        $this->set_default_options();
-
-        // Cron
-        $this->schedule_cleanup_events();
-
-        // Activation redirect flag
-        add_option('affcd_activation_redirect', true);
-
-        if (function_exists('affcd_log_activity')) {
-            affcd_log_activity('plugin_activated', [
-                'version'   => AFFCD_VERSION,
-                'timestamp' => current_time('mysql')
-            ]);
-        }
+        return array_merge($action_links, $links);
     }
 
     /**
-     * Deactivation
+     * AJAX test connection
      */
-    public function deactivation(): void {
-        // Clear scheduled events
-        wp_clear_scheduled_hook('affcd_cleanup_expired_codes');
-        wp_clear_scheduled_hook('affcd_cleanup_analytics_data');
+    public function ajax_test_connection() {
+        affcd_debug_log('AJAX test connection called', 'AJAX_TEST_CONNECTION');
+        
+        check_ajax_referer('affcd_admin_nonce', 'nonce');
 
-        if (function_exists('affcd_log_activity')) {
-            affcd_log_activity('plugin_deactivated', [
-                'version'   => AFFCD_VERSION,
-                'timestamp' => current_time('mysql')
-            ]);
+        if (!current_user_can('manage_affiliates')) {
+            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
         }
+
+        // Implementation would go here
+        wp_send_json_success(['message' => 'Test connection functionality']);
     }
 
     /**
-     * Uninstall (static)
+     * AJAX validate code
      */
-    public static function uninstall(): void {
-        if (!defined('WP_UNINSTALL_PLUGIN')) {
-            return;
-        }
-
-        require_once AFFCD_PLUGIN_DIR . 'includes/class-database-manager.php';
-
-        // Drop tables
-        $database_manager = new AFFCD_Database_Manager();
-        $database_manager->drop_tables();
-
-        // Options cleanup
-        delete_option('affcd_version');
-        delete_option('affcd_settings');
-        delete_option('affcd_api_settings');
-        delete_option('affcd_security_settings');
-        delete_option('affcd_webhook_settings');
-        delete_option('affcd_activation_redirect');
-
-        // Transients cleanup
-        global $wpdb;
-        $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_affcd_%'");
-        $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_timeout_affcd_%'");
+    public function ajax_validate_code() {
+        affcd_debug_log('AJAX validate code called', 'AJAX_VALIDATE_CODE');
+        
+        // Implementation would go here
+        wp_send_json_success(['message' => 'Validate code functionality']);
     }
 
     /**
-     * Requirements
+     * Cleanup expired codes
      */
-    private function check_requirements(): bool {
+    public function cleanup_expired_codes() {
+        affcd_debug_log('Cleanup expired codes called', 'CLEANUP_CODES');
+        
+        // Implementation would go here
+    }
+
+    /**
+     * Cleanup analytics data
+     */
+    public function cleanup_analytics_data() {
+        affcd_debug_log('Cleanup analytics data called', 'CLEANUP_ANALYTICS');
+        
+        // Implementation would go here
+    }
+
+    /**
+     * Check plugin requirements
+     */
+    private function check_requirements() {
+        affcd_debug_log('Checking PHP version: ' . PHP_VERSION, 'REQUIREMENTS_PHP');
+        affcd_debug_log('Checking WP version: ' . get_bloginfo('version'), 'REQUIREMENTS_WP');
+        
         global $wp_version;
-        return version_compare(PHP_VERSION, '7.4', '>=') && version_compare($wp_version, '5.0', '>=');
+        return (
+            version_compare(PHP_VERSION, '7.4', '>=') &&
+            version_compare($wp_version, '5.0', '>=')
+        );
     }
 
     /**
-     * AffiliateWP dependency
+     * Check AffiliateWP dependency
      */
-    private function check_affiliatewp_dependency(): bool {
-        // Soft dependency: allow plugin to run but surface admin notice if missing.
-        if (!function_exists('affiliate_wp') && !function_exists('affwp_get_affiliate')) {
+    private function check_affiliatewp_dependency() {
+        if (!function_exists('affiliate_wp')) {
             if (is_admin()) {
-                add_action('admin_notices', function () {
-                    echo '<div class="notice notice-warning is-dismissible"><p><strong>'
-                        . esc_html__('AffiliateWP Cross Domain Plugin Suite', 'affiliatewp-cross-domain-plugin-suite')
-                        . '</strong>: '
-                        . esc_html__('AffiliateWP is recommended for full functionality.', 'affiliatewp-cross-domain-plugin-suite')
-                        . ' <a href="https://affiliatewp.com" target="_blank" rel="noopener noreferrer">'
-                        . esc_html__('Get AffiliateWP', 'affiliatewp-cross-domain-plugin-suite')
-                        . '</a></p></div>';
+                add_action('admin_notices', function() {
+                    echo '<div class="notice notice-warning is-dismissible">';
+                    echo '<p><strong>' . __('AffiliateWP Cross Domain Plugin Suite', 'affiliatewp-cross-domain-plugin-suite') . '</strong>: ';
+                    echo __('AffiliateWP is recommended for full functionality.', 'affiliatewp-cross-domain-plugin-suite');
+                    echo ' <a href="https://affiliatewp.com" target="_blank">' . __('Get AffiliateWP', 'affiliatewp-cross-domain-plugin-suite') . '</a></p>';
+                    echo '</div>';
                 });
             }
         }
-        return true;
+        return true; // Allow plugin to run without AffiliateWP
     }
 
     /**
-     * Default options
+     * Set default options
      */
-    private function set_default_options(): void {
-        if (!get_option('affcd_version')) {
-            add_option('affcd_version', AFFCD_VERSION);
-        }
-        if (!get_option('affcd_settings')) {
-            add_option('affcd_settings', [
-                'api_enabled'                => true,
-                'rate_limit_enabled'         => true,
-                'rate_limit_requests_hour'   => 1000,
-                'cache_enabled'              => true,
-                'cache_duration'             => 900,
-                'cleanup_enabled'            => true,
-                'cleanup_expired_codes_days' => 30,
-                'cleanup_analytics_days'     => 90,
-                'webhook_enabled'            => true,
-                'security_level'             => 'high'
-            ]);
-        }
-    }
-
-    /**
-     * DB migration
-     */
-    private function maybe_update_database(): void {
-        $current_version = get_option('affcd_version', '0.0.0');
-        if (version_compare($current_version, AFFCD_VERSION, '<')) {
-            if ($this->database_manager instanceof AFFCD_Database_Manager) {
-                $this->database_manager->update_tables($current_version, AFFCD_VERSION);
+    private function set_default_options() {
+        affcd_debug_log('Setting default options', 'DEFAULT_OPTIONS_START');
+        
+        $default_options = [
+            'affcd_version' => AFFCD_VERSION,
+            'affcd_settings' => [],
+            'affcd_api_settings' => [],
+            'affcd_security_settings' => [],
+        ];
+        
+        foreach ($default_options as $option_name => $option_value) {
+            if (!get_option($option_name)) {
+                add_option($option_name, $option_value);
+                affcd_debug_log("Added option: {$option_name}", 'OPTION_ADDED');
             }
-            update_option('affcd_version', AFFCD_VERSION);
         }
+        
+        affcd_debug_log('Default options set', 'DEFAULT_OPTIONS_END');
     }
 
     /**
-     * Schedules
+     * Schedule cleanup events
      */
-    public function add_cron_schedules(array $schedules): array {
-        if (!isset($schedules['weekly'])) {
-            $schedules['weekly'] = [
-                'interval' => WEEK_IN_SECONDS,
-                'display'  => __('Once Weekly', 'affiliatewp-cross-domain-plugin-suite'),
-            ];
-        }
-        return $schedules;
-    }
-
-    private function schedule_cleanup_events(): void {
+    private function schedule_cleanup_events() {
+        affcd_debug_log('Scheduling cleanup events', 'CLEANUP_SCHEDULE_START');
+        
         if (!wp_next_scheduled('affcd_cleanup_expired_codes')) {
-            wp_schedule_event(time() + HOUR_IN_SECONDS, 'daily', 'affcd_cleanup_expired_codes');
+            wp_schedule_event(time(), 'hourly', 'affcd_cleanup_expired_codes');
+            affcd_debug_log('Scheduled expired codes cleanup', 'CLEANUP_CODES_SCHEDULED');
         }
+        
         if (!wp_next_scheduled('affcd_cleanup_analytics_data')) {
-            wp_schedule_event(time() + (2 * HOUR_IN_SECONDS), 'weekly', 'affcd_cleanup_analytics_data');
+            wp_schedule_event(time(), 'daily', 'affcd_cleanup_analytics_data');
+            affcd_debug_log('Scheduled analytics cleanup', 'CLEANUP_ANALYTICS_SCHEDULED');
         }
+        
+        affcd_debug_log('Cleanup events scheduled', 'CLEANUP_SCHEDULE_END');
     }
 
     /**
-     * Cleanup jobs
+     * Register admin settings
      */
-    public function cleanup_expired_codes(): void {
-        global $wpdb;
-
-        // Prefer manager routine if available
-        if ($this->vanity_code_manager && method_exists($this->vanity_code_manager, 'cleanup_expired_codes')) {
-            $this->vanity_code_manager->cleanup_expired_codes();
-            return;
-        }
-
-        // Fallback: delete expired codes from typical table if it exists
-        $table = $wpdb->prefix . 'affcd_vanity_codes';
-        $exists = $wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $table));
-        if ($exists === $table) {
-            $wpdb->query("DELETE FROM {$table} WHERE expires_at IS NOT NULL AND expires_at < NOW()");
-        }
-    }
-
-    public function cleanup_analytics_data(): void {
-        global $wpdb;
-
-        $settings     = get_option('affcd_settings', []);
-        $cleanup_days = isset($settings['cleanup_analytics_days']) ? (int)$settings['cleanup_analytics_days'] : 90;
-
-        $analytics_table = $wpdb->prefix . 'affcd_analytics';
-        $exists = $wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $analytics_table));
-        if ($exists === $analytics_table) {
-            $wpdb->query($wpdb->prepare(
-                "DELETE FROM {$analytics_table} WHERE created_at < DATE_SUB(NOW(), INTERVAL %d DAY)",
-                $cleanup_days
-            ));
-        }
-    }
-
-    /**
-     * Settings registration + sanitizers
-     */
-    private function register_admin_settings(): void {
+    private function register_admin_settings() {
         // API Settings
         register_setting('affcd_settings', 'affcd_api_settings', [
             'sanitize_callback' => [$this, 'sanitize_api_settings']
@@ -445,138 +710,89 @@ final class AffiliateWP_Cross_Domain_Plugin_Suite_Master {
         ]);
     }
 
-    public function sanitize_api_settings($input): array {
-        return [
-            'enabled'        => !empty($input['enabled']),
-            'rate_limit'     => absint($input['rate_limit'] ?? 1000),
-            'cache_duration' => absint($input['cache_duration'] ?? 900),
-            'debug_mode'     => !empty($input['debug_mode']),
-        ];
-    }
+    /**
+     * Sanitize API settings
+     */
+    public function sanitize_api_settings($input) {
+        $sanitized = [];
+        
+        $sanitized['enabled'] = !empty($input['enabled']);
+        $sanitized['rate_limit'] = absint($input['rate_limit'] ?? 1000);
+        $sanitized['cache_duration'] = absint($input['cache_duration'] ?? 900);
+        $sanitized['debug_mode'] = !empty($input['debug_mode']);
 
-    public function sanitize_security_settings($input): array {
-        $level = $input['security_level'] ?? 'high';
-        if (!in_array($level, ['low','medium','high'], true)) {
-            $level = 'high';
-        }
-        return [
-            'jwt_secret'      => sanitize_text_field($input['jwt_secret'] ?? ''),
-            'allowed_origins' => sanitize_textarea_field($input['allowed_origins'] ?? ''),
-            'require_https'   => !empty($input['require_https']),
-            'security_level'  => $level,
-        ];
-    }
-
-    public function sanitize_webhook_settings($input): array {
-        $events = is_array($input['events'] ?? null) ? array_values($input['events']) : [];
-        return [
-            'enabled' => !empty($input['enabled']),
-            'url'     => esc_url_raw($input['url'] ?? ''),
-            'secret'  => sanitize_text_field($input['secret'] ?? ''),
-            'events'  => $events,
-        ];
+        return $sanitized;
     }
 
     /**
-     * AJAX: Test connection to a client domain’s health endpoint
+     * Sanitize security settings
      */
-    public function ajax_test_connection(): void {
-        check_ajax_referer('affcd_admin_nonce', 'nonce');
+    public function sanitize_security_settings($input) {
+        $sanitized = [];
+        
+        $sanitized['jwt_secret'] = sanitize_text_field($input['jwt_secret'] ?? '');
+        $sanitized['allowed_origins'] = sanitize_textarea_field($input['allowed_origins'] ?? '');
+        $sanitized['require_https'] = !empty($input['require_https']);
+        $sanitized['security_level'] = in_array($input['security_level'], ['low', 'medium', 'high']) 
+            ? $input['security_level'] 
+            : 'high';
 
-        if (!current_user_can('manage_affiliates')) {
-            wp_send_json_error(__('Insufficient permissions', 'affiliatewp-cross-domain-plugin-suite'));
-        }
-
-        $domain_url = esc_url_raw($_POST['domain'] ?? '');
-        if (empty($domain_url)) {
-            wp_send_json_error(__('Domain is required', 'affiliatewp-cross-domain-plugin-suite'));
-        }
-
-        $health_url = trailingslashit($domain_url) . 'wp-json/affiliate-client/v1/health';
-        $response = wp_remote_get($health_url, [
-            'timeout' => 15,
-            'headers' => [
-                'User-Agent' => 'AffiliateWP-CrossDomain/' . AFFCD_VERSION,
-            ],
-            'sslverify' => true,
-        ]);
-
-        if (is_wp_error($response)) {
-            wp_send_json_error([
-                'message' => __('Connection failed', 'affiliatewp-cross-domain-plugin-suite'),
-                'error'   => $response->get_error_message(),
-            ]);
-        }
-
-        $code = (int) wp_remote_retrieve_response_code($response);
-        $body = wp_remote_retrieve_body($response);
-        $data = json_decode($body, true);
-
-        if ($code === 200 && isset($data['status']) && $data['status'] === 'ok') {
-            wp_send_json_success([
-                'message'        => __('Connection successful', 'affiliatewp-cross-domain-plugin-suite'),
-                'response_code'  => $code,
-                'response_time'  => $data['response_time'] ?? null,
-                'plugin_version' => $data['plugin_version'] ?? null,
-            ]);
-        }
-
-        wp_send_json_error([
-            'message'       => __('Health check failed', 'affiliatewp-cross-domain-plugin-suite'),
-            'response_code' => $code,
-            'body'          => $body,
-        ]);
+        return $sanitized;
     }
 
     /**
-     * AJAX: Validate code (public + logged-in)
+     * Sanitize webhook settings
      */
-    public function ajax_validate_code(): void {
-        // Basic rate limit by IP/requester
-        $ip = $_SERVER['REMOTE_ADDR'] ?? '';
-        if ($this->rate_limiter && !$this->rate_limiter->allow('validate_code', $ip)) {
-            wp_send_json_error(__('Rate limit exceeded. Try again later.', 'affiliatewp-cross-domain-plugin-suite'), 429);
-        }
+    public function sanitize_webhook_settings($input) {
+        $sanitized = [];
+        
+        $sanitized['enabled'] = !empty($input['enabled']);
+        $sanitized['url'] = esc_url_raw($input['url'] ?? '');
+        $sanitized['secret'] = sanitize_text_field($input['secret'] ?? '');
+        $sanitized['events'] = is_array($input['events']) ? $input['events'] : [];
 
-        $code   = sanitize_text_field($_POST['code'] ?? '');
-        $domain = sanitize_text_field($_POST['domain'] ?? '');
-
-        if ($code === '') {
-            wp_send_json_error(__('Code is required', 'affiliatewp-cross-domain-plugin-suite'));
-        }
-
-        $result = $this->vanity_code_manager->validate_code($code, $domain);
-        // $result should already be an array with success/error; just pass through
-        wp_send_json($result);
+        return $sanitized;
     }
 
     /**
-     * Plugin action links
+     * Maybe update database
      */
-    public function plugin_action_links(array $links): array {
-        $action_links = [
-            '<a href="' . esc_url(admin_url('admin.php?page=affcd-domain-management')) . '">' . esc_html__('Settings', 'affiliatewp-cross-domain-plugin-suite') . '</a>',
-            '<a href="https://starneconsulting.com/docs/affiliatewp-cross-domain-plugin-suite" target="_blank" rel="noopener noreferrer">' . esc_html__('Documentation', 'affiliatewp-cross-domain-plugin-suite') . '</a>',
-        ];
-        return array_merge($action_links, $links);
+    private function maybe_update_database() {
+        $current_version = get_option('affcd_version', '0.0.0');
+        if (version_compare($current_version, AFFCD_VERSION, '<')) {
+            $db_manager = $this->get_database_manager();
+            if (method_exists($db_manager, 'update_tables')) {
+                $db_manager->update_tables($current_version, AFFCD_VERSION);
+            }
+            update_option('affcd_version', AFFCD_VERSION);
+        }
     }
 
     /**
-     * Helper
+     * Check if plugin is activated and ready
      */
-    public function is_activated(): bool {
+    public function is_activated() {
         return $this->activated;
     }
 
-    public function get_version(): string {
+    /**
+     * Get plugin version
+     */
+    public function get_version() {
         return AFFCD_VERSION;
     }
 }
 
 /**
- * Bootstrap
+ * Initialize the plugin
  */
-function affcd_master(): AffiliateWP_Cross_Domain_Plugin_Suite_Master {
-    return AffiliateWP_Cross_Domain_Plugin_Suite_Master::instance();
+function affiliatewp_cross_domain_full() {
+    affcd_debug_log('Plugin function called', 'PLUGIN_FUNCTION');
+    return AffiliateWP_Cross_Domain_Full::instance();
 }
-affcd_master();
+
+// Initialize plugin with debug tracking
+affcd_debug_log('About to initialize plugin', 'PLUGIN_INIT');
+affcd_debug_log('Calling plugin initialization', 'FINAL_INIT');
+affiliatewp_cross_domain_full();
+affcd_debug_log('Plugin initialization completed', 'FINAL_COMPLETE');

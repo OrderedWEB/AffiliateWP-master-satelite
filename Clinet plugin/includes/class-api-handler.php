@@ -308,7 +308,7 @@ class ACI_API_Handler {
         
         $error_messages = [
             400 => __('Bad request. Please check your data.', 'affiliate-client-integration'),
-            401 => __('UnAuthorized. Please check your API key.', 'affiliate-client-integration'),
+            401 => __('Unauthorized. Please check your API key.', 'affiliate-client-integration'),
             403 => __('Forbidden. Your domain may not be Authorized.', 'affiliate-client-integration'),
             404 => __('API endpoint not found.', 'affiliate-client-integration'),
             429 => __('Rate limit exceeded. Please try again later.', 'affiliate-client-integration'),

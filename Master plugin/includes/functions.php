@@ -112,38 +112,35 @@ function affcd_get_current_domain() {
  *
  * @return string Client IP address
  */
-function affcd_get_client_ip() {
-	$ip_headers = [
-		'HTTP_X_FORWARDED_FOR',
-		'HTTP_X_REAL_IP',
-		'HTTP_CLIENT_IP',
-		'HTTP_X_CLUSTER_CLIENT_IP',
-		'HTTP_X_FORWARDED',
-		'HTTP_FORWARDED_FOR',
-		'HTTP_FORWARDED',
-		'REMOTE_ADDR',
-	];
+if ( ! function_exists( 'affcd_get_client_ip' ) ) {
+    function affcd_get_client_ip() {
+        $keys = array(
+            'HTTP_CLIENT_IP',
+            'HTTP_X_FORWARDED_FOR',
+            'HTTP_X_FORWARDED',
+            'HTTP_X_CLUSTER_CLIENT_IP',
+            'HTTP_FORWARDED_FOR',
+            'HTTP_FORWARDED',
+            'REMOTE_ADDR',
+        );
 
-	foreach ( $ip_headers as $header ) {
-		if ( ! empty( $_SERVER[ $header ] ) ) {
-			$ip = wp_unslash( $_SERVER[ $header ] );
+        foreach ( $keys as $key ) {
+            if ( ! empty( $_SERVER[ $key ] ) ) {
+                // Some headers can contain multiple IPs "client, proxy1, proxy2"
+                $iplist = explode( ',', $_SERVER[ $key ] );
+                foreach ( $iplist as $ip ) {
+                    $ip = trim( $ip );
+                    if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
+                        return $ip;
+                    }
+                }
+            }
+        }
 
-			// Handle multiple IPs (load balancers)
-			if ( strpos( $ip, ',' ) !== false ) {
-				$parts = explode( ',', $ip );
-				$ip    = trim( $parts[0] );
-			}
-
-			// Validate IP address (allow public only to avoid private noise)
-			if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
-				return $ip;
-			}
-		}
-	}
-
-	return isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '127.0.0.1';
+        // Fallback
+        return isset( $_SERVER['REMOTE_ADDR'] ) ? $_SERVER['REMOTE_ADDR'] : '0.0.0.0';
+    }
 }
-
 /**
  * Get user agent string
  *

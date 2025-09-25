@@ -1,63 +1,60 @@
 <?php
 /**
  * Database Manager Class
- *
- * Handles all database operations including table creation, updates, migrations,
- * data management, performance optimisation, and maintenance for the affiliate 
- * cross-domain system.
- *
- * @package AffiliateWP_Cross_Domain_Full
- * @version 1.0.0
- * @author Richard King, starneconsulting.com
  */
 
-// Prevent direct access
 if (!defined('ABSPATH')) {
     exit;
 }
 
 class AFFCD_Database_Manager {
-
+    
+    private static $instance_created = false;
+    
     /**
      * Current database version
-     *
-     * @var string
      */
     private $db_version = '1.0.0';
 
     /**
      * Database tables
-     *
-     * @var array
      */
     private $tables = [];
 
     /**
      * Migration log table
-     *
-     * @var string
      */
     private $migration_log_table;
 
     /**
      * Database character set and collation
-     *
-     * @var string
      */
     private $charset_collate;
-
-    /**
-     * Constructor
-     */
+    
     public function __construct() {
+        // Prevent infinite recursion
+        if (self::$instance_created) {
+            affcd_db_debug_log('Constructor called but instance already created - preventing recursion', 'CONSTRUCTOR_PREVENTED');
+            return;
+        }
+        
+        self::$instance_created = true;
+        affcd_db_debug_log('Database Manager constructor started', 'CONSTRUCTOR_START');
+        
         global $wpdb;
         
-        $this->charset_collate = $wpdb->get_charset_collate();
+        // Get charset collate safely
+        if (isset($wpdb->charset_collate)) {
+            $this->charset_collate = $wpdb->charset_collate;
+        } else {
+            $this->charset_collate = '';
+        }
         
+        // Set up table names
         $this->tables = [
             'vanity_codes'       => $wpdb->prefix . 'affcd_vanity_codes',
             'vanity_usage'       => $wpdb->prefix . 'affcd_vanity_usage',
-            'authorized_domains' => $wpdb->prefix . 'affcd_authorized_domains', // fixed key (lowercase)
+            'authorized_domains' => $wpdb->prefix . 'affcd_authorized_domains',
             'analytics'          => $wpdb->prefix . 'affcd_analytics',
             'rate_limiting'      => $wpdb->prefix . 'affcd_rate_limiting',
             'security_logs'      => $wpdb->prefix . 'affcd_security_logs',
@@ -68,7 +65,10 @@ class AFFCD_Database_Manager {
         ];
 
         $this->migration_log_table = $wpdb->prefix . 'affcd_migrations';
+        
+        affcd_db_debug_log('Database Manager constructor completed', 'CONSTRUCTOR_END');
     }
+
 
     /**
      * Initialize database manager
@@ -76,8 +76,13 @@ class AFFCD_Database_Manager {
      * @return bool Success status
      */
     public function init() {
+        affcd_db_debug_log('Database Manager init started', 'INIT_START');
+        
         $this->create_migration_log_table();
-        return $this->create_tables();
+        $result = $this->create_tables();
+        
+        affcd_db_debug_log('Database Manager init completed', 'INIT_END');
+        return $result;
     }
 
     /**
@@ -85,6 +90,8 @@ class AFFCD_Database_Manager {
      */
     private function create_migration_log_table() {
         global $wpdb;
+
+        affcd_db_debug_log('Creating migration log table', 'MIGRATION_LOG_START');
 
         $sql = "CREATE TABLE IF NOT EXISTS {$this->migration_log_table} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -104,7 +111,15 @@ class AFFCD_Database_Manager {
         ) {$this->charset_collate};";
 
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-        dbDelta($sql);
+        affcd_db_debug_log('About to call dbDelta for migration log table', 'MIGRATION_LOG_DBDELTA');
+        
+        $result = dbDelta($sql);
+        
+        affcd_db_debug_log('Migration log table dbDelta completed', 'MIGRATION_LOG_END');
+        
+        if (!empty($wpdb->last_error)) {
+            affcd_db_debug_log('Migration log table error: ' . $wpdb->last_error, 'MIGRATION_LOG_ERROR');
+        }
     }
 
     /**
@@ -113,29 +128,71 @@ class AFFCD_Database_Manager {
      * @return bool Success status
      */
     public function create_tables() {
+        affcd_db_debug_log('Starting create_tables method', 'CREATE_TABLES_START');
+        
         $success = true;
 
         try {
+            affcd_db_debug_log('About to create vanity codes table', 'CREATE_VANITY_CODES_START');
             $this->create_vanity_codes_table();
+            affcd_db_debug_log('Vanity codes table created successfully', 'CREATE_VANITY_CODES_END');
+            
+            affcd_db_debug_log('About to create vanity usage table', 'CREATE_VANITY_USAGE_START');
             $this->create_vanity_usage_table();
-            $this->create_authorized_domains_table(); // fixed method name
+            affcd_db_debug_log('Vanity usage table created successfully', 'CREATE_VANITY_USAGE_END');
+            
+            affcd_db_debug_log('About to create authorized domains table', 'CREATE_AUTHORIZED_DOMAINS_START');
+            $this->create_authorized_domains_table();
+            affcd_db_debug_log('Authorized domains table created successfully', 'CREATE_AUTHORIZED_DOMAINS_END');
+            
+            affcd_db_debug_log('About to create analytics table', 'CREATE_ANALYTICS_START');
             $this->create_analytics_table();
+            affcd_db_debug_log('Analytics table created successfully', 'CREATE_ANALYTICS_END');
+            
+            affcd_db_debug_log('About to create rate limiting table', 'CREATE_RATE_LIMITING_START');
             $this->create_rate_limiting_table();
+            affcd_db_debug_log('Rate limiting table created successfully', 'CREATE_RATE_LIMITING_END');
+            
+            affcd_db_debug_log('About to create security logs table', 'CREATE_SECURITY_LOGS_START');
             $this->create_security_logs_table();
+            affcd_db_debug_log('Security logs table created successfully', 'CREATE_SECURITY_LOGS_END');
+            
+            affcd_db_debug_log('About to create fraud detection table', 'CREATE_FRAUD_DETECTION_START');
             $this->create_fraud_detection_table();
+            affcd_db_debug_log('Fraud detection table created successfully', 'CREATE_FRAUD_DETECTION_END');
+            
+            affcd_db_debug_log('About to create usage tracking table', 'CREATE_USAGE_TRACKING_START');
             $this->create_usage_tracking_table();
+            affcd_db_debug_log('Usage tracking table created successfully', 'CREATE_USAGE_TRACKING_END');
+            
+            affcd_db_debug_log('About to create API audit logs table', 'CREATE_API_AUDIT_START');
             $this->create_api_audit_logs_table();
+            affcd_db_debug_log('API audit logs table created successfully', 'CREATE_API_AUDIT_END');
+            
+            affcd_db_debug_log('About to create performance metrics table', 'CREATE_PERFORMANCE_METRICS_START');
             $this->create_performance_metrics_table();
+            affcd_db_debug_log('Performance metrics table created successfully', 'CREATE_PERFORMANCE_METRICS_END');
+            
+            affcd_db_debug_log('About to add indexes', 'ADD_INDEXES_START');
             $this->add_indexes();
+            affcd_db_debug_log('Indexes added successfully', 'ADD_INDEXES_END');
+            
+            affcd_db_debug_log('About to add foreign keys', 'ADD_FOREIGN_KEYS_START');
             $this->add_foreign_keys();
+            affcd_db_debug_log('Foreign keys added successfully', 'ADD_FOREIGN_KEYS_END');
 
+            affcd_db_debug_log('About to update affcd_db_version option', 'UPDATE_VERSION_START');
             update_option('affcd_db_version', $this->db_version);
+            affcd_db_debug_log('Database version option updated', 'UPDATE_VERSION_END');
             
         } catch (Exception $e) {
+            affcd_db_debug_log('Exception in create_tables: ' . $e->getMessage(), 'CREATE_TABLES_EXCEPTION');
+            affcd_db_debug_log('Exception trace: ' . $e->getTraceAsString(), 'CREATE_TABLES_TRACE');
             error_log('AFFCD Database Manager: Table creation failed - ' . $e->getMessage());
             $success = false;
         }
 
+        affcd_db_debug_log('create_tables method completed with success: ' . ($success ? 'true' : 'false'), 'CREATE_TABLES_COMPLETE');
         return $success;
     }
 
@@ -145,7 +202,10 @@ class AFFCD_Database_Manager {
     private function create_vanity_codes_table() {
         global $wpdb;
         
+        affcd_db_debug_log('Starting vanity codes table creation', 'VANITY_CODES_TABLE_START');
+        
         $table_name = $this->tables['vanity_codes'];
+        affcd_db_debug_log('Table name: ' . $table_name, 'VANITY_CODES_TABLE_NAME');
 
         $sql = "CREATE TABLE IF NOT EXISTS {$table_name} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -177,13 +237,21 @@ class AFFCD_Database_Manager {
             KEY idx_expires_at (expires_at),
             KEY idx_performance (status, usage_count DESC, revenue_generated DESC),
             KEY idx_activity (last_used_at, status),
-            KEY idx_conversion_analysis (conversion_count DESC, revenue_generated DESC),
-            CONSTRAINT fk_vanity_affiliate FOREIGN KEY (affiliate_id) REFERENCES {$wpdb->users}(ID) ON DELETE CASCADE,
-            CONSTRAINT fk_vanity_creator FOREIGN KEY (created_by) REFERENCES {$wpdb->users}(ID) ON DELETE SET NULL
+            KEY idx_conversion_analysis (conversion_count DESC, revenue_generated DESC)
         ) {$this->charset_collate};";
 
+        affcd_db_debug_log('About to call dbDelta for vanity codes', 'VANITY_CODES_DBDELTA_START');
+        
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-        dbDelta($sql);
+        $result = dbDelta($sql);
+        
+        affcd_db_debug_log('dbDelta completed for vanity codes', 'VANITY_CODES_DBDELTA_END');
+        affcd_db_debug_log('dbDelta result: ' . print_r($result, true), 'VANITY_CODES_DBDELTA_RESULT');
+        
+        // Check for database errors
+        if (!empty($wpdb->last_error)) {
+            affcd_db_debug_log('Database error in vanity codes: ' . $wpdb->last_error, 'VANITY_CODES_DB_ERROR');
+        }
     }
 
     /**
@@ -191,6 +259,8 @@ class AFFCD_Database_Manager {
      */
     private function create_vanity_usage_table() {
         global $wpdb;
+        
+        affcd_db_debug_log('Starting vanity usage table creation', 'VANITY_USAGE_TABLE_START');
         
         $table_name = $this->tables['vanity_usage'];
 
@@ -234,13 +304,19 @@ class AFFCD_Database_Manager {
             KEY idx_analytics (vanity_code_id, validation_result, created_at),
             KEY idx_utm_tracking (utm_source, utm_medium, utm_campaign),
             KEY idx_geographic (country_code, region, city),
-            KEY idx_device_analytics (device_type, browser, operating_system),
-            CONSTRAINT fk_usage_vanity_code FOREIGN KEY (vanity_code_id) REFERENCES {$this->tables['vanity_codes']}(id) ON DELETE CASCADE,
-            CONSTRAINT fk_usage_user FOREIGN KEY (user_id) REFERENCES {$wpdb->users}(ID) ON DELETE SET NULL
+            KEY idx_device_analytics (device_type, browser, operating_system)
         ) {$this->charset_collate};";
 
+        affcd_db_debug_log('About to call dbDelta for vanity usage', 'VANITY_USAGE_DBDELTA_START');
+        
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-        dbDelta($sql);
+        $result = dbDelta($sql);
+        
+        affcd_db_debug_log('dbDelta completed for vanity usage', 'VANITY_USAGE_DBDELTA_END');
+        
+        if (!empty($wpdb->last_error)) {
+            affcd_db_debug_log('Database error in vanity usage: ' . $wpdb->last_error, 'VANITY_USAGE_DB_ERROR');
+        }
     }
 
     /**
@@ -248,6 +324,8 @@ class AFFCD_Database_Manager {
      */
     private function create_authorized_domains_table() {
         global $wpdb;
+        
+        affcd_db_debug_log('Starting authorized domains table creation', 'AUTHORIZED_DOMAINS_TABLE_START');
         
         $table_name = $this->tables['authorized_domains'];
 
@@ -313,14 +391,19 @@ class AFFCD_Database_Manager {
             KEY idx_created_at (created_at),
             KEY idx_security_level (security_level),
             KEY idx_performance (status, verification_status, last_activity_at),
-            KEY idx_rate_limiting (domain_url, current_daily_requests, max_daily_requests),
-            CONSTRAINT fk_domain_owner FOREIGN KEY (owner_user_id) REFERENCES {$wpdb->users}(ID) ON DELETE SET NULL,
-            CONSTRAINT fk_domain_creator FOREIGN KEY (created_by) REFERENCES {$wpdb->users}(ID) ON DELETE SET NULL,
-            CONSTRAINT fk_domain_suspender FOREIGN KEY (suspended_by) REFERENCES {$wpdb->users}(ID) ON DELETE SET NULL
+            KEY idx_rate_limiting (domain_url, current_daily_requests, max_daily_requests)
         ) {$this->charset_collate};";
 
+        affcd_db_debug_log('About to call dbDelta for authorized domains', 'AUTHORIZED_DOMAINS_DBDELTA_START');
+        
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-        dbDelta($sql);
+        $result = dbDelta($sql);
+        
+        affcd_db_debug_log('dbDelta completed for authorized domains', 'AUTHORIZED_DOMAINS_DBDELTA_END');
+        
+        if (!empty($wpdb->last_error)) {
+            affcd_db_debug_log('Database error in authorized domains: ' . $wpdb->last_error, 'AUTHORIZED_DOMAINS_DB_ERROR');
+        }
     }
 
     /**
@@ -328,6 +411,8 @@ class AFFCD_Database_Manager {
      */
     private function create_analytics_table() {
         global $wpdb;
+        
+        affcd_db_debug_log('Starting analytics table creation', 'ANALYTICS_TABLE_START');
         
         $table_name = $this->tables['analytics'];
 
@@ -362,12 +447,19 @@ class AFFCD_Database_Manager {
             KEY idx_analytics_overview (event_type, entity_type, created_at),
             KEY idx_domain_analytics (domain, event_type, created_at),
             KEY idx_revenue_analytics (revenue_impact DESC, created_at),
-            KEY idx_funnel_analytics (conversion_funnel_stage, event_type, created_at),
-            CONSTRAINT fk_analytics_user FOREIGN KEY (user_id) REFERENCES {$wpdb->users}(ID) ON DELETE SET NULL
+            KEY idx_funnel_analytics (conversion_funnel_stage, event_type, created_at)
         ) {$this->charset_collate};";
 
+        affcd_db_debug_log('About to call dbDelta for analytics', 'ANALYTICS_DBDELTA_START');
+        
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-        dbDelta($sql);
+        $result = dbDelta($sql);
+        
+        affcd_db_debug_log('dbDelta completed for analytics', 'ANALYTICS_DBDELTA_END');
+        
+        if (!empty($wpdb->last_error)) {
+            affcd_db_debug_log('Database error in analytics: ' . $wpdb->last_error, 'ANALYTICS_DB_ERROR');
+        }
     }
 
     /**
@@ -375,6 +467,8 @@ class AFFCD_Database_Manager {
      */
     private function create_rate_limiting_table() {
         global $wpdb;
+        
+        affcd_db_debug_log('Starting rate limiting table creation', 'RATE_LIMITING_TABLE_START');
         
         $table_name = $this->tables['rate_limiting'];
 
@@ -404,8 +498,16 @@ class AFFCD_Database_Manager {
             KEY idx_escalation (escalation_level, is_blocked, created_at)
         ) {$this->charset_collate};";
 
+        affcd_db_debug_log('About to call dbDelta for rate limiting', 'RATE_LIMITING_DBDELTA_START');
+        
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-        dbDelta($sql);
+        $result = dbDelta($sql);
+        
+        affcd_db_debug_log('dbDelta completed for rate limiting', 'RATE_LIMITING_DBDELTA_END');
+        
+        if (!empty($wpdb->last_error)) {
+            affcd_db_debug_log('Database error in rate limiting: ' . $wpdb->last_error, 'RATE_LIMITING_DB_ERROR');
+        }
     }
 
     /**
@@ -413,6 +515,8 @@ class AFFCD_Database_Manager {
      */
     private function create_security_logs_table() {
         global $wpdb;
+        
+        affcd_db_debug_log('Starting security logs table creation', 'SECURITY_LOGS_TABLE_START');
         
         $table_name = $this->tables['security_logs'];
 
@@ -452,14 +556,19 @@ class AFFCD_Database_Manager {
             KEY idx_created_at (created_at),
             KEY idx_investigation (investigation_status, severity, created_at),
             KEY idx_security_overview (event_type, severity, created_at),
-            KEY idx_threat_analysis (threat_score DESC, severity, created_at),
-            CONSTRAINT fk_security_user FOREIGN KEY (user_id) REFERENCES {$wpdb->users}(ID) ON DELETE SET NULL,
-            CONSTRAINT fk_security_assigned FOREIGN KEY (assigned_to) REFERENCES {$wpdb->users}(ID) ON DELETE SET NULL,
-            CONSTRAINT fk_security_resolver FOREIGN KEY (resolved_by) REFERENCES {$wpdb->users}(ID) ON DELETE SET NULL
+            KEY idx_threat_analysis (threat_score DESC, severity, created_at)
         ) {$this->charset_collate};";
 
+        affcd_db_debug_log('About to call dbDelta for security logs', 'SECURITY_LOGS_DBDELTA_START');
+        
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-        dbDelta($sql);
+        $result = dbDelta($sql);
+        
+        affcd_db_debug_log('dbDelta completed for security logs', 'SECURITY_LOGS_DBDELTA_END');
+        
+        if (!empty($wpdb->last_error)) {
+            affcd_db_debug_log('Database error in security logs: ' . $wpdb->last_error, 'SECURITY_LOGS_DB_ERROR');
+        }
     }
 
     /**
@@ -467,6 +576,8 @@ class AFFCD_Database_Manager {
      */
     private function create_fraud_detection_table() {
         global $wpdb;
+        
+        affcd_db_debug_log('Starting fraud detection table creation', 'FRAUD_DETECTION_TABLE_START');
         
         $table_name = $this->tables['fraud_detection'];
 
@@ -507,12 +618,19 @@ class AFFCD_Database_Manager {
             KEY idx_is_active (is_active),
             KEY idx_manual_review (manual_review_required),
             KEY idx_fraud_analysis (fraud_type, risk_score, is_active),
-            KEY idx_financial_impact (financial_impact DESC, created_at),
-            CONSTRAINT fk_fraud_resolver FOREIGN KEY (resolved_by) REFERENCES {$wpdb->users}(ID) ON DELETE SET NULL
+            KEY idx_financial_impact (financial_impact DESC, created_at)
         ) {$this->charset_collate};";
 
+        affcd_db_debug_log('About to call dbDelta for fraud detection', 'FRAUD_DETECTION_DBDELTA_START');
+        
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-        dbDelta($sql);
+        $result = dbDelta($sql);
+        
+        affcd_db_debug_log('dbDelta completed for fraud detection', 'FRAUD_DETECTION_DBDELTA_END');
+        
+        if (!empty($wpdb->last_error)) {
+            affcd_db_debug_log('Database error in fraud detection: ' . $wpdb->last_error, 'FRAUD_DETECTION_DB_ERROR');
+        }
     }
 
     /**
@@ -520,6 +638,8 @@ class AFFCD_Database_Manager {
      */
     private function create_usage_tracking_table() {
         global $wpdb;
+        
+        affcd_db_debug_log('Starting usage tracking table creation', 'USAGE_TRACKING_TABLE_START');
         
         $table_name = $this->tables['usage_tracking'];
 
@@ -566,12 +686,19 @@ class AFFCD_Database_Manager {
             KEY idx_affiliate_performance (affiliate_code, event_type, status, created_at),
             KEY idx_user_behavior (session_id, event_type, created_at),
             KEY idx_revenue_tracking (event_type, conversion_value, currency, created_at),
-            KEY idx_error_analysis (error_code, domain_from, created_at),
-            CONSTRAINT fk_tracking_user FOREIGN KEY (user_id) REFERENCES {$wpdb->users}(ID) ON DELETE SET NULL
+            KEY idx_error_analysis (error_code, domain_from, created_at)
         ) {$this->charset_collate};";
 
+        affcd_db_debug_log('About to call dbDelta for usage tracking', 'USAGE_TRACKING_DBDELTA_START');
+        
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-        dbDelta($sql);
+        $result = dbDelta($sql);
+        
+        affcd_db_debug_log('dbDelta completed for usage tracking', 'USAGE_TRACKING_DBDELTA_END');
+        
+        if (!empty($wpdb->last_error)) {
+            affcd_db_debug_log('Database error in usage tracking: ' . $wpdb->last_error, 'USAGE_TRACKING_DB_ERROR');
+        }
     }
 
     /**
@@ -579,6 +706,8 @@ class AFFCD_Database_Manager {
      */
     private function create_api_audit_logs_table() {
         global $wpdb;
+        
+        affcd_db_debug_log('Starting API audit logs table creation', 'API_AUDIT_LOGS_TABLE_START');
         
         $table_name = $this->tables['api_audit_logs'];
 
@@ -619,8 +748,16 @@ class AFFCD_Database_Manager {
             KEY idx_error_audit (response_code, created_at)
         ) {$this->charset_collate};";
 
+        affcd_db_debug_log('About to call dbDelta for API audit logs', 'API_AUDIT_LOGS_DBDELTA_START');
+        
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-        dbDelta($sql);
+        $result = dbDelta($sql);
+        
+        affcd_db_debug_log('dbDelta completed for API audit logs', 'API_AUDIT_LOGS_DBDELTA_END');
+        
+        if (!empty($wpdb->last_error)) {
+            affcd_db_debug_log('Database error in API audit logs: ' . $wpdb->last_error, 'API_AUDIT_LOGS_DB_ERROR');
+        }
     }
 
     /**
@@ -628,6 +765,8 @@ class AFFCD_Database_Manager {
      */
     private function create_performance_metrics_table() {
         global $wpdb;
+        
+        affcd_db_debug_log('Starting performance metrics table creation', 'PERFORMANCE_METRICS_TABLE_START');
         
         $table_name = $this->tables['performance_metrics'];
 
@@ -662,8 +801,16 @@ class AFFCD_Database_Manager {
             KEY idx_domain_performance (domain, metric_type, period_start)
         ) {$this->charset_collate};";
 
+        affcd_db_debug_log('About to call dbDelta for performance metrics', 'PERFORMANCE_METRICS_DBDELTA_START');
+        
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-        dbDelta($sql);
+        $result = dbDelta($sql);
+        
+        affcd_db_debug_log('dbDelta completed for performance metrics', 'PERFORMANCE_METRICS_DBDELTA_END');
+        
+        if (!empty($wpdb->last_error)) {
+            affcd_db_debug_log('Database error in performance metrics: ' . $wpdb->last_error, 'PERFORMANCE_METRICS_DB_ERROR');
+        }
     }
 
     /**
@@ -671,6 +818,8 @@ class AFFCD_Database_Manager {
      */
     private function add_indexes() {
         global $wpdb;
+        
+        affcd_db_debug_log('Starting add_indexes method', 'ADD_INDEXES_START_METHOD');
         
         $indexes = [
             // Vanity codes performance indexes
@@ -705,14 +854,22 @@ class AFFCD_Database_Manager {
         ];
 
         foreach ($indexes as $index_sql) {
-            $wpdb->query($index_sql);
+            affcd_db_debug_log('Executing index: ' . substr($index_sql, 0, 100) . '...', 'INDEX_EXECUTE');
+            $result = $wpdb->query($index_sql);
+            
+            if ($result === false) {
+                affcd_db_debug_log('Index failed: ' . $wpdb->last_error, 'INDEX_ERROR');
+            }
         }
+        
+        affcd_db_debug_log('add_indexes method completed', 'ADD_INDEXES_END_METHOD');
     }
 
     /**
      * Add foreign key constraints
      */
     private function add_foreign_keys() {
+        affcd_db_debug_log('add_foreign_keys method called (currently no operations)', 'ADD_FOREIGN_KEYS_METHOD');
         // Foreign keys are already defined in table creation
         // This method is for future constraint additions
     }

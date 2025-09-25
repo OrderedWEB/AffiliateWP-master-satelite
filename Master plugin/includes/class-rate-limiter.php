@@ -1263,29 +1263,3 @@ function affcd_check_rate_limit($action_type, $identifier = null) {
     return !$rate_limiter->is_identifier_blocked($identifier) && 
            $rate_limiter->is_within_limits($identifier, $action_type);
 }
-
-/**
- * Helper function to get client IP safely
- *
- * @return string Client IP address
- */
-function affcd_get_client_ip() {
-    $headers_to_check = [
-        'HTTP_CF_CONNECTING_IP',
-        'HTTP_X_FORWARDED_FOR',
-        'HTTP_X_REAL_IP',
-        'HTTP_CLIENT_IP',
-        'REMOTE_ADDR'
-    ];
-    
-    foreach ($headers_to_check as $header) {
-        if (!empty($_SERVER[$header])) {
-            $ip = trim(explode(',', $_SERVER[$header])[0]);
-            if (filter_var($ip, FILTER_VALIDATE_IP)) {
-                return $ip;
-            }
-        }
-    }
-    
-    return $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
-}

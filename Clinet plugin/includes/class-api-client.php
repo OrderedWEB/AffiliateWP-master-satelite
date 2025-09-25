@@ -709,7 +709,7 @@ class AFFILIATE_CLIENT_API_Client {
             'ssl_verification_failed' => __('SSL verification failed. Please check your SSL configuration.', 'affiliate-client-full'),
             'invalid_api_key' => __('Invalid API key. Please check your API key in settings.', 'affiliate-client-full'),
             'rate_limit_exceeded' => __('API rate limit exceeded. Please wait before making more requests.', 'affiliate-client-full'),
-            'unAuthorized' => __('UnAuthorized access. Please check your API key and permissions.', 'affiliate-client-full'),
+            'unAuthorized' => __('Unauthorized access. Please check your API key and permissions.', 'affiliate-client-full'),
             'not_found' => __('API endpoint not found. Please check your remote site configuration.', 'affiliate-client-full'),
             'server_error' => __('Server error on remote site. Please contact support.', 'affiliate-client-full'),
         ];
