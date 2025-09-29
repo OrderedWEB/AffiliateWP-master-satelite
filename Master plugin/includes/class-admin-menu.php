@@ -13,6 +13,7 @@ if (class_exists('AFFCD_Admin_Menu')) {
     return;
 }
 
+
 class AFFCD_Admin_Menu {
     
     private static $instance = null;
@@ -264,6 +265,22 @@ class AFFCD_Admin_Menu {
             'manage_options',
             'affcd-domains',
             [$this, 'render_domains_page']
+        );
+add_submenu_page('affcd-dashboard', 'Commission Calculator', 'Calculator', 'manage_options', 'affcd-calculator', [$this, 'render_calculator_page']);
+      add_submenu_page('affcd-dashboard', 'Health Monitoring', 'Health', 'manage_options', 'affcd-health', [$this, 'render_health_page']);
+ add_submenu_page('affcd-dashboard', 'Data Backflow', 'Data Sync', 'manage_options', 'affcd-backflow', [$this, 'render_backflow_page']);
+ add_submenu_page('affcd-dashboard', 'Portal Enhancement', 'Portal', 'manage_options', 'affcd-portal', [$this, 'render_portal_page']);
+ add_submenu_page('affcd-dashboard', 'Addon Settings', 'Addons', 'manage_options', 'affcd-addons', [$this, 'render_addons_page']);
+ add_submenu_page('affcd-dashboard', 'Bulk Operations', 'Bulk Ops', 'manage_options', 'affcd-bulk', [$this, 'render_bulk_operations_page']);
+ add_submenu_page('affcd-dashboard', 'Tracking Reports', 'Tracking', 'manage_options', 'affcd-tracking', [$this, 'render_tracking_page']);
+
+      add_submenu_page(
+            'affcd-dashboard',
+            __('Role Management', 'affiliatewp-cross-domain-plugin-suite'),
+            __('Roles', 'affiliatewp-cross-domain-plugin-suite'),
+            'manage_options',
+            'affcd-roles',
+            [$this, 'render_roles_page']
         );
 
         // Analytics
@@ -954,8 +971,102 @@ class AFFCD_Admin_Menu {
         </script>
         <?php
     }
-    
-    public function render_system_status_page() {
+      public function render_calculator_page() {
+        $template_file = plugin_dir_path(dirname(__FILE__)) . 'admin/templates/commission-calculator.php';
+        
+        if (file_exists($template_file)) {
+            include $template_file;
+        } else {
+            echo '<div class="wrap"><h1>Commission Calculator</h1><p>Calculator loading...</p></div>';
+        }
+    }
+        /**
+     * Render role management page
+     */
+    public function render_roles_page() {
+        $template_file = $this->template_dir . 'role-management.php';
+        
+        if (file_exists($template_file)) {
+            include $template_file;
+        } else {
+            $this->render_fallback_page(__('Role Management', 'affiliatewp-cross-domain-plugin-suite'));
+        }
+    }
+    public function render_bulk_operations_page() {
+        $admin_file = plugin_dir_path(dirname(__FILE__)) . 'admin/class-bulk-operations.php';
+        
+        if (file_exists($admin_file) && !class_exists('AFFCD_Bulk_Operations')) {
+            include $admin_file;
+        }
+        
+        echo '<div class="wrap"><h1>Bulk Operations</h1><p>Bulk operations loading...</p></div>';
+    }
+    public function render_tracking_page() {
+        $admin_file = plugin_dir_path(dirname(__FILE__)) . 'admin/tracking-reports.php';
+        
+        if (file_exists($admin_file)) {
+            include $admin_file;
+        } else {
+            echo '<div class="wrap"><h1>Tracking Reports</h1><p>Tracking reports loading...</p></div>';
+        }
+    }
+
+     public function render_portal_page() {
+        $template_file = plugin_dir_path(dirname(__FILE__)) . 'admin/templates/portal-enhancement.php';
+        
+        if (file_exists($template_file)) {
+            include $template_file;
+        } else {
+            echo '<div class="wrap"><h1>Portal Enhancement</h1><p>Portal loading...</p></div>';
+        }
+    }
+     /**
+     * Render data backflow page
+     */
+    public function render_backflow_page() {
+               $template_file = plugin_dir_path(dirname(__FILE__)) . 'admin/templates/data-backflow.php';
+
+        if (file_exists($template_file)) {
+            include $template_file;
+        } else {
+            $this->render_fallback_page(__('Data Backflow', 'affiliatewp-cross-domain-plugin-suite'));
+        }
+    }
+public function render_addons_page() {
+        $admin_file = plugin_dir_path(dirname(__FILE__)) . 'admin/addon-settings.php';
+        
+        if (file_exists($admin_file) && !class_exists('AFFCD_Addon_Settings_Admin')) {
+            include $admin_file;
+        }
+        
+        echo '<div class="wrap"><h1>Addon Settings</h1><p>Addon management loading...</p></div>';
+    }
+      public function render_health_page() {
+        $template_file = plugin_dir_path(dirname(__FILE__)) . 'admin/templates/health-monitor-dashboard.php';
+        
+        if (!file_exists($template_file)) {
+            $template_file = plugin_dir_path(dirname(__FILE__)) . 'admin/templates/health-monitoring.php';
+        }
+        
+        if (file_exists($template_file)) {
+            include $template_file;
+        } else {
+            echo '<div class="wrap"><h1>Health Monitoring</h1><p>Health monitoring loading...</p></div>';
+        }
+    }
+    private function render_fallback_page( $args = [] ) {
+    $title = isset( $args['title'] ) ? $args['title'] : 'Feature not available';
+    $desc  = isset( $args['description'] ) ? $args['description'] : 'This section is under construction.';
+    ?>
+    <div class="wrap">
+        <h1><?php echo esc_html( $title ); ?></h1>
+        <div class="notice notice-info">
+            <p><?php echo esc_html( $desc ); ?></p>
+        </div>
+    </div>
+    <?php
+}
+      public function render_system_status_page() {
         $system_info = $this->get_system_information();
         $health_status = $this->get_detailed_health_status();
         
@@ -1013,6 +1124,7 @@ class AFFCD_Admin_Menu {
         </style>
         <?php
     }
+    
     
     public function render_settings_page() {
         if (isset($_POST['submit'])) {

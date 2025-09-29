@@ -15,19 +15,40 @@
  * Requires PHP: 7.4
  * Network: false
  */
-
 // Prevent direct access
-if (!defined('ABSPATH')) {
+if ( ! defined('ABSPATH') ) {
     exit;
 }
 
-// Define plugin constants
-define('AME_VERSION', '1.0.0');
-define('AME_PLUGIN_FILE', __FILE__);
-define('AME_PLUGIN_DIR', plugin_dir_path(__FILE__));
-define('AME_PLUGIN_URL', plugin_dir_url(__FILE__));
-define('AME_INCLUDES_DIR', AME_PLUGIN_DIR . 'includes/');
-define('AME_ASSETS_URL', AME_PLUGIN_URL . 'assets/');
+/**
+ * Define base version constants once, in the right order.
+ * AME_VERSION first, then AFFCD_VERSION as an alias.
+ */
+if ( ! defined('AME_VERSION') ) {
+    define('AME_VERSION', '1.0.0');
+}
+if ( ! defined('AFFCD_VERSION') ) {
+    define('AFFCD_VERSION', AME_VERSION);
+}
+
+/**
+ * Plugin constants
+ */
+if ( ! defined('AME_PLUGIN_FILE') ) {
+    define('AME_PLUGIN_FILE', __FILE__);
+}
+if ( ! defined('AME_PLUGIN_DIR') ) {
+    define('AME_PLUGIN_DIR', plugin_dir_path(__FILE__));
+}
+if ( ! defined('AME_PLUGIN_URL') ) {
+    define('AME_PLUGIN_URL', plugin_dir_url(__FILE__));
+}
+if ( ! defined('AME_INCLUDES_DIR') ) {
+    define('AME_INCLUDES_DIR', AME_PLUGIN_DIR . 'includes/');
+}
+if ( ! defined('AME_ASSETS_URL') ) {
+    define('AME_ASSETS_URL', AME_PLUGIN_URL . 'assets/');
+}
 
 /**
  * Main plugin class for Cross-Domain Affiliate System Enhancement
@@ -221,37 +242,49 @@ class CrossDomainAffiliateSystemEnhancement {
     }
     
     /**
-     * Enqueue frontend assets
-     */
-    public function enqueue_frontend_assets() {
-        if (!$this->should_load_frontend_assets()) {
-            return;
-        }
-        
-        wp_enqueue_script(
-            'ame-frontend-js',
-            AME_ASSETS_URL . 'js/frontend-enhancement.js',
-            ['jquery'],
-            AME_VERSION,
-            true
-        );
-        
-        wp_enqueue_style(
-            'ame-frontend-css',
-            AME_ASSETS_URL . 'css/frontend-enhancement.css',
-            [],
-            AME_VERSION
-        );
-        
-        // Localise frontend script
-        wp_localize_script('ame-frontend-js', 'ameFrontend', [
-            'apiUrl' => rest_url('affiliate-enhancement/v1/'),
-            'domain' => home_url(),
-            'affiliateId' => $this->get_current_user_affiliate_id(),
-            'trackingEnabled' => $this->is_tracking_enabled()
-        ]);
+ * Enqueue frontend assets
+ */
+public function enqueue_frontend_assets() {
+    if ( ! $this->should_load_frontend_assets() ) {
+        return;
     }
-    
+
+    // Safe version constant
+    if ( ! defined( 'AFFCD_VERSION' ) ) {
+        define( 'AFFCD_VERSION', defined( 'AME_VERSION' ) ? AME_VERSION : '1.0.0' );
+    }
+
+    // Cache-busting: use filemtime if asset exists, else fall back
+    $js_path  = plugin_dir_path( __FILE__ ) . '../assets/js/frontend-enhancement.js';
+    $css_path = plugin_dir_path( __FILE__ ) . '../assets/css/frontend-enhancement.css';
+
+    $js_ver  = file_exists( $js_path )  ? (string) filemtime( $js_path )  : AFFCD_VERSION;
+    $css_ver = file_exists( $css_path ) ? (string) filemtime( $css_path ) : AFFCD_VERSION;
+
+    wp_enqueue_script(
+        'ame-frontend-js',
+        AME_ASSETS_URL . 'js/frontend-enhancement.js',
+        [ 'jquery' ],
+        $js_ver,
+        true
+    );
+
+    wp_enqueue_style(
+        'ame-frontend-css',
+        AME_ASSETS_URL . 'css/frontend-enhancement.css',
+        [],
+        $css_ver
+    );
+
+    // Localise frontend script
+    wp_localize_script( 'ame-frontend-js', 'ameFrontend', [
+        'apiUrl'          => rest_url( 'affiliate-enhancement/v1/' ),
+        'domain'          => home_url(),
+        'affiliateId'     => $this->get_current_user_affiliate_id(),
+        'trackingEnabled' => $this->is_tracking_enabled(),
+    ] );
+}
+
     /**
      * Register REST API routes
      */

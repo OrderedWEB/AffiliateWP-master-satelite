@@ -650,4 +650,471 @@ class ACI_Shortcodes {
             }
             
             updateCountdown();
-            setInterval(updateCountdown, 1
+            setInterval(updateCountdown, 1000);
+        });
+        </script>
+        <?php
+        
+        return ob_get_clean();
+    }
+
+    /**
+     * Testimonial shortcode
+     * [affiliate_testimonial author="John Doe" rating="5" image="url"]Content[/affiliate_testimonial]
+     */
+    public function shortcode_testimonial($atts, $content = '') {
+        $atts = shortcode_atts([
+            'author' => '',
+            'company' => '',
+            'image' => '',
+            'rating' => '',
+            'style' => 'default',
+            'size' => 'medium',
+            'class' => ''
+        ], $atts, 'affiliate_testimonial');
+
+        $author = sanitize_text_field($atts['author']);
+        $company = sanitize_text_field($atts['company']);
+        $image = esc_url($atts['image']);
+        $rating = intval($atts['rating']);
+        $style = sanitize_text_field($atts['style']);
+        $size = sanitize_text_field($atts['size']);
+        $class = sanitize_html_class($atts['class']);
+
+        ob_start();
+        ?>
+        <div class="aci-shortcode-wrapper aci-testimonial-wrapper aci-style-<?php echo esc_attr($style); ?> aci-size-<?php echo esc_attr($size); ?> <?php echo esc_attr($class); ?>">
+            <div class="aci-testimonial">
+                <?php if ($rating > 0): ?>
+                    <div class="aci-testimonial-rating">
+                        <?php for ($i = 1; $i <= 5; $i++): ?>
+                            <span class="aci-star <?php echo $i <= $rating ? 'filled' : ''; ?>">★</span>
+                        <?php endfor; ?>
+                    </div>
+                <?php endif; ?>
+                
+                <div class="aci-testimonial-content">
+                    <?php echo wp_kses_post($content); ?>
+                </div>
+                
+                <div class="aci-testimonial-author">
+                    <?php if (!empty($image)): ?>
+                        <div class="aci-author-image">
+                            <img src="<?php echo esc_url($image); ?>" alt="<?php echo esc_attr($author); ?>">
+                        </div>
+                    <?php endif; ?>
+                    
+                    <div class="aci-author-info">
+                        <?php if (!empty($author)): ?>
+                            <div class="aci-author-name"><?php echo esc_html($author); ?></div>
+                        <?php endif; ?>
+                        <?php if (!empty($company)): ?>
+                            <div class="aci-author-company"><?php echo esc_html($company); ?></div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php
+        
+        return ob_get_clean();
+    }
+
+    /**
+     * Comparison table shortcode
+     * [affiliate_comparison features="Feature 1,Feature 2" product1="Product A" product2="Product B"]
+     */
+    public function shortcode_comparison($atts, $content = '') {
+        $atts = shortcode_atts([
+            'features' => '',
+            'product1' => '',
+            'product2' => '',
+            'product3' => '',
+            'style' => 'default',
+            'highlight' => '',
+            'class' => ''
+        ], $atts, 'affiliate_comparison');
+
+        $features = array_filter(array_map('trim', explode(',', $atts['features'])));
+        $products = array_filter([
+            $atts['product1'],
+            $atts['product2'],
+            $atts['product3']
+        ]);
+        
+        $style = sanitize_text_field($atts['style']);
+        $highlight = sanitize_text_field($atts['highlight']);
+        $class = sanitize_html_class($atts['class']);
+
+        if (empty($features) || empty($products)) {
+            return '<div class="aci-error">Features and products are required for comparison</div>';
+        }
+
+        ob_start();
+        ?>
+        <div class="aci-shortcode-wrapper aci-comparison-wrapper aci-style-<?php echo esc_attr($style); ?> <?php echo esc_attr($class); ?>">
+            <div class="aci-comparison-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="aci-feature-header"><?php _e('Features', 'affiliate-client-integration'); ?></th>
+                            <?php foreach ($products as $index => $product): ?>
+                                <th class="aci-product-header <?php echo $highlight === (string)($index + 1) ? 'highlighted' : ''; ?>">
+                                    <?php echo esc_html($product); ?>
+                                    <?php if ($highlight === (string)($index + 1)): ?>
+                                        <span class="aci-recommended"><?php _e('Recommended', 'affiliate-client-integration'); ?></span>
+                                    <?php endif; ?>
+                                </th>
+                            <?php endforeach; ?>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($features as $feature): ?>
+                            <tr>
+                                <td class="aci-feature-name"><?php echo esc_html($feature); ?></td>
+                                <?php foreach ($products as $index => $product): ?>
+                                    <td class="aci-product-feature <?php echo $highlight === (string)($index + 1) ? 'highlighted' : ''; ?>">
+                                        <span class="aci-check">✓</span>
+                                    </td>
+                                <?php endforeach; ?>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            
+            <?php if (!empty($content)): ?>
+                <div class="aci-comparison-footer">
+                    <?php echo wp_kses_post($content); ?>
+                </div>
+            <?php endif; ?>
+        </div>
+        <?php
+        
+        return ob_get_clean();
+    }
+
+    /**
+     * Stats display shortcode
+     * [affiliate_stats clicks="1234" conversions="56" revenue="12345.67"]
+     */
+    public function shortcode_stats($atts, $content = '') {
+        $atts = shortcode_atts([
+            'clicks' => '0',
+            'conversions' => '0',
+            'revenue' => '0',
+            'currency' => 'EUR',
+            'style' => 'default',
+            'layout' => 'grid',
+            'class' => ''
+        ], $atts, 'affiliate_stats');
+
+        $clicks = sanitize_text_field($atts['clicks']);
+        $conversions = sanitize_text_field($atts['conversions']);
+        $revenue = sanitize_text_field($atts['revenue']);
+        $currency = sanitize_text_field($atts['currency']);
+        $style = sanitize_text_field($atts['style']);
+        $layout = sanitize_text_field($atts['layout']);
+        $class = sanitize_html_class($atts['class']);
+
+        ob_start();
+        ?>
+        <div class="aci-shortcode-wrapper aci-stats-wrapper aci-style-<?php echo esc_attr($style); ?> aci-layout-<?php echo esc_attr($layout); ?> <?php echo esc_attr($class); ?>">
+            <div class="aci-stats-grid">
+                <div class="aci-stat-item">
+                    <div class="aci-stat-icon">👁️</div>
+                    <div class="aci-stat-value"><?php echo esc_html(number_format_i18n($clicks)); ?></div>
+                    <div class="aci-stat-label"><?php _e('Total Clicks', 'affiliate-client-integration'); ?></div>
+                </div>
+                
+                <div class="aci-stat-item">
+                    <div class="aci-stat-icon">✅</div>
+                    <div class="aci-stat-value"><?php echo esc_html(number_format_i18n($conversions)); ?></div>
+                    <div class="aci-stat-label"><?php _e('Conversions', 'affiliate-client-integration'); ?></div>
+                </div>
+                
+                <div class="aci-stat-item">
+                    <div class="aci-stat-icon">💰</div>
+                    <div class="aci-stat-value"><?php echo esc_html($this->format_price($revenue, $currency)); ?></div>
+                    <div class="aci-stat-label"><?php _e('Revenue', 'affiliate-client-integration'); ?></div>
+                </div>
+            </div>
+            
+            <?php if (!empty($content)): ?>
+                <div class="aci-stats-description">
+                    <?php echo wp_kses_post($content); ?>
+                </div>
+            <?php endif; ?>
+        </div>
+        <?php
+        
+        return ob_get_clean();
+    }
+
+    /**
+     * Progress bar shortcode
+     * [affiliate_progress_bar value="75" max="100" label="Progress"]
+     */
+    public function shortcode_progress_bar($atts, $content = '') {
+        $atts = shortcode_atts([
+            'value' => '0',
+            'max' => '100',
+            'label' => '',
+            'color' => '#4CAF50',
+            'style' => 'default',
+            'size' => 'medium',
+            'show_percentage' => 'true',
+            'class' => ''
+        ], $atts, 'affiliate_progress_bar');
+
+        $value = floatval($atts['value']);
+        $max = floatval($atts['max']);
+        $label = sanitize_text_field($atts['label']);
+        $color = sanitize_hex_color($atts['color']);
+        $style = sanitize_text_field($atts['style']);
+        $size = sanitize_text_field($atts['size']);
+        $show_percentage = filter_var($atts['show_percentage'], FILTER_VALIDATE_BOOLEAN);
+        $class = sanitize_html_class($atts['class']);
+
+        $percentage = $max > 0 ? min(100, ($value / $max) * 100) : 0;
+
+        ob_start();
+        ?>
+        <div class="aci-shortcode-wrapper aci-progress-wrapper aci-style-<?php echo esc_attr($style); ?> aci-size-<?php echo esc_attr($size); ?> <?php echo esc_attr($class); ?>">
+            <?php if (!empty($label)): ?>
+                <div class="aci-progress-header">
+                    <span class="aci-progress-label"><?php echo esc_html($label); ?></span>
+                    <?php if ($show_percentage): ?>
+                        <span class="aci-progress-percentage"><?php echo number_format($percentage, 1); ?>%</span>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
+            
+            <div class="aci-progress-bar-container">
+                <div class="aci-progress-bar" 
+                     style="width: <?php echo esc_attr($percentage); ?>%; background-color: <?php echo esc_attr($color); ?>;"
+                     role="progressbar" 
+                     aria-valuenow="<?php echo esc_attr($value); ?>" 
+                     aria-valuemin="0" 
+                     aria-valuemax="<?php echo esc_attr($max); ?>">
+                </div>
+            </div>
+            
+            <?php if (!empty($content)): ?>
+                <div class="aci-progress-description">
+                    <?php echo wp_kses_post($content); ?>
+                </div>
+            <?php endif; ?>
+        </div>
+        <?php
+        
+        return ob_get_clean();
+    }
+
+    /**
+     * Enqueue shortcode assets
+     */
+    public function enqueue_shortcode_assets() {
+        if (!$this->shortcode_assets_needed()) {
+            return;
+        }
+
+        wp_enqueue_style(
+            'aci-shortcodes',
+            ACI_PLUGIN_URL . 'assets/css/shortcodes.css',
+            [],
+            ACI_VERSION
+        );
+
+        wp_enqueue_script(
+            'aci-shortcodes',
+            ACI_PLUGIN_URL . 'assets/js/shortcodes.js',
+            ['jquery'],
+            ACI_VERSION,
+            true
+        );
+
+        wp_localize_script('aci-shortcodes', 'aciShortcodes', [
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('aci_shortcode_nonce'),
+            'i18n' => [
+                'validating' => __('Validating...', 'affiliate-client-integration'),
+                'submitting' => __('Processing...', 'affiliate-client-integration'),
+                'success' => __('Success!', 'affiliate-client-integration'),
+                'error' => __('An error occurred. Please try again.', 'affiliate-client-integration'),
+                'invalidCode' => __('Invalid affiliate code.', 'affiliate-client-integration'),
+                'requiredField' => __('This field is required.', 'affiliate-client-integration'),
+                'invalidEmail' => __('Please enter a valid email address.', 'affiliate-client-integration'),
+                'copied' => __('Copied to clipboard!', 'affiliate-client-integration')
+            ],
+            'settings' => [
+                'validateRealtime' => $this->settings['validate_realtime'] ?? true,
+                'showNotifications' => $this->settings['show_notifications'] ?? true,
+                'trackInteractions' => $this->settings['track_interactions'] ?? true
+            ]
+        ]);
+    }
+
+    /**
+     * Mark that shortcode assets are needed
+     */
+    private function mark_shortcode_assets_needed() {
+        if (!isset($GLOBALS['aci_shortcode_assets_needed'])) {
+            $GLOBALS['aci_shortcode_assets_needed'] = true;
+        }
+    }
+
+    /**
+     * Check if shortcode assets are needed
+     */
+    private function shortcode_assets_needed() {
+        return isset($GLOBALS['aci_shortcode_assets_needed']) && $GLOBALS['aci_shortcode_assets_needed'];
+    }
+
+    /**
+     * Get active discount data
+     */
+    private function get_active_discount_data() {
+        if (class_exists('WooCommerce') && WC()->session) {
+            return WC()->session->get('aci_affiliate_discount');
+        }
+        
+        return apply_filters('aci_get_active_discount_data', null);
+    }
+
+    /**
+     * Format price for display
+     */
+    private function format_price($amount, $currency = 'EUR') {
+        $currency_symbols = [
+            'EUR' => '€',
+            'USD' => '$',
+            'GBP' => '£',
+            'JPY' => '¥',
+        ];
+        
+        $symbol = $currency_symbols[$currency] ?? $currency . ' ';
+        return $symbol . number_format($amount, 2);
+    }
+
+    /**
+     * AJAX: Validate affiliate code
+     */
+    public function ajax_validate_code() {
+        check_ajax_referer('aci_shortcode_nonce', 'nonce');
+        
+        $affiliate_code = sanitize_text_field($_POST['affiliate_code'] ?? '');
+        $form_id = sanitize_text_field($_POST['form_id'] ?? '');
+        
+        if (empty($affiliate_code)) {
+            wp_send_json_error([
+                'message' => __('Affiliate code is required.', 'affiliate-client-integration')
+            ]);
+        }
+
+        $api_handler = new ACI_API_Handler();
+        $result = $api_handler->validate_affiliate_code($affiliate_code);
+
+        if (is_wp_error($result)) {
+            wp_send_json_error([
+                'message' => $result->get_error_message()
+            ]);
+        }
+
+        if ($result['valid']) {
+            do_action('aci_affiliate_code_validated', $affiliate_code, $result);
+            
+            wp_send_json_success([
+                'message' => __('Affiliate code is valid.', 'affiliate-client-integration'),
+                'data' => $result
+            ]);
+        } else {
+            wp_send_json_error([
+                'message' => __('Invalid affiliate code.', 'affiliate-client-integration')
+            ]);
+        }
+    }
+
+    /**
+     * AJAX: Submit affiliate form
+     */
+    public function ajax_submit_form() {
+        check_ajax_referer('aci_shortcode_nonce', 'nonce');
+        
+        $form_id = sanitize_text_field($_POST['form_id'] ?? '');
+        $affiliate_code = sanitize_text_field($_POST['affiliate_code'] ?? '');
+        $email = sanitize_email($_POST['email'] ?? '');
+        $additional_data = $_POST['data'] ?? [];
+
+        if (empty($affiliate_code)) {
+            wp_send_json_error([
+                'message' => __('Affiliate code is required.', 'affiliate-client-integration')
+            ]);
+        }
+
+        $api_handler = new ACI_API_Handler();
+        
+        $submission_data = [
+            'code' => $affiliate_code,
+            'email' => $email,
+            'form_id' => $form_id,
+            'additional_data' => $additional_data,
+            'ip_address' => $this->get_user_ip(),
+            'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? '',
+            'timestamp' => current_time('mysql')
+        ];
+
+        $result = $api_handler->submit_affiliate_form($submission_data);
+
+        if (is_wp_error($result)) {
+            wp_send_json_error([
+                'message' => $result->get_error_message()
+            ]);
+        }
+
+        if ($result['success']) {
+            do_action('aci_affiliate_form_submitted', $submission_data, $result);
+            
+            wp_send_json_success([
+                'message' => __('Form submitted successfully!', 'affiliate-client-integration'),
+                'data' => $result
+            ]);
+        } else {
+            wp_send_json_error([
+                'message' => $result['message'] ?? __('Form submission failed.', 'affiliate-client-integration')
+            ]);
+        }
+    }
+
+    /**
+     * Get user IP address
+     */
+    private function get_user_ip() {
+        $ip_headers = [
+            'HTTP_CF_CONNECTING_IP',
+            'HTTP_CLIENT_IP',
+            'HTTP_X_FORWARDED_FOR',
+            'HTTP_X_FORWARDED',
+            'HTTP_X_CLUSTER_CLIENT_IP',
+            'HTTP_FORWARDED_FOR',
+            'HTTP_FORWARDED',
+            'REMOTE_ADDR'
+        ];
+        
+        foreach ($ip_headers as $header) {
+            if (isset($_SERVER[$header]) && !empty($_SERVER[$header])) {
+                $ip = sanitize_text_field($_SERVER[$header]);
+                
+                if (strpos($ip, ',') !== false) {
+                    $ip = trim(explode(',', $ip)[0]);
+                }
+                
+                if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+                    return $ip;
+                }
+            }
+        }
+        
+        return '0.0.0.0';
+    }
+}

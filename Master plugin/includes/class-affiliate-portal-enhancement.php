@@ -67,34 +67,48 @@ class AffiliatePortalEnhancement {
         );
     }
     
-    /**
-     * Enqueue dashboard-specific assets
-     */
-    public function enqueue_dashboard_assets() {
-        wp_enqueue_script(
-            'ame-dashboard-js',
-            AME_ASSETS_URL . 'js/affiliate-dashboard.js',
-            ['jquery', 'chart-js'],
-            AME_VERSION,
-            true
-        );
-        
-        wp_enqueue_style(
-            'ame-dashboard-css',
-            AME_ASSETS_URL . 'css/affiliate-dashboard.css',
-            [],
-            AME_VERSION
-        );
-        
-        // Enqueue Chart.js for analytics visualisation
-        wp_enqueue_script(
-            'chart-js',
-            'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js',
-            [],
-            '3.9.1',
-            true
-        );
+/**
+ * Enqueue dashboard-specific assets
+ */
+public function enqueue_dashboard_assets() {
+    // Make this file self-sufficient in case it loads before the main plugin bootstrap.
+    if ( ! defined('AME_VERSION') ) {
+        define('AME_VERSION', '1.0.0');
     }
+    if ( ! defined('AFFCD_VERSION') ) {
+        define('AFFCD_VERSION', AME_VERSION);
+    }
+
+    // Enqueue Chart.js FIRST since ame-dashboard-js depends on it
+    wp_enqueue_script(
+        'chart-js',
+        'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js',
+        [],
+        '3.9.1',
+        true
+    );
+
+    // Cache-busting versions (fallback to plugin version)
+    $js_path  = plugin_dir_path(__FILE__) . '../assets/js/affiliate-dashboard.js';
+    $css_path = plugin_dir_path(__FILE__) . '../assets/css/affiliate-dashboard.css';
+    $js_ver   = file_exists($js_path)  ? (string) filemtime($js_path)  : AFFCD_VERSION;
+    $css_ver  = file_exists($css_path) ? (string) filemtime($css_path) : AFFCD_VERSION;
+
+    wp_enqueue_script(
+        'ame-dashboard-js',
+        AME_ASSETS_URL . 'js/affiliate-dashboard.js',
+        ['jquery', 'chart-js'],
+        $js_ver,
+        true
+    );
+
+    wp_enqueue_style(
+        'ame-dashboard-css',
+        AME_ASSETS_URL . 'css/affiliate-dashboard.css',
+        [],
+        $css_ver
+    );
+}
     
     /**
      * Render enhanced affiliate dashboard

@@ -814,3 +814,479 @@ class ACI_URL_Handler {
             'Android' => '/android/i',
             'iOS' => '/iphone|ipad|ipod/i'
         ];
+
+    foreach ($os_list as $os => $pattern) {
+            if (preg_match($pattern, $user_agent)) {
+                return $os;
+            }
+        }
+        
+        return 'Unknown';
+    }
+
+    /**
+     * Get active affiliate data
+     */
+    public function get_active_affiliate_data() {
+        return $this->active_affiliate_data;
+    }
+
+    /**
+     * Check if affiliate is active
+     */
+    public function has_active_affiliate() {
+        return !empty($this->active_affiliate_data);
+    }
+
+    /**
+     * Get affiliate code
+     */
+    public function get_affiliate_code() {
+        return $this->active_affiliate_data['affiliate_code'] ?? null;
+    }
+
+    /**
+     * Get affiliate ID
+     */
+    public function get_affiliate_id() {
+        return $this->active_affiliate_data['affiliate_id'] ?? null;
+    }
+
+    /**
+     * Clear affiliate data
+     */
+    public function clear_affiliate_data() {
+        // Clear session
+        unset($_SESSION['aci_affiliate_data']);
+        unset($_SESSION['aci_processed_params']);
+        
+        // Clear cookie
+        setcookie('aci_affiliate', '', time() - 3600, COOKIEPATH, COOKIE_DOMAIN);
+        
+        // Clear active data
+        $this->active_affiliate_data = null;
+        
+        do_action('aci_affiliate_data_cleared');
+    }
+
+    /**
+     * Load session data
+     */
+    private function load_session_data() {
+        if (isset($_SESSION['aci_affiliate_data'])) {
+            $this->active_affiliate_data = $_SESSION['aci_affiliate_data'];
+        } elseif (isset($_COOKIE['aci_affiliate'])) {
+            // Try to restore from cookie
+            $cookie_data = json_decode(base64_decode($_COOKIE['aci_affiliate']), true);
+            if ($cookie_data && is_array($cookie_data)) {
+                $_SESSION['aci_affiliate_data'] = $cookie_data;
+                $this->active_affiliate_data = $cookie_data;
+            }
+        }
+    }
+
+    /**
+     * Set referrer data
+     */
+    private function set_referrer_data() {
+        if (empty($_SERVER['HTTP_REFERER'])) {
+            return;
+        }
+
+        $referrer = esc_url_raw($_SERVER['HTTP_REFERER']);
+        $parsed = parse_url($referrer);
+        
+        $_SESSION['aci_referrer_data'] = [
+            'referrer' => $referrer,
+            'referrer_domain' => $parsed['host'] ?? '',
+            'referrer_path' => $parsed['path'] ?? '',
+            'detected_at' => current_time('mysql')
+        ];
+    }
+
+    /**
+     * Track URL parameter event
+     */
+    private function track_url_parameter_event($parameters) {
+        do_action('aci_url_parameters_detected', $parameters);
+
+        // Track with API
+        $this->api_handler->track_event('url_parameter_detected', [
+            'parameters' => $parameters,
+            'page_url' => $_SERVER['REQUEST_URI'] ?? '',
+            'referrer' => $_SERVER['HTTP_REFERER'] ?? ''
+        ]);
+    }
+
+    /**
+     * Validate parameter value
+     */
+    private function validate_parameter_value($value) {
+        // Must be alphanumeric with limited special characters
+        if (!preg_match('/^[a-zA-Z0-9_-]{3,50}$/', $value)) {
+            return false;
+        }
+
+        // Check against blacklist
+        $blacklist = ['test', 'demo', 'admin', 'null'];
+        if (in_array(strtolower($value), $blacklist)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Track conversion
+     */
+    public function track_conversion($order_id, $order_total = 0) {
+        if (!$this->has_active_affiliate()) {
+            return false;
+        }
+
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'aci_affiliate_tracking';
+
+        // Update the most recent tracking record for this session
+        $session_id = session_id();
+        
+        $updated = $wpdb->update(
+            $table_name,
+            [
+                'converted' => 1,
+                'conversion_value' => floatval($order_total)
+            ],
+            [
+                'session_id' => $session_id,
+                'converted' => 0
+            ],
+            ['%d', '%f'],
+            ['%s', '%d']
+        );
+
+        if ($updated) {
+            // Track conversion with API
+            $this->api_handler->track_conversion([
+                'affiliate_id' => $this->get_affiliate_id(),
+                'affiliate_code' => $this->get_affiliate_code(),
+                'order_id' => $order_id,
+                'order_total' => $order_total,
+                'session_id' => $session_id
+            ]);
+
+            do_action('aci_conversion_tracked', $order_id, $order_total, $this->active_affiliate_data);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Cleanup old sessions
+     */
+    private function cleanup_old_sessions() {
+        // Run cleanup occasionally
+        if (rand(1, 100) > 5) { // 5% chance
+            return;
+        }
+
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'aci_affiliate_tracking';
+
+        // Delete tracking data older than 90 days
+        $wpdb->query(
+            "DELETE FROM {$table_name} 
+             WHERE tracked_at < DATE_SUB(NOW(), INTERVAL 90 DAY)"
+        );
+    }
+
+    /**
+     * Get statistics for affiliate
+     */
+    public function get_affiliate_statistics($affiliate_id = null) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'aci_affiliate_tracking';
+
+        $where = $affiliate_id ? $wpdb->prepare('WHERE affiliate_id = %d', $affiliate_id) : '';
+
+        $stats = $wpdb->get_row(
+            "SELECT 
+                COUNT(*) as total_visits,
+                SUM(converted) as total_conversions,
+                SUM(conversion_value) as total_value,
+                COUNT(DISTINCT session_id) as unique_visitors,
+                COUNT(DISTINCT DATE(tracked_at)) as active_days
+             FROM {$table_name}
+             {$where}"
+        );
+
+        if ($stats) {
+            $stats->conversion_rate = $stats->total_visits > 0 
+                ? ($stats->total_conversions / $stats->total_visits) * 100 
+                : 0;
+            
+            $stats->average_value = $stats->total_conversions > 0 
+                ? $stats->total_value / $stats->total_conversions 
+                : 0;
+        }
+
+        return $stats;
+    }
+
+    /**
+     * Get recent conversions
+     */
+    public function get_recent_conversions($limit = 10) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'aci_affiliate_tracking';
+
+        return $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$table_name}
+             WHERE converted = 1
+             ORDER BY tracked_at DESC
+             LIMIT %d",
+            $limit
+        ));
+    }
+
+    /**
+     * Export tracking data
+     */
+    public function export_tracking_data($filters = []) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'aci_affiliate_tracking';
+
+        $where_clauses = ['1=1'];
+        $where_values = [];
+
+        if (!empty($filters['start_date'])) {
+            $where_clauses[] = 'tracked_at >= %s';
+            $where_values[] = $filters['start_date'];
+        }
+
+        if (!empty($filters['end_date'])) {
+            $where_clauses[] = 'tracked_at <= %s';
+            $where_values[] = $filters['end_date'];
+        }
+
+        if (!empty($filters['affiliate_id'])) {
+            $where_clauses[] = 'affiliate_id = %d';
+            $where_values[] = $filters['affiliate_id'];
+        }
+
+        if (isset($filters['converted'])) {
+            $where_clauses[] = 'converted = %d';
+            $where_values[] = $filters['converted'] ? 1 : 0;
+        }
+
+        $where_sql = implode(' AND ', $where_clauses);
+
+        if (!empty($where_values)) {
+            $query = $wpdb->prepare(
+                "SELECT * FROM {$table_name} WHERE {$where_sql} ORDER BY tracked_at DESC",
+                $where_values
+            );
+        } else {
+            $query = "SELECT * FROM {$table_name} WHERE {$where_sql} ORDER BY tracked_at DESC";
+        }
+
+        return $wpdb->get_results($query, ARRAY_A);
+    }
+
+    /**
+     * Get tracking data for affiliate
+     */
+    public function get_affiliate_tracking($affiliate_id, $limit = 50) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'aci_affiliate_tracking';
+
+        return $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$table_name}
+             WHERE affiliate_id = %d
+             ORDER BY tracked_at DESC
+             LIMIT %d",
+            $affiliate_id,
+            $limit
+        ));
+    }
+
+    /**
+     * Delete tracking data
+     */
+    public function delete_tracking_data($tracking_id) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'aci_affiliate_tracking';
+
+        return $wpdb->delete(
+            $table_name,
+            ['id' => $tracking_id],
+            ['%d']
+        );
+    }
+
+    /**
+     * Bulk delete tracking data
+     */
+    public function bulk_delete_tracking($tracking_ids) {
+        if (empty($tracking_ids) || !is_array($tracking_ids)) {
+            return 0;
+        }
+
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'aci_affiliate_tracking';
+
+        $placeholders = implode(',', array_fill(0, count($tracking_ids), '%d'));
+        
+        return $wpdb->query($wpdb->prepare(
+            "DELETE FROM {$table_name} WHERE id IN ($placeholders)",
+            $tracking_ids
+        ));
+    }
+
+    /**
+     * Get UTM parameters
+     */
+    public function get_utm_parameters() {
+        $utm_params = [];
+        
+        $utm_keys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
+        
+        foreach ($utm_keys as $key) {
+            if (isset($_GET[$key])) {
+                $utm_params[$key] = sanitize_text_field($_GET[$key]);
+            }
+        }
+
+        return $utm_params;
+    }
+
+    /**
+     * Store UTM parameters in session
+     */
+    private function store_utm_parameters() {
+        $utm_params = $this->get_utm_parameters();
+        
+        if (!empty($utm_params)) {
+            $_SESSION['aci_utm_params'] = $utm_params;
+        }
+    }
+
+    /**
+     * Get device information
+     */
+    public function get_device_info() {
+        return [
+            'device_type' => $this->detect_device_type(),
+            'browser' => $this->detect_browser(),
+            'operating_system' => $this->detect_operating_system(),
+            'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? ''
+        ];
+    }
+
+    /**
+     * Check if mobile device
+     */
+    public function is_mobile() {
+        return $this->detect_device_type() === 'mobile';
+    }
+
+    /**
+     * Check if tablet device
+     */
+    public function is_tablet() {
+        return $this->detect_device_type() === 'tablet';
+    }
+
+    /**
+     * Check if desktop device
+     */
+    public function is_desktop() {
+        return $this->detect_device_type() === 'desktop';
+    }
+
+    /**
+     * Get tracking summary
+     */
+    public function get_tracking_summary($period = '30d') {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'aci_affiliate_tracking';
+
+        $date_filter = '';
+        switch ($period) {
+            case '24h':
+                $date_filter = "AND tracked_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)";
+                break;
+            case '7d':
+                $date_filter = "AND tracked_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)";
+                break;
+            case '30d':
+                $date_filter = "AND tracked_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
+                break;
+            case '90d':
+                $date_filter = "AND tracked_at >= DATE_SUB(NOW(), INTERVAL 90 DAY)";
+                break;
+        }
+
+        return $wpdb->get_row(
+            "SELECT 
+                COUNT(*) as total_visits,
+                COUNT(DISTINCT affiliate_id) as unique_affiliates,
+                SUM(converted) as total_conversions,
+                SUM(conversion_value) as total_revenue,
+                COUNT(DISTINCT session_id) as unique_sessions,
+                COUNT(DISTINCT user_ip) as unique_ips
+             FROM {$table_name}
+             WHERE 1=1 {$date_filter}"
+        );
+    }
+
+    /**
+     * Get top performing affiliates
+     */
+    public function get_top_affiliates($limit = 10, $order_by = 'conversions') {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'aci_affiliate_tracking';
+
+        $order_column = 'total_conversions';
+        switch ($order_by) {
+            case 'visits':
+                $order_column = 'total_visits';
+                break;
+            case 'revenue':
+                $order_column = 'total_revenue';
+                break;
+            case 'conversion_rate':
+                $order_column = 'conversion_rate';
+                break;
+        }
+
+        return $wpdb->get_results($wpdb->prepare(
+            "SELECT 
+                affiliate_id,
+                affiliate_code,
+                COUNT(*) as total_visits,
+                SUM(converted) as total_conversions,
+                SUM(conversion_value) as total_revenue,
+                (SUM(converted) / COUNT(*) * 100) as conversion_rate
+             FROM {$table_name}
+             GROUP BY affiliate_id, affiliate_code
+             ORDER BY {$order_column} DESC
+             LIMIT %d",
+            $limit
+        ));
+    }
+
+    /**
+     * Get JavaScript configuration for frontend
+     */
+    public function get_js_config() {
+        return [
+            'has_active_affiliate' => $this->has_active_affiliate(),
+            'affiliate_code' => $this->get_affiliate_code(),
+            'parameter_names' => $this->parameter_names,
+            'auto_discount' => $this->settings['auto_discount']['enabled'] ?? false,
+            'show_notifications' => $this->settings['show_notifications'] ?? true
+        ];
+    }
+}

@@ -23,9 +23,9 @@ if (!current_user_can('manage_affiliates') && !current_user_can('manage_options'
 }
 
 // Get data backflow manager instance
-$backflow_manager = AFFCD_Master_Plugin::get_instance()->get_backflow_manager();
-$database_manager = AFFCD_Master_Plugin::get_instance()->get_database_manager();
-
+$master = class_exists('AFFCD_Master_Plugin') ? AFFCD_Master_Plugin::get_instance() : null;
+$backflow_manager = ($master && method_exists($master, 'get_backflow_manager')) ? $master->get_backflow_manager() : null;
+$database_manager = ($master && method_exists($master, 'get_database_manager')) ? $master->get_database_manager() : null;
 // Process form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce($_POST['affcd_backflow_nonce'] ?? '', 'affcd_backflow_action')) {
     $action = sanitize_text_field($_POST['action'] ?? '');
@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce($_POST['affcd_backf
         case 'sync_domain_data':
             $domain_id = intval($_POST['domain_id'] ?? 0);
             if ($domain_id > 0) {
-                $sync_result = $backflow_manager->sync_domain_data($domain_id);
+                $sync_result = ($backflow_manager && method_exists($backflow_manager, 'sync_domain_data') ? $backflow_manager->sync_domain_data($domain_id) : false);
                 if ($sync_result) {
                     add_settings_error('affcd_messages', 'sync_success', 
                         __('Domain data synchronised successfully.', 'affiliatewp-cross-domain-plugin-suite'), 'success');
@@ -47,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce($_POST['affcd_backf
             
         case 'purge_old_data':
             $days_to_keep = intval($_POST['days_to_keep'] ?? 90);
-            $purge_result = $backflow_manager->purge_old_backflow_data($days_to_keep);
+            $purge_result = ($backflow_manager && method_exists($backflow_manager, 'purge_old_backflow_data') ? $backflow_manager->purge_old_backflow_data($days_to_keep) : false);
             if ($purge_result !== false) {
                 add_settings_error('affcd_messages', 'purge_success', 
                     sprintf(__('Purged %d old records successfully.', 'affiliatewp-cross-domain-plugin-suite'), $purge_result), 'success');
@@ -58,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce($_POST['affcd_backf
             break;
             
         case 'rebuild_analytics':
-            $rebuild_result = $backflow_manager->rebuild_analytics_cache();
+            $rebuild_result = ($backflow_manager && method_exists($backflow_manager, 'rebuild_analytics_cache') ? $backflow_manager->rebuild_analytics_cache() : false);
             if ($rebuild_result) {
                 add_settings_error('affcd_messages', 'rebuild_success', 
                     __('Analytics cache rebuilt successfully.', 'affiliatewp-cross-domain-plugin-suite'), 'success');
@@ -83,16 +83,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce($_POST['affcd_backf
             break;
     }
     
-    // Redirect to prevent form resubmission
-    wp_redirect(admin_url('admin.php?page=affcd-data-backflow'));
+    // Show a notice and avoid redirect if headers already sent
+add_settings_error('affcd_messages', 'settings_updated', __('Synchronisation settings updated successfully.', 'affiliate-master-enhancement'), 'success');
+
+// Prefer a redirect (PRG) only if it's still safe
+$redirect_url = admin_url('admin.php?page=affcd-backflow'); // <- match your submenu slug
+if ( ! headers_sent() ) {
+    wp_safe_redirect($redirect_url);
     exit;
 }
 
+
 // Get current backflow statistics
-$backflow_stats = $backflow_manager->get_backflow_statistics();
-$domain_performance = $backflow_manager->get_domain_performance_data();
-$sync_health = $backflow_manager->get_synchronisation_health();
-$recent_activities = $backflow_manager->get_recent_backflow_activities(50);
+$backflow_stats = ($backflow_manager && method_exists($backflow_manager, 'get_backflow_statistics')) ? $backflow_manager->get_backflow_statistics() : ['total_sync_operations'=>0,'successful_operations'=>0,'failed_operations'=>0,'data_processed'=>0,'avg_latency_ms'=>0,'last_sync'=>null];
+$domain_performance = ($backflow_manager && method_exists($backflow_manager, 'get_domain_performance_data')) ? $backflow_manager->get_domain_performance_data() : [];
+$sync_health = ($backflow_manager && method_exists($backflow_manager, 'get_synchronisation_health')) ? $backflow_manager->get_synchronisation_health() : ['status'=>'unknown','issues'=>[]];
+$recent_activities = ($backflow_manager && method_exists($backflow_manager, 'get_recent_backflow_activities')) ? $backflow_manager->get_recent_backflow_activities(50) : [];
 
 // Get sync settings
 $sync_settings = get_option('affcd_backflow_settings', [
@@ -104,7 +110,7 @@ $sync_settings = get_option('affcd_backflow_settings', [
 ]);
 
 // Get authorised domains for sync operations
-$authorised_domains = $database_manager->get_authorised_domains();
+$authorised_domains = ($database_manager && method_exists($database_manager, 'get_authorised_domains')) ? $database_manager->get_authorised_domains() : [];
 
 ?>
 
@@ -431,7 +437,7 @@ $authorised_domains = $database_manager->get_authorised_domains();
                     <h3 class="affcd-chart-title"><?php _e('Error Analysis', 'affiliatewp-cross-domain-plugin-suite'); ?></h3>
                     <div class="affcd-error-summary">
                         <?php 
-                        $error_stats = $backflow_manager->get_error_statistics();
+$error_stats = ($backflow_manager && method_exists($backflow_manager, 'get_error_statistics')) ? $backflow_manager->get_error_statistics() : [];
                         if (!empty($error_stats)): ?>
                             <div class="affcd-error-types">
                                 <?php foreach ($error_stats as $error_type => $count): ?>
@@ -1145,16 +1151,24 @@ jQuery(document).ready(function($) {
             return;
         }
         
+<?php
+$labels_data_flow = ($backflow_manager && method_exists($backflow_manager,'get_chart_labels')) ? $backflow_manager->get_chart_labels('data_flow', 7) : [];
+$data_data_flow   = ($backflow_manager && method_exists($backflow_manager,'get_chart_data'))   ? $backflow_manager->get_chart_data('data_flow', 7) : [];
+$labels_revenue   = ($backflow_manager && method_exists($backflow_manager,'get_chart_labels')) ? $backflow_manager->get_chart_labels('revenue_attribution') : [];
+$data_revenue     = ($backflow_manager && method_exists($backflow_manager,'get_chart_data'))   ? $backflow_manager->get_chart_data('revenue_attribution') : [];
+$labels_sync      = ($backflow_manager && method_exists($backflow_manager,'get_chart_labels')) ? $backflow_manager->get_chart_labels('sync_performance', 7) : [];
+$data_sync        = ($backflow_manager && method_exists($backflow_manager,'get_chart_data'))   ? $backflow_manager->get_chart_data('sync_performance', 7) : [];
+?>
         // Data flow trends chart
         var dataFlowCtx = document.getElementById('data-flow-chart');
         if (dataFlowCtx && !dataFlowCtx.chartInstance) {
             dataFlowCtx.chartInstance = new Chart(dataFlowCtx.getContext('2d'), {
                 type: 'line',
-                data: {
-                    labels: <?php echo json_encode($backflow_manager->get_chart_labels('data_flow', 7)); ?>,
+                    labels: <?php echo json_encode($labels_data_flow); ?>,
+                    labels: <?php echo json_encode($labels_data_flow); ?>,
                     datasets: [{
-                        label: 'Records Processed',
-                        data: <?php echo json_encode($backflow_manager->get_chart_data('data_flow', 7)); ?>,
+                        data: <?php echo json_encode($data_data_flow); ?>,
+                        data: <?php echo json_encode($data_data_flow); ?>,
                         borderColor: '#0073aa',
                         backgroundColor: 'rgba(0, 115, 170, 0.1)',
                         tension: 0.4
@@ -1177,10 +1191,10 @@ jQuery(document).ready(function($) {
         if (revenueCtx && !revenueCtx.chartInstance) {
             revenueCtx.chartInstance = new Chart(revenueCtx.getContext('2d'), {
                 type: 'doughnut',
-                data: {
-                    labels: <?php echo json_encode($backflow_manager->get_chart_labels('revenue_attribution')); ?>,
-                    datasets: [{
-                        data: <?php echo json_encode($backflow_manager->get_chart_data('revenue_attribution')); ?>,
+                    labels: <?php echo json_encode($labels_revenue); ?>,
+                    labels: <?php echo json_encode($labels_revenue); ?>,
+                        data: <?php echo json_encode($data_revenue); ?>,
+                        data: <?php echo json_encode($data_revenue); ?>,
                         backgroundColor: [
                             '#0073aa', '#00a32a', '#dba617', '#d63638', '#6c757d'
                         ]
@@ -1203,11 +1217,10 @@ jQuery(document).ready(function($) {
         if (syncCtx && !syncCtx.chartInstance) {
             syncCtx.chartInstance = new Chart(syncCtx.getContext('2d'), {
                 type: 'bar',
-                data: {
-                    labels: <?php echo json_encode($backflow_manager->get_chart_labels('sync_performance', 7)); ?>,
+                    labels: <?php echo json_encode($labels_sync); ?>,
                     datasets: [{
-                        label: 'Success Rate (%)',
-                        data: <?php echo json_encode($backflow_manager->get_chart_data('sync_performance', 7)); ?>,
+                        data: <?php echo json_encode($data_sync); ?>,
+                        data: <?php echo json_encode($data_sync); ?>,
                         backgroundColor: '#00a32a'
                     }]
                 },

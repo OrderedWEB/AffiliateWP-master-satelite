@@ -982,3 +982,744 @@ class AFFILIATE_CLIENT_Conversion_Tracker {
         
         return $sanitized;
     }
+/**
+     * Get current visit ID
+     *
+     * @return string|null Visit ID
+     */
+    private function get_current_visit_id() {
+        $session_cookie = 'affiliate_client_visit_id';
+        return isset($_COOKIE[$session_cookie]) ? sanitize_text_field($_COOKIE[$session_cookie]) : null;
+    }
+
+    /**
+     * Get site currency
+     *
+     * @return string Currency code
+     */
+    private function get_site_currency() {
+        // Try WooCommerce first
+        if (function_exists('get_woocommerce_currency')) {
+            return get_woocommerce_currency();
+        }
+        
+        // Try EDD
+        if (function_exists('edd_get_currency')) {
+            return edd_get_currency();
+        }
+        
+        // Default to EUR
+        return apply_filters('affiliate_client_default_currency', 'EUR');
+    }
+
+    /**
+     * Get current URL
+     *
+     * @return string Current URL
+     */
+    private function get_current_url() {
+        if (isset($_SERVER['REQUEST_URI'])) {
+            return home_url(sanitize_text_field($_SERVER['REQUEST_URI']));
+        }
+        return home_url();
+    }
+
+    /**
+     * Get user IP address
+     *
+     * @return string IP address
+     */
+    private function get_user_ip() {
+        $ip_headers = [
+            'HTTP_CF_CONNECTING_IP',
+            'HTTP_CLIENT_IP',
+            'HTTP_X_FORWARDED_FOR',
+            'HTTP_X_FORWARDED',
+            'HTTP_X_CLUSTER_CLIENT_IP',
+            'HTTP_FORWARDED_FOR',
+            'HTTP_FORWARDED',
+            'REMOTE_ADDR'
+        ];
+        
+        foreach ($ip_headers as $header) {
+            if (isset($_SERVER[$header]) && !empty($_SERVER[$header])) {
+                $ip = sanitize_text_field($_SERVER[$header]);
+                
+                if (strpos($ip, ',') !== false) {
+                    $ip = trim(explode(',', $ip)[0]);
+                }
+                
+                if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+                    return $ip;
+                }
+            }
+        }
+        
+        return '0.0.0.0';
+    }
+
+    /**
+     * Get user agent
+     *
+     * @return string User agent
+     */
+    private function get_user_agent() {
+        return isset($_SERVER['HTTP_USER_AGENT']) ? sanitize_text_field($_SERVER['HTTP_USER_AGENT']) : '';
+    }
+
+    /**
+     * Log error message
+     *
+     * @param string $message Error message
+     */
+    private function log_error($message) {
+        if ($this->config['debug_mode']) {
+            error_log('[Affiliate Client Integration - Conversion Tracker] ' . $message);
+        }
+    }
+
+    /**
+     * Output conversion tracking script
+     */
+    public function output_conversion_tracking_script() {
+        if (!$this->config['tracking_enabled']) {
+            return;
+        }
+
+        ?>
+        <script type="text/javascript">
+        (function() {
+            // Conversion tracking helper
+            window.ACI_Conversion = {
+                track: function(amount, reference, data) {
+                    if (typeof aciConfig === 'undefined') {
+                        console.warn('ACI not initialized');
+                        return;
+                    }
+
+                    var conversionData = {
+                        action: 'aci_track_conversion',
+                        nonce: aciConfig.nonce,
+                        amount: amount || 0,
+                        reference: reference || '',
+                        data: data || {}
+                    };
+
+                    jQuery.post(aciConfig.ajaxUrl, conversionData, function(response) {
+                        if (response.success) {
+                            console.log('Conversion tracked:', response);
+                            jQuery(document).trigger('aci:conversion:tracked', [response]);
+                        } else {
+                            console.warn('Conversion tracking failed:', response.message);
+                        }
+                    }).fail(function() {
+                        console.error('Conversion tracking request failed');
+                    });
+                }
+            };
+        })();
+        </script>
+        <?php
+    }
+
+    /**
+     * Get attributed affiliate based on attribution model
+     *
+     * @return int|null Affiliate ID
+     */
+    private function get_attributed_affiliate() {
+        switch ($this->attribution_model) {
+            case 'first_click':
+                return $this->get_first_click_affiliate();
+            case 'last_click':
+                return $this->get_last_click_affiliate();
+            case 'linear':
+                return $this->get_linear_attribution_affiliate();
+            case 'time_decay':
+                return $this->get_time_decay_affiliate();
+            default:
+                return $this->get_last_click_affiliate();
+        }
+    }
+
+    /**
+     * Get first-click affiliate
+     *
+     * @return int|null Affiliate ID
+     */
+    private function get_first_click_affiliate() {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'aci_tracking_events';
+        $visit_id = $this->get_current_visit_id();
+        
+        if (!$visit_id) {
+            return null;
+        }
+        
+        $affiliate_id = $wpdb->get_var($wpdb->prepare(
+            "SELECT affiliate_id FROM {$table_name} 
+             WHERE visit_id = %s 
+             AND event_type = 'affiliate_visit' 
+             ORDER BY created_at ASC 
+             LIMIT 1",
+            $visit_id
+        ));
+        
+        return $affiliate_id ? intval($affiliate_id) : null;
+    }
+
+    /**
+     * Get last-click affiliate
+     *
+     * @return int|null Affiliate ID
+     */
+    private function get_last_click_affiliate() {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'aci_tracking_events';
+        $visit_id = $this->get_current_visit_id();
+        
+        if (!$visit_id) {
+            return null;
+        }
+        
+        $affiliate_id = $wpdb->get_var($wpdb->prepare(
+            "SELECT affiliate_id FROM {$table_name} 
+             WHERE visit_id = %s 
+             AND event_type = 'affiliate_visit' 
+             ORDER BY created_at DESC 
+             LIMIT 1",
+            $visit_id
+        ));
+        
+        return $affiliate_id ? intval($affiliate_id) : null;
+    }
+
+    /**
+     * Get linear attribution affiliate
+     * Credits are split equally among all touchpoints
+     *
+     * @return int|null Affiliate ID (most recent for simplicity)
+     */
+    private function get_linear_attribution_affiliate() {
+        return $this->get_last_click_affiliate();
+    }
+
+    /**
+     * Get time-decay attribution affiliate
+     * More recent touchpoints get more credit
+     *
+     * @return int|null Affiliate ID
+     */
+    private function get_time_decay_affiliate() {
+        return $this->get_last_click_affiliate();
+    }
+
+    /**
+     * Prepare conversion data
+     *
+     * @param float $amount Conversion amount
+     * @param string|null $reference Conversion reference
+     * @param array $additional_data Additional data
+     * @param int $affiliate_id Affiliate ID
+     * @return array Conversion data
+     */
+    private function prepare_conversion_data($amount, $reference, $additional_data, $affiliate_id) {
+        return [
+            'affiliate_id' => $affiliate_id,
+            'visit_id' => $this->get_current_visit_id(),
+            'amount' => floatval($amount),
+            'currency' => $this->get_site_currency(),
+            'reference' => $reference ? sanitize_text_field($reference) : '',
+            'attribution_model' => $this->attribution_model,
+            'url' => $this->get_current_url(),
+            'ip_address' => $this->get_user_ip(),
+            'user_agent' => $this->get_user_agent(),
+            'created_at' => current_time('mysql'),
+            'additional_data' => $additional_data,
+        ];
+    }
+
+    /**
+     * Validate conversion data
+     *
+     * @param array $conversion_data Conversion data
+     * @return array Validation result
+     */
+    private function validate_conversion($conversion_data) {
+        $errors = [];
+
+        // Validate affiliate ID
+        if (empty($conversion_data['affiliate_id'])) {
+            $errors[] = 'Affiliate ID is required';
+        } elseif (!$this->validate_affiliate_id($conversion_data['affiliate_id'])) {
+            $errors[] = 'Invalid affiliate ID';
+        }
+
+        // Validate amount
+        if ($conversion_data['amount'] < 0) {
+            $errors[] = 'Amount cannot be negative';
+        }
+
+        // Validate currency
+        if (empty($conversion_data['currency'])) {
+            $errors[] = 'Currency is required';
+        }
+
+        return [
+            'valid' => empty($errors),
+            'message' => empty($errors) ? 'Valid' : implode(', ', $errors),
+        ];
+    }
+
+    /**
+     * Check for duplicate conversions
+     *
+     * @param array $conversion_data Conversion data
+     * @return bool True if duplicate
+     */
+    private function is_duplicate_conversion($conversion_data) {
+        if (empty($conversion_data['reference'])) {
+            return false;
+        }
+
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'aci_conversions';
+
+        $existing = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM {$table_name} 
+             WHERE reference = %s 
+             AND affiliate_id = %d 
+             LIMIT 1",
+            $conversion_data['reference'],
+            $conversion_data['affiliate_id']
+        ));
+
+        return !empty($existing);
+    }
+
+    /**
+     * Log conversion to database
+     *
+     * @param array $conversion_data Conversion data
+     * @return int|false Log ID or false on failure
+     */
+    private function log_conversion($conversion_data) {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'aci_conversions';
+        
+        $result = $wpdb->insert(
+            $table_name,
+            [
+                'affiliate_id' => $conversion_data['affiliate_id'],
+                'visit_id' => $conversion_data['visit_id'],
+                'amount' => $conversion_data['amount'],
+                'currency' => $conversion_data['currency'],
+                'reference' => $conversion_data['reference'],
+                'attribution_model' => $conversion_data['attribution_model'],
+                'url' => $conversion_data['url'],
+                'ip_address' => $conversion_data['ip_address'],
+                'user_agent' => $conversion_data['user_agent'],
+                'additional_data' => json_encode($conversion_data['additional_data']),
+                'synced' => 0,
+                'created_at' => $conversion_data['created_at'],
+            ],
+            [
+                '%d', '%s', '%f', '%s', '%s', '%s', 
+                '%s', '%s', '%s', '%s', '%d', '%s'
+            ]
+        );
+
+        if ($result === false) {
+            $this->log_error('Failed to log conversion: ' . $wpdb->last_error);
+            return false;
+        }
+
+        return $wpdb->insert_id;
+    }
+
+    /**
+     * Send conversion to remote site
+     *
+     * @param array $conversion_data Conversion data
+     * @param int $log_id Local log ID
+     * @return array API result
+     */
+    private function send_conversion_to_remote($conversion_data, $log_id) {
+        if (!$this->api_client->is_available()) {
+            return [
+                'success' => false,
+                'error' => 'API client not available',
+            ];
+        }
+
+        $api_data = [
+            'conversion_data' => $conversion_data,
+            'local_log_id' => $log_id,
+            'site_url' => home_url(),
+            'client_version' => AFFILIATE_CLIENT_FULL_VERSION,
+        ];
+
+        return $this->api_client->send_conversion_data($api_data);
+    }
+
+    /**
+     * Mark conversion as synced
+     *
+     * @param int $log_id Log ID
+     * @return bool Success status
+     */
+    private function mark_conversion_synced($log_id) {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'aci_conversions';
+        
+        return $wpdb->update(
+            $table_name,
+            ['synced' => 1],
+            ['id' => $log_id],
+            ['%d'],
+            ['%d']
+        ) !== false;
+    }
+
+    /**
+     * Validate affiliate ID
+     *
+     * @param int $affiliate_id Affiliate ID
+     * @return bool True if valid
+     */
+    private function validate_affiliate_id($affiliate_id) {
+        $cache_key = 'aci_validate_affiliate_' . $affiliate_id;
+        $cached_result = get_transient($cache_key);
+
+        if ($cached_result !== false) {
+            return $cached_result;
+        }
+
+        $result = $this->api_client->validate_affiliate($affiliate_id);
+        $is_valid = $result['valid'] ?? false;
+
+        set_transient($cache_key, $is_valid, 5 * MINUTE_IN_SECONDS);
+
+        return $is_valid;
+    }
+
+    /**
+     * Track conversion
+     *
+     * @param float $amount Conversion amount
+     * @param string|null $reference Conversion reference
+     * @param array $additional_data Additional conversion data
+     * @return array Tracking result
+     */
+    public function track_conversion($amount = 0, $reference = null, $additional_data = []) {
+        $affiliate_id = $this->get_attributed_affiliate();
+        
+        if (!$affiliate_id) {
+            return [
+                'success' => false,
+                'message' => 'No affiliate to attribute conversion to',
+            ];
+        }
+
+        $conversion_data = $this->prepare_conversion_data($amount, $reference, $additional_data, $affiliate_id);
+        
+        $validation = $this->validate_conversion($conversion_data);
+        if (!$validation['valid']) {
+            return [
+                'success' => false,
+                'message' => $validation['message'],
+            ];
+        }
+
+        if ($this->is_duplicate_conversion($conversion_data)) {
+            return [
+                'success' => false,
+                'message' => 'Duplicate conversion detected',
+            ];
+        }
+
+        $log_id = $this->log_conversion($conversion_data);
+        
+        if (!$log_id) {
+            return [
+                'success' => false,
+                'message' => 'Failed to log conversion locally',
+            ];
+        }
+
+        $api_result = $this->send_conversion_to_remote($conversion_data, $log_id);
+        
+        if ($api_result['success']) {
+            $this->mark_conversion_synced($log_id);
+            
+            do_action('aci_conversion_tracked', $conversion_data, $log_id);
+            
+            return [
+                'success' => true,
+                'message' => 'Conversion tracked successfully',
+                'conversion_id' => $log_id,
+                'affiliate_id' => $affiliate_id,
+                'amount' => $amount,
+            ];
+        } else {
+            return [
+                'success' => false,
+                'message' => 'Failed to send conversion to remote site: ' . ($api_result['error'] ?? 'Unknown error'),
+                'local_id' => $log_id,
+            ];
+        }
+    }
+
+    /**
+     * Register REST API endpoints
+     */
+    public function register_conversion_endpoints() {
+        register_rest_route('aci/v1', '/conversion', [
+            'methods' => 'POST',
+            'callback' => [$this, 'rest_track_conversion'],
+            'permission_callback' => '__return_true',
+            'args' => [
+                'amount' => [
+                    'required' => false,
+                    'type' => 'number',
+                    'default' => 0,
+                ],
+                'reference' => [
+                    'required' => false,
+                    'type' => 'string',
+                ],
+                'data' => [
+                    'required' => false,
+                    'type' => 'object',
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * REST API conversion tracking
+     *
+     * @param WP_REST_Request $request Request object
+     * @return WP_REST_Response
+     */
+    public function rest_track_conversion($request) {
+        $amount = floatval($request->get_param('amount'));
+        $reference = sanitize_text_field($request->get_param('reference'));
+        $data = $request->get_param('data') ?: [];
+
+        $result = $this->track_conversion($amount, $reference, $data);
+        
+        return rest_ensure_response($result);
+    }
+
+    /**
+     * AJAX conversion tracking
+     */
+    public function ajax_track_conversion() {
+        check_ajax_referer('aci_nonce', 'nonce');
+
+        $amount = floatval($_POST['amount'] ?? 0);
+        $reference = sanitize_text_field($_POST['reference'] ?? '');
+        $data = $_POST['data'] ?? [];
+
+        $data = $this->sanitize_conversion_data($data);
+
+        $result = $this->track_conversion($amount, $reference, $data);
+        
+        wp_send_json($result);
+    }
+
+    /**
+     * Get conversion statistics
+     *
+     * @param array $filters Statistics filters
+     * @return array Statistics data
+     */
+    public function get_conversion_statistics($filters = []) {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'aci_conversions';
+        $where_conditions = ['1=1'];
+        $where_values = [];
+        
+        if (!empty($filters['start_date'])) {
+            $where_conditions[] = 'created_at >= %s';
+            $where_values[] = $filters['start_date'];
+        }
+        
+        if (!empty($filters['end_date'])) {
+            $where_conditions[] = 'created_at <= %s';
+            $where_values[] = $filters['end_date'];
+        }
+        
+        if (!empty($filters['affiliate_id'])) {
+            $where_conditions[] = 'affiliate_id = %d';
+            $where_values[] = $filters['affiliate_id'];
+        }
+        
+        $where_clause = implode(' AND ', $where_conditions);
+        
+        if (!empty($where_values)) {
+            $query = $wpdb->prepare(
+                "SELECT 
+                    COUNT(*) as total_conversions,
+                    SUM(amount) as total_amount,
+                    AVG(amount) as average_amount,
+                    MIN(amount) as min_amount,
+                    MAX(amount) as max_amount,
+                    currency
+                FROM {$table_name}
+                WHERE {$where_clause}
+                GROUP BY currency",
+                $where_values
+            );
+        } else {
+            $query = "SELECT 
+                COUNT(*) as total_conversions,
+                SUM(amount) as total_amount,
+                AVG(amount) as average_amount,
+                MIN(amount) as min_amount,
+                MAX(amount) as max_amount,
+                currency
+            FROM {$table_name}
+            WHERE {$where_clause}
+            GROUP BY currency";
+        }
+        
+        return $wpdb->get_results($query, ARRAY_A);
+    }
+
+    /**
+     * Retry failed conversions
+     *
+     * @param int $limit Maximum number to retry
+     * @return int Number of conversions retried
+     */
+    public function retry_failed_conversions($limit = 50) {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'aci_conversions';
+        
+        $failed_conversions = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$table_name} 
+             WHERE synced = 0 
+             ORDER BY created_at ASC 
+             LIMIT %d",
+            $limit
+        ));
+        
+        $retry_count = 0;
+        
+        foreach ($failed_conversions as $conversion) {
+            $conversion_data = [
+                'affiliate_id' => $conversion->affiliate_id,
+                'visit_id' => $conversion->visit_id,
+                'amount' => $conversion->amount,
+                'currency' => $conversion->currency,
+                'reference' => $conversion->reference,
+                'attribution_model' => $conversion->attribution_model,
+                'url' => $conversion->url,
+                'ip_address' => $conversion->ip_address,
+                'user_agent' => $conversion->user_agent,
+                'additional_data' => json_decode($conversion->additional_data, true),
+                'created_at' => $conversion->created_at,
+            ];
+            
+            $result = $this->send_conversion_to_remote($conversion_data, $conversion->id);
+            
+            if ($result['success']) {
+                $this->mark_conversion_synced($conversion->id);
+                $retry_count++;
+            }
+        }
+        
+        return $retry_count;
+    }
+
+    /**
+     * Cleanup old conversions
+     *
+     * @param int $days Days to keep
+     * @return int Number of conversions deleted
+     */
+    public function cleanup_old_conversions($days = 90) {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'aci_conversions';
+        
+        $deleted = $wpdb->query($wpdb->prepare(
+            "DELETE FROM {$table_name}
+             WHERE created_at < DATE_SUB(NOW(), INTERVAL %d DAY)
+             AND synced = 1",
+            $days
+        ));
+        
+        return $deleted !== false ? $deleted : 0;
+    }
+
+    /**
+     * Export conversion data
+     *
+     * @param array $filters Export filters
+     * @return array Export data
+     */
+    public function export_conversions($filters = []) {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'aci_conversions';
+        $where_conditions = ['1=1'];
+        $where_values = [];
+        
+        if (!empty($filters['start_date'])) {
+            $where_conditions[] = 'created_at >= %s';
+            $where_values[] = $filters['start_date'];
+        }
+        
+        if (!empty($filters['end_date'])) {
+            $where_conditions[] = 'created_at <= %s';
+            $where_values[] = $filters['end_date'];
+        }
+        
+        if (!empty($filters['affiliate_id'])) {
+            $where_conditions[] = 'affiliate_id = %d';
+            $where_values[] = $filters['affiliate_id'];
+        }
+        
+        $where_clause = implode(' AND ', $where_conditions);
+        
+        if (!empty($where_values)) {
+            $query = $wpdb->prepare(
+                "SELECT * FROM {$table_name} WHERE {$where_clause} ORDER BY created_at DESC",
+                $where_values
+            );
+        } else {
+            $query = "SELECT * FROM {$table_name} WHERE {$where_clause} ORDER BY created_at DESC";
+        }
+        
+        $conversions = $wpdb->get_results($query, ARRAY_A);
+        
+        $export_data = [];
+        foreach ($conversions as $conversion) {
+            $additional_data = json_decode($conversion['additional_data'], true);
+            $export_data[] = [
+                'id' => $conversion['id'],
+                'affiliate_id' => $conversion['affiliate_id'],
+                'visit_id' => $conversion['visit_id'],
+                'amount' => $conversion['amount'],
+                'currency' => $conversion['currency'],
+                'reference' => $conversion['reference'],
+                'attribution_model' => $conversion['attribution_model'],
+                'url' => $conversion['url'],
+                'synced' => $conversion['synced'] ? 'Yes' : 'No',
+                'created_at' => $conversion['created_at'],
+                'additional_data' => $additional_data,
+            ];
+        }
+        
+        return $export_data;
+    }
+}

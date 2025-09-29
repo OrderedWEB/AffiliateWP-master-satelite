@@ -1316,8 +1316,7 @@ class ACI_Client_Admin {
                     </ol>
                 </div>
 
-                <!-- Available Shortcodes -->
-                <div class="aci-doc-section">
+             <div class="aci-doc-section">
                     <h2><?php _e('Available Shortcodes', 'affiliate-client-integration'); ?></h2>
                     
                     <h3><?php _e('Form Shortcodes', 'affiliate-client-integration'); ?></h3>
@@ -1332,18 +1331,18 @@ class ACI_Client_Admin {
                         <tbody>
                             <tr>
                                 <td><code>[affiliate_form]</code></td>
-                                <td><?php _e('Display an affiliate code entry form', 'affiliate-client-integration'); ?></td>
-                                <td><code>[affiliate_form title="Get Discount" collect_email="true"]</code></td>
+                                <td><?php _e('Display a full affiliate code form', 'affiliate-client-integration'); ?></td>
+                                <td><code>[affiliate_form template="default"]</code></td>
                             </tr>
                             <tr>
                                 <td><code>[affiliate_form_inline]</code></td>
-                                <td><?php _e('Compact inline version of the affiliate form', 'affiliate-client-integration'); ?></td>
+                                <td><?php _e('Display an inline affiliate code input', 'affiliate-client-integration'); ?></td>
                                 <td><code>[affiliate_form_inline placeholder="Enter code"]</code></td>
                             </tr>
                             <tr>
                                 <td><code>[affiliate_discount_form]</code></td>
-                                <td><?php _e('Form with discount preview', 'affiliate-client-integration'); ?></td>
-                                <td><code>[affiliate_discount_form discount_amount="15"]</code></td>
+                                <td><?php _e('Display a discount application form', 'affiliate-client-integration'); ?></td>
+                                <td><code>[affiliate_discount_form show_validation="true"]</code></td>
                             </tr>
                         </tbody>
                     </table>
@@ -1376,11 +1375,814 @@ class ACI_Client_Admin {
                         </tbody>
                     </table>
 
+                    <h3><?php _e('Popup Shortcodes', 'affiliate-client-integration'); ?></h3>
+                    <table class="aci-doc-table">
+                        <thead>
+                            <tr>
+                                <th><?php _e('Shortcode', 'affiliate-client-integration'); ?></th>
+                                <th><?php _e('Description', 'affiliate-client-integration'); ?></th>
+                                <th><?php _e('Example', 'affiliate-client-integration'); ?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>[affiliate_popup_trigger]</code></td>
+                                <td><?php _e('Create a button to trigger the affiliate popup', 'affiliate-client-integration'); ?></td>
+                                <td><code>[affiliate_popup_trigger text="Enter Code"]</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>[affiliate_popup_form]</code></td>
+                                <td><?php _e('Display a popup form on page', 'affiliate-client-integration'); ?></td>
+                                <td><code>[affiliate_popup_form trigger="exit_intent"]</code></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h3><?php _e('URL Parameter Shortcodes', 'affiliate-client-integration'); ?></h3>
+                    <table class="aci-doc-table">
+                        <thead>
+                            <tr>
+                                <th><?php _e('Shortcode', 'affiliate-client-integration'); ?></th>
+                                <th><?php _e('Description', 'affiliate-client-integration'); ?></th>
+                                <th><?php _e('Example', 'affiliate-client-integration'); ?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>[affiliate_url_param]</code></td>
+                                <td><?php _e('Display value from URL parameter', 'affiliate-client-integration'); ?></td>
+                                <td><code>[affiliate_url_param parameter="aff"]</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>[affiliate_referrer_info]</code></td>
+                                <td><?php _e('Display referrer information', 'affiliate-client-integration'); ?></td>
+                                <td><code>[affiliate_referrer_info show="domain"]</code></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
                     <h3><?php _e('Conditional Shortcodes', 'affiliate-client-integration'); ?></h3>
                     <table class="aci-doc-table">
                         <thead>
                             <tr>
                                 <th><?php _e('Shortcode', 'affiliate-client-integration'); ?></th>
                                 <th><?php _e('Description', 'affiliate-client-integration'); ?></th>
-                                <th><?php _
-                                
+                                <th><?php _e('Example', 'affiliate-client-integration'); ?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>[affiliate_if_active]...[/affiliate_if_active]</code></td>
+                                <td><?php _e('Show content only if affiliate is active', 'affiliate-client-integration'); ?></td>
+                                <td><code>[affiliate_if_active]Thank you![/affiliate_if_active]</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>[affiliate_if_code]...[/affiliate_if_code]</code></td>
+                                <td><?php _e('Show content if specific code matches', 'affiliate-client-integration'); ?></td>
+                                <td><code>[affiliate_if_code code="SPECIAL"]Content[/affiliate_if_code]</code></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Shortcode Parameters -->
+                <div class="aci-doc-section">
+                    <h2><?php _e('Common Shortcode Parameters', 'affiliate-client-integration'); ?></h2>
+                    <table class="aci-doc-table">
+                        <thead>
+                            <tr>
+                                <th><?php _e('Parameter', 'affiliate-client-integration'); ?></th>
+                                <th><?php _e('Description', 'affiliate-client-integration'); ?></th>
+                                <th><?php _e('Default', 'affiliate-client-integration'); ?></th>
+                                <th><?php _e('Example', 'affiliate-client-integration'); ?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>template</code></td>
+                                <td><?php _e('Template style to use', 'affiliate-client-integration'); ?></td>
+                                <td><code>default</code></td>
+                                <td><code>template="minimal"</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>class</code></td>
+                                <td><?php _e('Additional CSS classes', 'affiliate-client-integration'); ?></td>
+                                <td><code>""</code></td>
+                                <td><code>class="my-custom-class"</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>show_validation</code></td>
+                                <td><?php _e('Show real-time validation', 'affiliate-client-integration'); ?></td>
+                                <td><code>true</code></td>
+                                <td><code>show_validation="false"</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>redirect_url</code></td>
+                                <td><?php _e('URL to redirect after success', 'affiliate-client-integration'); ?></td>
+                                <td><code>""</code></td>
+                                <td><code>redirect_url="/thank-you"</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>format</code></td>
+                                <td><?php _e('Display format', 'affiliate-client-integration'); ?></td>
+                                <td><code>default</code></td>
+                                <td><code>format="badge"</code></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- URL Parameters -->
+                <div class="aci-doc-section">
+                    <h2><?php _e('URL Parameter Configuration', 'affiliate-client-integration'); ?></h2>
+                    <p><?php _e('The plugin automatically detects affiliate codes from URL parameters. Configure your preferred parameter name in Settings.', 'affiliate-client-integration'); ?></p>
+                    
+                    <h3><?php _e('Default URL Structure', 'affiliate-client-integration'); ?></h3>
+                    <pre><code>https://yoursite.com/?aff=AFFILIATE_CODE</code></pre>
+                    
+                    <h3><?php _e('Custom Parameter Names', 'affiliate-client-integration'); ?></h3>
+                    <pre><code>https://yoursite.com/?affiliate=CODE
+https://yoursite.com/?ref=CODE
+https://yoursite.com/?referral=CODE</code></pre>
+                    
+                    <p><?php _e('Configure your preferred parameter name in Settings > URL Parameters.', 'affiliate-client-integration'); ?></p>
+                </div>
+
+                <!-- Popup Configuration -->
+                <div class="aci-doc-section">
+                    <h2><?php _e('Popup Configuration', 'affiliate-client-integration'); ?></h2>
+                    <p><?php _e('Configure popups to capture affiliate codes from visitors.', 'affiliate-client-integration'); ?></p>
+                    
+                    <h3><?php _e('Trigger Types', 'affiliate-client-integration'); ?></h3>
+                    <ul>
+                        <li><strong><?php _e('Exit Intent:', 'affiliate-client-integration'); ?></strong> <?php _e('Triggers when user moves cursor to leave page', 'affiliate-client-integration'); ?></li>
+                        <li><strong><?php _e('Time Delay:', 'affiliate-client-integration'); ?></strong> <?php _e('Triggers after specified seconds on page', 'affiliate-client-integration'); ?></li>
+                        <li><strong><?php _e('Scroll Percentage:', 'affiliate-client-integration'); ?></strong> <?php _e('Triggers when user scrolls to percentage', 'affiliate-client-integration'); ?></li>
+                        <li><strong><?php _e('Manual:', 'affiliate-client-integration'); ?></strong> <?php _e('Triggered by button click', 'affiliate-client-integration'); ?></li>
+                    </ul>
+                </div>
+
+                <!-- API Integration -->
+                <div class="aci-doc-section">
+                    <h2><?php _e('API Integration', 'affiliate-client-integration'); ?></h2>
+                    <p><?php _e('The plugin communicates with your master affiliate domain via REST API.', 'affiliate-client-integration'); ?></p>
+                    
+                    <h3><?php _e('Required Configuration', 'affiliate-client-integration'); ?></h3>
+                    <ol>
+                        <li><?php _e('Master Domain URL', 'affiliate-client-integration'); ?></li>
+                        <li><?php _e('API Key', 'affiliate-client-integration'); ?></li>
+                        <li><?php _e('API Secret (optional for enhanced security)', 'affiliate-client-integration'); ?></li>
+                    </ol>
+                    
+                    <h3><?php _e('API Endpoints Used', 'affiliate-client-integration'); ?></h3>
+                    <ul>
+                        <li><code>/wp-json/affcd/v1/validate</code> - <?php _e('Validate affiliate codes', 'affiliate-client-integration'); ?></li>
+                        <li><code>/wp-json/affcd/v1/track</code> - <?php _e('Track events and conversions', 'affiliate-client-integration'); ?></li>
+                        <li><code>/wp-json/affcd/v1/config</code> - <?php _e('Sync configuration', 'affiliate-client-integration'); ?></li>
+                        <li><code>/wp-json/affcd/v1/health</code> - <?php _e('Health check', 'affiliate-client-integration'); ?></li>
+                    </ul>
+                </div>
+
+                <!-- Troubleshooting -->
+                <div class="aci-doc-section">
+                    <h2><?php _e('Troubleshooting', 'affiliate-client-integration'); ?></h2>
+                    
+                    <h3><?php _e('Connection Issues', 'affiliate-client-integration'); ?></h3>
+                    <ul>
+                        <li><?php _e('Verify master domain URL is correct (include https://)', 'affiliate-client-integration'); ?></li>
+                        <li><?php _e('Check API key is valid and active', 'affiliate-client-integration'); ?></li>
+                        <li><?php _e('Ensure SSL certificate is valid if using HTTPS', 'affiliate-client-integration'); ?></li>
+                        <li><?php _e('Check firewall settings allow API communication', 'affiliate-client-integration'); ?></li>
+                        <li><?php _e('Use the Connection Test tool in Settings', 'affiliate-client-integration'); ?></li>
+                    </ul>
+                    
+                    <h3><?php _e('Code Validation Issues', 'affiliate-client-integration'); ?></h3>
+                    <ul>
+                        <li><?php _e('Verify code exists and is active on master domain', 'affiliate-client-integration'); ?></li>
+                        <li><?php _e('Check code expiry date has not passed', 'affiliate-client-integration'); ?></li>
+                        <li><?php _e('Verify usage limit has not been reached', 'affiliate-client-integration'); ?></li>
+                        <li><?php _e('Clear cache if code was recently created', 'affiliate-client-integration'); ?></li>
+                    </ul>
+                    
+                    <h3><?php _e('Performance Issues', 'affiliate-client-integration'); ?></h3>
+                    <ul>
+                        <li><?php _e('Enable caching in Advanced Settings', 'affiliate-client-integration'); ?></li>
+                        <li><?php _e('Adjust cache duration for optimal performance', 'affiliate-client-integration'); ?></li>
+                        <li><?php _e('Use object caching if available', 'affiliate-client-integration'); ?></li>
+                        <li><?php _e('Review error logs for specific issues', 'affiliate-client-integration'); ?></li>
+                    </ul>
+                </div>
+
+                <!-- Support -->
+                <div class="aci-doc-section">
+                    <h2><?php _e('Support', 'affiliate-client-integration'); ?></h2>
+                    <p>
+                        <?php _e('For additional support:', 'affiliate-client-integration'); ?>
+                    </p>
+                    <ul>
+                        <li><?php _e('Visit the Support page for system diagnostics', 'affiliate-client-integration'); ?></li>
+                        <li><?php _e('Review error logs in Advanced Settings', 'affiliate-client-integration'); ?></li>
+                        <li><?php printf(__('Contact: %s', 'affiliate-client-integration'), '<a href="mailto:r.king@starneconsulting.com">r.king@starneconsulting.com</a>'); ?></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <style>
+        .aci-documentation {
+            max-width: 1200px;
+        }
+        .aci-doc-section {
+            background: #fff;
+            border: 1px solid #ddd;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .aci-doc-section h2 {
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #0073aa;
+            color: #0073aa;
+        }
+        .aci-doc-section h3 {
+            color: #333;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        .aci-doc-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        .aci-doc-table th {
+            background: #f5f5f5;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #ddd;
+        }
+        .aci-doc-table td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        .aci-doc-table code {
+            background: #f9f9f9;
+            padding: 2px 6px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            font-size: 13px;
+        }
+        .aci-doc-section pre {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .aci-doc-section pre code {
+            background: transparent;
+            border: none;
+            padding: 0;
+        }
+        .aci-doc-section ul {
+            padding-left: 20px;
+        }
+        .aci-doc-section ul li {
+            margin: 8px 0;
+        }
+        </style>
+        <?php
+    }
+
+
+
+
+          /**
+     * Render support page
+     */
+    public function render_support_page() {
+        ?>
+        <div class="wrap aci-admin-wrap">
+            <h1><?php _e('Support', 'affiliate-client-integration'); ?></h1>
+            
+            <div class="aci-support-container">
+                <!-- System Information -->
+                <div class="aci-support-section">
+                    <h2><?php _e('System Information', 'affiliate-client-integration'); ?></h2>
+                    <table class="aci-info-table">
+                        <tr>
+                            <th><?php _e('Plugin Version:', 'affiliate-client-integration'); ?></th>
+                            <td><?php echo defined('ACI_VERSION') ? ACI_VERSION : '1.0.0'; ?></td>
+                        </tr>
+                        <tr>
+                            <th><?php _e('WordPress Version:', 'affiliate-client-integration'); ?></th>
+                            <td><?php echo get_bloginfo('version'); ?></td>
+                        </tr>
+                        <tr>
+                            <th><?php _e('PHP Version:', 'affiliate-client-integration'); ?></th>
+                            <td><?php echo PHP_VERSION; ?></td>
+                        </tr>
+                        <tr>
+                            <th><?php _e('Site URL:', 'affiliate-client-integration'); ?></th>
+                            <td><?php echo home_url(); ?></td>
+                        </tr>
+                        <tr>
+                            <th><?php _e('API Status:', 'affiliate-client-integration'); ?></th>
+                            <td>
+                                <span class="status-indicator" id="api-status">
+                                    <?php _e('Checking...', 'affiliate-client-integration'); ?>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th><?php _e('Cache Status:', 'affiliate-client-integration'); ?></th>
+                            <td>
+                                <?php echo wp_using_ext_object_cache() ? 
+                                    __('Active (Object Cache)', 'affiliate-client-integration') : 
+                                    __('File-based', 'affiliate-client-integration'); ?>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <!-- Help Resources -->
+                <div class="aci-support-section">
+                    <h2><?php _e('Help Resources', 'affiliate-client-integration'); ?></h2>
+                    <ul class="aci-resource-list">
+                        <li>
+                            <strong><?php _e('Documentation:', 'affiliate-client-integration'); ?></strong>
+                            <a href="<?php echo admin_url('admin.php?page=aci-documentation'); ?>">
+                                <?php _e('View Documentation', 'affiliate-client-integration'); ?>
+                            </a>
+                        </li>
+                        <li>
+                            <strong><?php _e('Shortcode Reference:', 'affiliate-client-integration'); ?></strong>
+                            <a href="<?php echo admin_url('admin.php?page=aci-documentation#shortcodes'); ?>">
+                                <?php _e('View Shortcodes', 'affiliate-client-integration'); ?>
+                            </a>
+                        </li>
+                        <li>
+                            <strong><?php _e('API Documentation:', 'affiliate-client-integration'); ?></strong>
+                            <a href="<?php echo admin_url('admin.php?page=aci-documentation#api'); ?>">
+                                <?php _e('View API Docs', 'affiliate-client-integration'); ?>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Contact Information -->
+                <div class="aci-support-section">
+                    <h2><?php _e('Contact Information', 'affiliate-client-integration'); ?></h2>
+                    <p>
+                        <strong><?php _e('Author:', 'affiliate-client-integration'); ?></strong> Richard King<br>
+                        <strong><?php _e('Email:', 'affiliate-client-integration'); ?></strong> 
+                        <a href="mailto:r.king@starneconsulting.com">r.king@starneconsulting.com</a><br>
+                        <strong><?php _e('Website:', 'affiliate-client-integration'); ?></strong> 
+                        <a href="https://starneconsulting.com" target="_blank">starneconsulting.com</a>
+                    </p>
+                </div>
+
+                <!-- Diagnostic Tools -->
+                <div class="aci-support-section">
+                    <h2><?php _e('Diagnostic Tools', 'affiliate-client-integration'); ?></h2>
+                    <div class="aci-diagnostic-tools">
+                        <button type="button" id="run-diagnostics" class="button button-secondary">
+                            <?php _e('Run System Diagnostics', 'affiliate-client-integration'); ?>
+                        </button>
+                        <button type="button" id="test-api-connection" class="button button-secondary">
+                            <?php _e('Test API Connection', 'affiliate-client-integration'); ?>
+                        </button>
+                        <button type="button" id="view-error-logs" class="button button-secondary">
+                            <?php _e('View Error Logs', 'affiliate-client-integration'); ?>
+                        </button>
+                    </div>
+                    <div id="diagnostic-results" class="aci-diagnostic-results"></div>
+                </div>
+            </div>
+        </div>
+
+        <style>
+        .aci-support-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+        }
+        .aci-support-section {
+            background: #fff;
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 4px;
+        }
+        .aci-support-section h2 {
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .aci-info-table {
+            width: 100%;
+            margin-top: 15px;
+        }
+        .aci-info-table th {
+            text-align: left;
+            padding: 8px 10px;
+            width: 180px;
+            font-weight: 600;
+        }
+        .aci-info-table td {
+            padding: 8px 10px;
+        }
+        .aci-resource-list {
+            list-style: none;
+            padding-left: 0;
+        }
+        .aci-resource-list li {
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .aci-resource-list li:last-child {
+            border-bottom: none;
+        }
+        .aci-diagnostic-tools {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        .aci-diagnostic-results {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            display: none;
+        }
+        .aci-diagnostic-results.active {
+            display: block;
+        }
+        .status-indicator {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status-indicator.ok {
+            background: #46b450;
+            color: #fff;
+        }
+        .status-indicator.error {
+            background: #dc3232;
+            color: #fff;
+        }
+        .status-indicator.warning {
+            background: #ffb900;
+            color: #000;
+        }
+        </style>
+
+        <script type="text/javascript">
+        jQuery(document).ready(function($) {
+            // Test API connection on page load
+            ACI_Admin.testConnection(function(result) {
+                var $status = $('#api-status');
+                $status.removeClass('ok error warning');
+                
+                if (result.success) {
+                    $status.addClass('ok').text('<?php _e('Connected', 'affiliate-client-integration'); ?>');
+                } else {
+                    $status.addClass('error').text('<?php _e('Connection Failed', 'affiliate-client-integration'); ?>');
+                }
+            });
+
+            // Diagnostic tools
+            $('#run-diagnostics').on('click', function() {
+                ACI_Admin.runDiagnostics();
+            });
+
+            $('#test-api-connection').on('click', function() {
+                ACI_Admin.testConnection();
+            });
+
+            $('#view-error-logs').on('click', function() {
+                ACI_Admin.viewErrorLogs();
+            });
+        });
+        </script>
+        <?php
+    }
+
+    /**
+     * Validate settings before saving
+     */
+    public function validate_settings($settings) {
+        $validated = [];
+
+        // Validate master domain
+        if (!empty($settings['master_domain'])) {
+            $validated['master_domain'] = esc_url_raw($settings['master_domain']);
+            
+            if (empty($validated['master_domain'])) {
+                add_settings_error(
+                    'aci_settings',
+                    'invalid_master_domain',
+                    __('Invalid master domain URL.', 'affiliate-client-integration'),
+                    'error'
+                );
+            }
+        }
+
+        // Validate API credentials
+        if (!empty($settings['api_key'])) {
+            $validated['api_key'] = sanitize_text_field($settings['api_key']);
+        }
+
+        if (!empty($settings['api_secret'])) {
+            $validated['api_secret'] = sanitize_text_field($settings['api_secret']);
+        }
+
+        // Validate timeout
+        if (isset($settings['timeout'])) {
+            $timeout = absint($settings['timeout']);
+            $validated['timeout'] = max(5, min(60, $timeout));
+        }
+
+        // Validate cache duration
+        if (isset($settings['cache_duration'])) {
+            $cache_duration = absint($settings['cache_duration']);
+            $validated['cache_duration'] = max(300, min(86400, $cache_duration));
+        }
+
+        // Validate retry attempts
+        if (isset($settings['retry_attempts'])) {
+            $retry = absint($settings['retry_attempts']);
+            $validated['retry_attempts'] = max(1, min(10, $retry));
+        }
+
+        // Boolean settings
+        $boolean_settings = [
+            'enable_logging',
+            'enable_ssl_verify',
+            'send_analytics'
+        ];
+
+        foreach ($boolean_settings as $key) {
+            $validated[$key] = !empty($settings[$key]);
+        }
+
+        // Validate popup settings
+        if (isset($settings['popup']) && is_array($settings['popup'])) {
+            $validated['popup'] = $this->validate_popup_settings($settings['popup']);
+        }
+
+        // Validate URL parameters
+        if (isset($settings['url_params']) && is_array($settings['url_params'])) {
+            $validated['url_params'] = $this->validate_url_params($settings['url_params']);
+        }
+
+        // Validate shortcode settings
+        if (isset($settings['shortcodes']) && is_array($settings['shortcodes'])) {
+            $validated['shortcodes'] = $this->validate_shortcode_settings($settings['shortcodes']);
+        }
+
+        // Custom code validation
+        if (!empty($settings['custom_code'])) {
+            $validated['custom_code'] = $settings['custom_code'];
+        }
+
+        return $validated;
+    }
+
+    /**
+     * Validate popup settings
+     */
+    private function validate_popup_settings($popup_settings) {
+        $validated = [];
+
+        $validated['enabled'] = !empty($popup_settings['enabled']);
+        
+        $validated['template'] = sanitize_text_field($popup_settings['template'] ?? 'default');
+        
+        $validated['trigger'] = in_array($popup_settings['trigger'] ?? 'exit_intent', 
+            ['exit_intent', 'time_delay', 'scroll_percentage', 'manual']) ? 
+            $popup_settings['trigger'] : 'exit_intent';
+        
+        $validated['delay'] = absint($popup_settings['delay'] ?? 5);
+        $validated['delay'] = max(1, min(60, $validated['delay']));
+        
+        $validated['scroll_percentage'] = absint($popup_settings['scroll_percentage'] ?? 50);
+        $validated['scroll_percentage'] = max(0, min(100, $validated['scroll_percentage']));
+        
+        $validated['show_once'] = !empty($popup_settings['show_once']);
+        $validated['cookie_duration'] = absint($popup_settings['cookie_duration'] ?? 30);
+        
+        $validated['popup_title'] = sanitize_text_field($popup_settings['popup_title'] ?? '');
+        $validated['popup_description'] = wp_kses_post($popup_settings['popup_description'] ?? '');
+
+        return $validated;
+    }
+
+    /**
+     * Validate URL parameters
+     */
+    private function validate_url_params($url_params) {
+        $validated = [];
+
+        $validated['enabled'] = !empty($url_params['enabled']);
+        
+        $validated['param_name'] = sanitize_text_field($url_params['param_name'] ?? 'aff');
+        
+        if (empty($validated['param_name'])) {
+            $validated['param_name'] = 'aff';
+        }
+        
+        $validated['auto_apply'] = !empty($url_params['auto_apply']);
+        $validated['override_existing'] = !empty($url_params['override_existing']);
+
+        return $validated;
+    }
+
+    /**
+     * Validate shortcode settings
+     */
+    private function validate_shortcode_settings($shortcode_settings) {
+        $validated = [];
+
+        $validated['enabled'] = !empty($shortcode_settings['enabled']);
+        $validated['default_template'] = sanitize_text_field($shortcode_settings['default_template'] ?? 'default');
+        $validated['enable_form'] = !empty($shortcode_settings['enable_form']);
+        $validated['enable_display'] = !empty($shortcode_settings['enable_display']);
+
+        return $validated;
+    }
+
+    /**
+     * AJAX test connection
+     */
+    public function ajax_test_connection() {
+        check_ajax_referer('aci_admin_nonce', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error([
+                'message' => __('Insufficient permissions.', 'affiliate-client-integration')
+            ]);
+        }
+
+        $result = $this->api_handler->test_connection();
+
+        if ($result['success']) {
+            wp_send_json_success([
+                'message' => __('Connection successful!', 'affiliate-client-integration'),
+                'data' => $result['data']
+            ]);
+        } else {
+            wp_send_json_error([
+                'message' => $result['message'] ?? __('Connection failed.', 'affiliate-client-integration'),
+                'error' => $result['error'] ?? null
+            ]);
+        }
+    }
+
+    /**
+     * AJAX save settings
+     */
+    public function ajax_save_settings() {
+        check_ajax_referer('aci_admin_nonce', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error([
+                'message' => __('Insufficient permissions.', 'affiliate-client-integration')
+            ]);
+        }
+
+        $settings = $_POST['settings'] ?? [];
+        $validated_settings = $this->validate_settings($settings);
+        
+        update_option('aci_settings', $validated_settings);
+
+        do_action('aci_settings_saved', $validated_settings);
+
+        wp_send_json_success([
+            'message' => __('Settings saved successfully.', 'affiliate-client-integration')
+        ]);
+    }
+
+    /**
+     * AJAX get analytics
+     */
+    public function ajax_get_analytics() {
+        check_ajax_referer('aci_admin_nonce', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error([
+                'message' => __('Insufficient permissions.', 'affiliate-client-integration')
+            ]);
+        }
+
+        $period = sanitize_text_field($_POST['period'] ?? '7d');
+        $analytics = $this->api_handler->get_analytics($period);
+
+        if ($analytics) {
+            wp_send_json_success([
+                'analytics' => $analytics
+            ]);
+        } else {
+            wp_send_json_error([
+                'message' => __('Unable to retrieve analytics data.', 'affiliate-client-integration')
+            ]);
+        }
+    }
+
+    /**
+     * AJAX export data
+     */
+    public function ajax_export_data() {
+        check_ajax_referer('aci_admin_nonce', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error([
+                'message' => __('Insufficient permissions.', 'affiliate-client-integration')
+            ]);
+        }
+
+        $period = sanitize_text_field($_POST['period'] ?? '30d');
+        $format = sanitize_text_field($_POST['format'] ?? 'csv');
+
+        $export_data = $this->api_handler->export_analytics($period, $format);
+
+        if ($export_data) {
+            wp_send_json_success([
+                'export_url' => $export_data['url'],
+                'filename' => $export_data['filename']
+            ]);
+        } else {
+            wp_send_json_error([
+                'message' => __('Unable to export data.', 'affiliate-client-integration')
+            ]);
+        }
+    }
+
+    /**
+     * Add dashboard widgets
+     */
+    public function add_dashboard_widgets() {
+        wp_add_dashboard_widget(
+            'aci_dashboard_widget',
+            __('Affiliate Integration Stats', 'affiliate-client-integration'),
+            [$this, 'render_dashboard_widget']
+        );
+    }
+
+    /**
+     * Render dashboard widget
+     */
+    public function render_dashboard_widget() {
+        $stats = $this->api_handler->get_quick_stats();
+        ?>
+        <div class="aci-dashboard-widget">
+            <div class="aci-widget-stats">
+                <div class="aci-widget-stat">
+                    <span class="label"><?php _e('Total Clicks:', 'affiliate-client-integration'); ?></span>
+                    <span class="value"><?php echo number_format($stats['total_clicks'] ?? 0); ?></span>
+                </div>
+                <div class="aci-widget-stat">
+                    <span class="label"><?php _e('Conversions:', 'affiliate-client-integration'); ?></span>
+                    <span class="value"><?php echo number_format($stats['conversions'] ?? 0); ?></span>
+                </div>
+                <div class="aci-widget-stat">
+                    <span class="label"><?php _e('Conversion Rate:', 'affiliate-client-integration'); ?></span>
+                    <span class="value"><?php echo number_format($stats['conversion_rate'] ?? 0, 2); ?>%</span>
+                </div>
+            </div>
+            <p class="aci-widget-link">
+                <a href="<?php echo admin_url('admin.php?page=aci-analytics'); ?>">
+                    <?php _e('View Full Analytics', 'affiliate-client-integration'); ?> &rarr;
+                </a>
+            </p>
+        </div>
+        <?php
+    }
+
+    /**
+     * Section callbacks
+     */
+    public function connection_section_callback() {
+        echo '<p>' . __('Configure the connection to your master affiliate domain.', 'affiliate-client-integration') . '</p>';
+    }
+
+    public function popup_section_callback() {
+        echo '<p>' . __('Configure popup behaviour and appearance for affiliate code collection.', 'affiliate-client-integration') . '</p>';
+    }
+
+    public function url_section_callback() {
+        echo '<p>' . __('Configure URL parameter handling for affiliate codes.', 'affiliate-client-integration') . '</p>';
+    }
+
+    public function shortcode_section_callback() {
+        echo '<p>' . __('Configure shortcode functionality and default settings.', 'affiliate-client-integration') . '</p>';
+    }
+
+    public function advanced_section_callback() {
+        echo '<p>' . __('Advanced settings for developers and troubleshooting.', 'affiliate-client-integration') . '</p>';
+    }
+}
