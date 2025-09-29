@@ -982,5 +982,3 @@ class AFFILIATE_CLIENT_Conversion_Tracker {
         
         return $sanitized;
     }
-
-    /**

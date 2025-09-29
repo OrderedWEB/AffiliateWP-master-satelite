@@ -379,8 +379,8 @@ class AffiliateClientFull {
                 AffiliateClientTracker.init({
                     affiliateId: <?php echo json_encode($affiliate_id); ?>,
                     visitId: <?php echo json_encode($visit_id); ?>,
-                    pageUrl: <?php echo json_encode(get_permalink()); ?>,
-                    pageTitle: <?php echo json_encode(get_the_title()); ?>,
+                    pageUrl: <?php global $wp; echo json_encode( get_permalink() ? get_permalink() : home_url( add_query_arg( [], $wp->request ?? '' ) ) ); ?>,
+                    pageTitle: <?php echo json_encode( get_the_title() ? get_the_title() : get_bloginfo('name') ); ?>,
                     timestamp: <?php echo time(); ?>
                 });
             }
@@ -406,7 +406,7 @@ class AffiliateClientFull {
      * Render admin settings page
      */
     public function render_admin_page() {
-        if (isset($_GET['message']) && $_GET['message'] === 'saved') {
+        if (isset($_GET['message']) && sanitize_text_field($_GET['message']) === 'saved') {
             echo '<div class="notice notice-success is-dismissible"><p>' . 
                  __('Settings saved successfully.', 'affiliate-client-full') . '</p></div>';
         }
@@ -558,14 +558,14 @@ class AffiliateClientFull {
      * Save plugin settings
      */
     public function save_settings() {
-        if (!current_user_can('manage_options') || !wp_verify_nonce($_POST['affiliate_client_nonce'], 'affiliate_client_save_settings')) {
+        if (!current_user_can('manage_options') || !isset($_POST['affiliate_client_nonce']) || !wp_verify_nonce($_POST['affiliate_client_nonce'], 'affiliate_client_save_settings')) {
             wp_die(__('Permission denied.', 'affiliate-client-full'));
         }
 
-        update_option('affiliate_client_remote_url', sanitize_url($_POST['remote_url']));
-        update_option('affiliate_client_api_key', sanitize_text_field($_POST['api_key']));
-        update_option('affiliate_client_tracking_enabled', isset($_POST['tracking_enabled']));
-        update_option('affiliate_client_debug_mode', isset($_POST['debug_mode']));
+        update_option('affiliate_client_remote_url', esc_url_raw( wp_unslash( $_POST['remote_url'] ) ) );
+        update_option('affiliate_client_api_key', sanitize_text_field( wp_unslash( $_POST['api_key'] ) ) );
+        update_option('affiliate_client_tracking_enabled', isset($_POST['tracking_enabled']) );
+        update_option('affiliate_client_debug_mode', isset($_POST['debug_mode']) );
 
         // Update configuration
         $this->load_config();
@@ -578,9 +578,8 @@ class AffiliateClientFull {
      * AJAX: Test connection to remote site
      */
     public function ajax_test_connection() {
-        if (!wp_verify_nonce($_POST['nonce'], 'affiliate_client_admin_nonce') || !current_user_can('manage_options')) {
-            wp_die();
-        }
+        check_ajax_referer('affiliate_client_admin_nonce','nonce');
+        if ( ! current_user_can('manage_options') ) { wp_send_json_error('forbidden', 403); }
 
         $result = $this->api_client->test_connection();
         wp_send_json($result);
@@ -590,9 +589,8 @@ class AffiliateClientFull {
      * AJAX: Sync data with remote site
      */
     public function ajax_sync_data() {
-        if (!wp_verify_nonce($_POST['nonce'], 'affiliate_client_admin_nonce') || !current_user_can('manage_options')) {
-            wp_die();
-        }
+        check_ajax_referer('affiliate_client_admin_nonce','nonce');
+        if ( ! current_user_can('manage_options') ) { wp_send_json_error('forbidden', 403); }
 
         $result = $this->sync_pending_data();
         wp_send_json($result);
@@ -602,8 +600,10 @@ class AffiliateClientFull {
      * REST: Track event
      */
     public function rest_track_event($request) {
+        if ( class_exists('Affiliate_Rate_Limiter') ) { $lim = Affiliate_Rate_Limiter::instance(); if ( $err = $lim->enforce_for_rest('api_request', $request) ) { return $err; } }
         $event = sanitize_text_field($request->get_param('event'));
         $data = $request->get_param('data');
+        if ( ! is_array( $data ) ) { $data = []; }
 
         if ($this->tracking_handler) {
             $result = $this->tracking_handler->track_event($event, $data);
@@ -617,7 +617,8 @@ class AffiliateClientFull {
      * REST: Track conversion
      */
     public function rest_track_conversion($request) {
-        $amount = $request->get_param('amount');
+        if ( class_exists('Affiliate_Rate_Limiter') ) { $lim = Affiliate_Rate_Limiter::instance(); if ( $err = $lim->enforce_for_rest('api_request', $request) ) { return $err; } }
+        $amount = floatval( $request->get_param('amount') );
         $reference = sanitize_text_field($request->get_param('reference'));
 
         if ($this->conversion_tracker) {
@@ -704,8 +705,8 @@ class AffiliateClientFull {
      */
     public function is_tracking_enabled() {
         return get_option('affiliate_client_tracking_enabled', true) && 
-               !empty($this->config['remote_url']) && 
-               !empty($this->config['api_key']);
+               !empty($this->config['remote_url'] ?? '') && 
+               !empty($this->config['api_key'] ?? '');
     }
 
     /**

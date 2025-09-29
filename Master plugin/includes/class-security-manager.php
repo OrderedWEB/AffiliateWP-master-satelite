@@ -1,6 +1,6 @@
 <?php
 /**
- * Enhanced Security Manager for Affiliate Cross Domain System
+ * Enhanced Security Manaager for Affiliate Cross Domain System
  *
  * Plugin: Affiliate Cross Domain System (Master)
  *
@@ -19,6 +19,9 @@ class AFFCD_Security_Manager {
     private $fraud_detection_table;
     private $authorized_domains_table;
     private $cache_prefix = 'affcd_security_';
+
+    // Schema versioning for safe upgrades
+    private $db_version = '1.0.1';
 
     // Security thresholds
     private $rate_limits = [
@@ -39,17 +42,24 @@ class AFFCD_Security_Manager {
         $this->fraud_detection_table    = $wpdb->prefix . 'affcd_fraud_detection';
         $this->authorized_domains_table = $wpdb->prefix . 'affcd_authorized_domains';
 
-        // Initialize hooks
+        // Initialize hooks (guarded to avoid duplicate bindings)
         add_action('init', [$this, 'init']);
-        add_action('wp_ajax_affcd_security_test', [$this, 'ajax_security_test']);
-        add_action('affcd_cleanup_security_logs', [$this, 'cleanup_old_logs']);
-        add_action('affcd_analyze_fraud_patterns', [$this, 'analyze_fraud_patterns']);
 
-        // Security headers
-        add_action('send_headers', [$this, 'add_security_headers']);
-
-        // API request filtering
-        add_filter('affcd_api_request_allowed', [$this, 'filter_api_requests'], 10, 2);
+        if (!has_action('wp_ajax_affcd_security_test', [$this, 'ajax_security_test'])) {
+            add_action('wp_ajax_affcd_security_test', [$this, 'ajax_security_test']);
+        }
+        if (!has_action('affcd_cleanup_security_logs', [$this, 'cleanup_old_logs'])) {
+            add_action('affcd_cleanup_security_logs', [$this, 'cleanup_old_logs']);
+        }
+        if (!has_action('affcd_analyze_fraud_patterns', [$this, 'analyze_fraud_patterns'])) {
+            add_action('affcd_analyze_fraud_patterns', [$this, 'analyze_fraud_patterns']);
+        }
+        if (!has_action('send_headers', [$this, 'add_security_headers'])) {
+            add_action('send_headers', [$this, 'add_security_headers']);
+        }
+        if (!has_filter('affcd_api_request_allowed', [$this, 'filter_api_requests'])) {
+            add_filter('affcd_api_request_allowed', [$this, 'filter_api_requests'], 10, 2);
+        }
     }
 
     /**
@@ -57,6 +67,7 @@ class AFFCD_Security_Manager {
      */
     public function init() {
         $this->maybe_create_tables();
+        $this->ensure_security_logs_columns(); // auto-heal missing cols (e.g., source_ip)
         $this->schedule_cleanup_tasks();
         $this->load_rate_limits();
         $this->setup_fraud_detection();
@@ -69,7 +80,8 @@ class AFFCD_Security_Manager {
         global $wpdb;
         $charset_collate = $wpdb->get_charset_collate();
 
-        $sql_rate_limit = "CREATE TABLE IF NOT EXISTS {$this->rate_limit_table} (
+        // IMPORTANT: No "IF NOT EXISTS" so dbDelta can ALTER existing tables.
+        $sql_rate_limit = "CREATE TABLE {$this->rate_limit_table} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             identifier varchar(255) NOT NULL,
             action_type varchar(100) NOT NULL,
@@ -85,11 +97,11 @@ class AFFCD_Security_Manager {
             KEY is_blocked (is_blocked)
         ) $charset_collate;";
 
-        $sql_security_logs = "CREATE TABLE IF NOT EXISTS {$this->security_logs_table} (
+        $sql_security_logs = "CREATE TABLE {$this->security_logs_table} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             event_type varchar(100) NOT NULL,
             severity enum('low','medium','high','critical') DEFAULT 'medium',
-            source_ip varchar(45) NOT NULL,
+            source_ip varchar(45) NOT NULL DEFAULT '',
             user_id bigint(20) unsigned DEFAULT NULL,
             domain varchar(255),
             user_agent text,
@@ -105,7 +117,7 @@ class AFFCD_Security_Manager {
             KEY created_at (created_at)
         ) $charset_collate;";
 
-        $sql_fraud_detection = "CREATE TABLE IF NOT EXISTS {$this->fraud_detection_table} (
+        $sql_fraud_detection = "CREATE TABLE {$this->fraud_detection_table} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             identifier varchar(255) NOT NULL,
             fraud_type varchar(100) NOT NULL,
@@ -124,7 +136,7 @@ class AFFCD_Security_Manager {
             KEY is_active (is_active)
         ) $charset_collate;";
 
-        $sql_authorized_domains = "CREATE TABLE IF NOT EXISTS {$this->authorized_domains_table} (
+        $sql_authorized_domains = "CREATE TABLE {$this->authorized_domains_table} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             domain varchar(255) NOT NULL,
             domain_hash varchar(64) NOT NULL,
@@ -148,11 +160,58 @@ class AFFCD_Security_Manager {
             KEY created_by (created_by)
         ) $charset_collate;";
 
-        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta($sql_rate_limit);
         dbDelta($sql_security_logs);
         dbDelta($sql_fraud_detection);
         dbDelta($sql_authorized_domains);
+
+        // Bump stored DB version
+        $stored = get_option('affcd_db_version');
+        if ($stored !== $this->db_version) {
+            update_option('affcd_db_version', $this->db_version);
+        }
+    }
+
+    /**
+     * Ensure critical columns/indexes exist even if an older install missed them.
+     */
+    private function ensure_security_logs_columns() {
+        global $wpdb;
+        $table = $this->security_logs_table;
+
+        if (!$this->column_exists($table, 'source_ip')) {
+            // Add column + index safely
+            $wpdb->query("ALTER TABLE {$table} ADD COLUMN source_ip VARCHAR(45) NOT NULL DEFAULT '' AFTER severity");
+            $wpdb->query("ALTER TABLE {$table} ADD INDEX idx_source_ip (source_ip)");
+        }
+    }
+
+    /**
+     * Cheap column existence check with small cache
+     */
+    private function column_exists($table, $column) {
+        static $cache = [];
+        $key = strtolower($table);
+        if (!isset($cache[$key])) {
+            global $wpdb;
+            $cols = $wpdb->get_col("SHOW COLUMNS FROM `{$table}`", 0);
+            $cache[$key] = array_map('strtolower', (array) $cols);
+        }
+        return in_array(strtolower($column), $cache[$key], true);
+    }
+
+    /**
+     * Get and cache full column list for a table
+     */
+    private function get_table_columns($table) {
+        static $cache = [];
+        $key = strtolower($table);
+        if (!isset($cache[$key])) {
+            global $wpdb;
+            $cache[$key] = array_map('strtolower', (array) $wpdb->get_col("SHOW COLUMNS FROM `{$table}`", 0));
+        }
+        return $cache[$key];
     }
 
     /* 
@@ -529,31 +588,37 @@ class AFFCD_Security_Manager {
     }
 
     /**
-     * Log security event
+     * Log security event (defensive: intersect with actual columns so deploys don't 500)
      */
     public function log_security_event($event_type, $severity, $event_data = [], $context = []) {
         global $wpdb;
-        
-        $source_ip = $this->get_client_ip();
-        $user_id   = get_current_user_id() ?: null;
-        $domain    = $this->get_current_domain();
+
+        $source_ip  = $this->get_client_ip();
+        $user_id    = get_current_user_id() ?: null;
+        $domain     = $this->get_current_domain();
         $user_agent = $_SERVER['HTTP_USER_AGENT'] ?? '';
-        
-        $wpdb->insert(
-            $this->security_logs_table,
-            [
-                'event_type'   => $event_type,
-                'severity'     => $severity,
-                'source_ip'    => $source_ip,
-                'user_id'      => $user_id,
-                'domain'       => $domain,
-                'user_agent'   => $user_agent,
-                'event_data'   => wp_json_encode($event_data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
-                'context_data' => wp_json_encode($context, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
-            ],
-            ['%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s']
-        );
-        
+
+        $columns = $this->get_table_columns($this->security_logs_table);
+
+        $data = array_intersect_key([
+            'event_type'   => $event_type,
+            'severity'     => $severity,
+            'source_ip'    => $source_ip,
+            'user_id'      => $user_id,
+            'domain'       => $domain,
+            'user_agent'   => $user_agent,
+            'event_data'   => wp_json_encode($event_data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+            'context_data' => wp_json_encode($context, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+        ], array_flip($columns));
+
+        // Build formats dynamically
+        $formats = [];
+        foreach ($data as $k => $v) {
+            $formats[] = ($k === 'user_id') ? '%d' : '%s';
+        }
+
+        $wpdb->insert($this->security_logs_table, $data, $formats);
+
         // Real-time alerting for critical events
         if ($severity === 'critical') {
             $this->send_critical_alert($event_type, $event_data);
@@ -701,33 +766,31 @@ class AFFCD_Security_Manager {
     }
 
     /**
-     * Get client IP
+     * Get client IP (handles Cloudflare/CDN first, then proxies)
      */
     public function get_client_ip() {
-        $ip_headers = [
+        $headers = [
+            'HTTP_CF_CONNECTING_IP', // Cloudflare
             'HTTP_X_FORWARDED_FOR',
             'HTTP_X_REAL_IP',
             'HTTP_CLIENT_IP',
             'REMOTE_ADDR'
         ];
         
-        foreach ($ip_headers as $header) {
+        foreach ($headers as $header) {
             if (!empty($_SERVER[$header])) {
                 $ip = $_SERVER[$header];
-                
                 // Handle comma-separated IPs
                 if (strpos($ip, ',') !== false) {
                     $ip = trim(explode(',', $ip)[0]);
                 }
-                
-                // Validate IP
-                if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+                if (filter_var($ip, FILTER_VALIDATE_IP)) {
                     return $ip;
                 }
             }
         }
         
-        return $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+        return '127.0.0.1';
     }
 
     /**
@@ -735,10 +798,10 @@ class AFFCD_Security_Manager {
      */
     private function clean_domain($domain) {
         // Remove protocol
-        $domain = preg_replace('#^https?://#i', '', $domain);
+        $domain = preg_replace('#^https?://#i', '', (string) $domain);
         
         // Remove www
-        $domain = preg_replace('#^www\.#i', '', $domain);
+        $domain = preg_replace('#^www\\.#i', '', $domain);
         
         // Remove trailing slash and path
         $domain = strtok($domain, '/');
@@ -1006,26 +1069,31 @@ class AFFCD_Security_Manager {
      */
     public function analyze_fraud_patterns() {
         global $wpdb;
-        
-        // Analyze IP patterns
-        $suspicious_ips = $wpdb->get_results(
-            "SELECT source_ip, COUNT(*) as event_count, 
-                    COUNT(DISTINCT event_type) as event_types
-             FROM {$this->security_logs_table} 
-             WHERE created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
-               AND severity IN ('medium', 'high', 'critical')
-             GROUP BY source_ip 
-             HAVING event_count > 10 OR event_types > 3
-             ORDER BY event_count DESC",
-            ARRAY_A
-        );
-        
-        foreach ($suspicious_ips as $ip_data) {
-            $this->check_fraud_patterns($ip_data['source_ip'], 'suspicious_ip', [
-                'event_count' => $ip_data['event_count'],
-                'event_types' => $ip_data['event_types'],
-                'velocity'    => $ip_data['event_count'] / 24 // events per hour
-            ]);
+
+        $cols = $this->get_table_columns($this->security_logs_table);
+
+        // Analyze IP patterns (only if source_ip exists)
+        $suspicious_ips = [];
+        if (in_array('source_ip', $cols, true)) {
+            $suspicious_ips = $wpdb->get_results(
+                "SELECT source_ip, COUNT(*) as event_count, 
+                        COUNT(DISTINCT event_type) as event_types
+                 FROM {$this->security_logs_table} 
+                 WHERE created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+                   AND severity IN ('medium', 'high', 'critical')
+                 GROUP BY source_ip 
+                 HAVING event_count > 10 OR event_types > 3
+                 ORDER BY event_count DESC",
+                ARRAY_A
+            );
+
+            foreach ($suspicious_ips as $ip_data) {
+                $this->check_fraud_patterns($ip_data['source_ip'], 'suspicious_ip', [
+                    'event_count' => $ip_data['event_count'],
+                    'event_types' => $ip_data['event_types'],
+                    'velocity'    => $ip_data['event_count'] / 24 // events per hour
+                ]);
+            }
         }
         
         // Analyze domain patterns
@@ -1048,7 +1116,7 @@ class AFFCD_Security_Manager {
         
         // Log analysis completion
         $this->log_security_event('fraud_analysis_completed', 'low', [
-            'suspicious_ips'     => count($suspicious_ips),
+            'suspicious_ips'     => is_array($suspicious_ips) ? count($suspicious_ips) : 0,
             'suspicious_domains' => count($suspicious_domains)
         ]);
     }
@@ -1290,7 +1358,7 @@ class AFFCD_Security_Manager {
                 $log['id'],
                 $log['event_type'],
                 $log['severity'],
-                $log['source_ip'],
+                $log['source_ip'] ?? '',
                 $log['user_id'],
                 $log['domain'],
                 $log['user_agent'],

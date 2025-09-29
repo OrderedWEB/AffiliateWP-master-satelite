@@ -1,74 +1,77 @@
-[2025-09-24 11:46:05] STEP: FILE_LOAD | MESSAGE: Plugin file loaded | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: PLUGIN_INIT | MESSAGE: About to initialize plugin | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: FINAL_INIT | MESSAGE: Calling plugin initialization | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: PLUGIN_FUNCTION | MESSAGE: Plugin function called | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_1 | MESSAGE: Instance method called | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_2 | MESSAGE: Creating new instance | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_3 | MESSAGE: Constructor started | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_4 | MESSAGE: Starting hook registration | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_5 | MESSAGE: Activation hook registered | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_6 | MESSAGE: Deactivation hook registered | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_7 | MESSAGE: Uninstall hook registered | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_8 | MESSAGE: Textdomain hook registered | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_9 | MESSAGE: Init hook registered | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_10 | MESSAGE: REST API hook registered | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_11 | MESSAGE: AJAX test connection hook registered | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_12 | MESSAGE: AJAX validate code hook registered | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_13 | MESSAGE: Registering admin hooks | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_14 | MESSAGE: Admin init hook registered | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_15 | MESSAGE: Admin notices hook registered | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_16 | MESSAGE: Plugin action links filter registered | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_17 | MESSAGE: Cleanup expired codes hook registered | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_18 | MESSAGE: Cleanup analytics hook registered | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_19 | MESSAGE: All hooks registered successfully | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_20 | MESSAGE: Hooks initialized | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_21 | MESSAGE: Starting file includes | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_22 | MESSAGE: Including: includes/functions.php | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_23 | MESSAGE: Successfully included: includes/functions.php | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_24 | MESSAGE: Including: includes/class-database-manager.php | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_25 | MESSAGE: Successfully included: includes/class-database-manager.php | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_26 | MESSAGE: Including: includes/class-security-validator.php | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_27 | MESSAGE: Successfully included: includes/class-security-validator.php | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_28 | MESSAGE: Including: includes/class-rate-limiter.php | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_29 | MESSAGE: Successfully included: includes/class-rate-limiter.php | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_30 | MESSAGE: Including: includes/class-api-endpoints.php | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_31 | MESSAGE: Successfully included: includes/class-api-endpoints.php | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_32 | MESSAGE: Including: includes/class-vanity-code-manager.php | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_33 | MESSAGE: Successfully included: includes/class-vanity-code-manager.php | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_34 | MESSAGE: Including: includes/class-webhook-manager.php | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_35 | MESSAGE: Successfully included: includes/class-webhook-manager.php | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_36 | MESSAGE: Including: includes/class-webhook-handler.php | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_37 | MESSAGE: Successfully included: includes/class-webhook-handler.php | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_38 | MESSAGE: Including admin files | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_39 | MESSAGE: Including admin file: admin/class-admin-menu.php | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_40 | MESSAGE: Successfully included admin file: admin/class-admin-menu.php | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_41 | MESSAGE: Including admin file: admin/class-domain-manager.php | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_42 | MESSAGE: Successfully included admin file: admin/class-domain-manager.php | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_43 | MESSAGE: Including admin file: admin/class-bulk-operations.php | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_44 | MESSAGE: Successfully included admin file: admin/class-bulk-operations.php | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_45 | MESSAGE: Including admin file: admin/domain-management.php | MEMORY: 40 MB | PEAK: 40 MB
-[2025-09-24 11:46:05] STEP: STEP_46 | MESSAGE: Successfully included admin file: admin/domain-management.php | MEMORY: 42 MB | PEAK: 42 MB
-[2025-09-24 11:46:05] STEP: STEP_47 | MESSAGE: All includes completed | MEMORY: 42 MB | PEAK: 42 MB
-[2025-09-24 11:46:05] STEP: STEP_48 | MESSAGE: Files included | MEMORY: 42 MB | PEAK: 42 MB
-[2025-09-24 11:46:05] STEP: STEP_49 | MESSAGE: Starting component initialization | MEMORY: 42 MB | PEAK: 42 MB
-[2025-09-24 11:46:05] STEP: STEP_50 | MESSAGE: Creating database manager | MEMORY: 42 MB | PEAK: 42 MB
-[2025-09-24 11:46:05] STEP: STEP_51 | MESSAGE: Database manager created | MEMORY: 42 MB | PEAK: 42 MB
-[2025-09-24 11:46:05] STEP: STEP_52 | MESSAGE: Creating security validator | MEMORY: 42 MB | PEAK: 42 MB
-[2025-09-24 11:46:05] STEP: STEP_53 | MESSAGE: Security validator created | MEMORY: 42 MB | PEAK: 42 MB
-[2025-09-24 11:46:05] STEP: STEP_54 | MESSAGE: Creating rate limiter | MEMORY: 42 MB | PEAK: 42 MB
-[2025-09-24 11:46:05] STEP: STEP_55 | MESSAGE: Rate limiter created | MEMORY: 42 MB | PEAK: 42 MB
-[2025-09-24 11:46:05] STEP: STEP_56 | MESSAGE: Creating vanity code manager | MEMORY: 42 MB | PEAK: 42 MB
-[2025-09-24 11:46:05] STEP: STEP_57 | MESSAGE: Vanity code manager created | MEMORY: 42 MB | PEAK: 42 MB
-[2025-09-24 11:46:05] STEP: STEP_58 | MESSAGE: Creating webhook manager | MEMORY: 42 MB | PEAK: 42 MB
-[2025-09-24 11:46:05] STEP: STEP_59 | MESSAGE: Webhook manager created | MEMORY: 42 MB | PEAK: 42 MB
-[2025-09-24 11:46:05] STEP: STEP_60 | MESSAGE: Creating webhook handler | MEMORY: 42 MB | PEAK: 42 MB
-[2025-09-24 11:46:05] STEP: STEP_61 | MESSAGE: Webhook handler created | MEMORY: 42 MB | PEAK: 42 MB
-[2025-09-24 11:46:05] STEP: STEP_62 | MESSAGE: Creating API endpoints | MEMORY: 42 MB | PEAK: 42 MB
-[2025-09-24 11:46:05] STEP: STEP_63 | MESSAGE: API endpoints created | MEMORY: 42 MB | PEAK: 42 MB
-[2025-09-24 11:46:05] STEP: STEP_64 | MESSAGE: SKIPPING admin components creation for now | MEMORY: 42 MB | PEAK: 42 MB
-[2025-09-24 11:46:05] STEP: STEP_65 | MESSAGE: Admin components SKIPPED - set to null | MEMORY: 42 MB | PEAK: 42 MB
-[2025-09-24 11:46:05] STEP: STEP_66 | MESSAGE: Component initialization completed | MEMORY: 42 MB | PEAK: 42 MB
-[2025-09-24 11:46:05] STEP: STEP_67 | MESSAGE: Components initialized | MEMORY: 42 MB | PEAK: 42 MB
-[2025-09-24 11:46:05] STEP: STEP_68 | MESSAGE: Constructor completed | MEMORY: 42 MB | PEAK: 42 MB
-[2025-09-24 11:46:05] STEP: STEP_69 | MESSAGE: Instance created successfully | MEMORY: 42 MB | PEAK: 42 MB
-[2025-09-24 11:46:05] STEP: FINAL_COMPLETE | MESSAGE: Plugin initialization completed | MEMORY: 42 MB | PEAK: 42 MB
+[2025-09-29 07:06:38] STEP: FILE_LOAD | MESSAGE: Plugin file loaded | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: PLUGIN_INIT | MESSAGE: About to initialize plugin | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: FINAL_INIT | MESSAGE: Calling plugin initialization | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: PLUGIN_FUNCTION | MESSAGE: Plugin function called | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_1 | MESSAGE: Instance method called | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_2 | MESSAGE: Creating new instance | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_3 | MESSAGE: Constructor started | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_4 | MESSAGE: Starting hook registration | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_5 | MESSAGE: Activation hook registered | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_6 | MESSAGE: Deactivation hook registered | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_7 | MESSAGE: Uninstall hook registered | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_8 | MESSAGE: Textdomain hook registered | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_9 | MESSAGE: Init hook registered | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_10 | MESSAGE: REST API hook registered | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_11 | MESSAGE: Legacy AJAX test connection hook registered | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_12 | MESSAGE: Legacy AJAX validate code hook registered | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_13 | MESSAGE: Registering admin hooks | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_14 | MESSAGE: Admin init hook registered | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_15 | MESSAGE: Admin notices hook registered | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_16 | MESSAGE: Plugin action links filter registered | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_17 | MESSAGE: Cleanup expired codes hook registered | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_18 | MESSAGE: Cleanup analytics hook registered | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_19 | MESSAGE: All hooks registered successfully | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_20 | MESSAGE: Hooks initialized | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_21 | MESSAGE: Starting file includes | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_22 | MESSAGE: Including: includes/functions.php | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_23 | MESSAGE: Successfully included: includes/functions.php | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_24 | MESSAGE: Including: includes/class-database-manager.php | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_25 | MESSAGE: Successfully included: includes/class-database-manager.php | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_26 | MESSAGE: Including: includes/class-security-validator.php | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_27 | MESSAGE: Successfully included: includes/class-security-validator.php | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_28 | MESSAGE: Including: includes/class-rate-limiter.php | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_29 | MESSAGE: Successfully included: includes/class-rate-limiter.php | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_30 | MESSAGE: Including: includes/class-api-endpoints.php | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_31 | MESSAGE: Successfully included: includes/class-api-endpoints.php | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_32 | MESSAGE: Including: includes/class-vanity-code-manager.php | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_33 | MESSAGE: Successfully included: includes/class-vanity-code-manager.php | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_34 | MESSAGE: Including: includes/class-webhook-manager.php | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_35 | MESSAGE: Successfully included: includes/class-webhook-manager.php | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_36 | MESSAGE: Including: includes/class-webhook-handler.php | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_37 | MESSAGE: Successfully included: includes/class-webhook-handler.php | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_38 | MESSAGE: Including: includes/class-plugin-manager.php | MEMORY: 60 MB | PEAK: 60 MB
+[2025-09-29 07:06:38] STEP: STEP_39 | MESSAGE: Successfully included: includes/class-plugin-manager.php | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: STEP_40 | MESSAGE: Including: includes/class-affiliate-link-health-monitor.php | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: STEP_41 | MESSAGE: Successfully included: includes/class-affiliate-link-health-monitor.php | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: STEP_42 | MESSAGE: Including: includes/class-affiliate-portal-enhancement.php | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: STEP_43 | MESSAGE: Successfully included: includes/class-affiliate-portal-enhancement.php | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: STEP_44 | MESSAGE: Including: includes/class-enhanced-commission-calculator.php | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: STEP_45 | MESSAGE: Successfully included: includes/class-enhanced-commission-calculator.php | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: STEP_46 | MESSAGE: Including: includes/class-enhanced-role-management.php | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: STEP_47 | MESSAGE: Successfully included: includes/class-enhanced-role-management.php | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: STEP_48 | MESSAGE: Including: includes/class-satellite-data-backflow-manager.php | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: STEP_49 | MESSAGE: Successfully included: includes/class-satellite-data-backflow-manager.php | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: MISSING_FILE | MESSAGE: File not found: includes/class-ajax-handlers.php | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: STEP_50 | MESSAGE: Including admin files | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: STEP_51 | MESSAGE: Including admin file: includes/class-admin-menu.php | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: STEP_52 | MESSAGE: Successfully included admin file: includes/class-admin-menu.php | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: STEP_53 | MESSAGE: Including admin file: admin/class-domain-manager.php | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: STEP_54 | MESSAGE: Successfully included admin file: admin/class-domain-manager.php | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: STEP_55 | MESSAGE: Including admin file: admin/class-bulk-operations.php | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: STEP_56 | MESSAGE: Successfully included admin file: admin/class-bulk-operations.php | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: STEP_57 | MESSAGE: Including admin file: admin/domain-management.php | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: STEP_58 | MESSAGE: Successfully included admin file: admin/domain-management.php | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: STEP_59 | MESSAGE: All includes completed | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: STEP_60 | MESSAGE: Files included | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: STEP_61 | MESSAGE: Starting component initialization | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: STEP_62 | MESSAGE: Getting database manager instance | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: DB_MANAGER_CREATE | MESSAGE: Creating new database manager instance | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: STEP_63 | MESSAGE: Database manager ready | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: STEP_64 | MESSAGE: Creating security validator | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: STEP_65 | MESSAGE: Security validator created | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: RATE_LIMITER_CHECK | MESSAGE: Checking rate limiter file: /home/customer/www/affiliates.theitalianbureau.com/public_html/wp-content/plugins/Affiliate Cross Domain Master/includes/class-rate-limiter.php | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: RATE_LIMITER_EXISTS | MESSAGE: File exists: YES | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: RATE_LIMITER_CLASS | MESSAGE: Class exists: NO | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: RATE_LIMITER_MANUAL_LOAD | MESSAGE: Manually requiring rate limiter file | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: RATE_LIMITER_FINAL_CHECK | MESSAGE: Class exists after manual load: NO | MEMORY: 62 MB | PEAK: 62 MB
+[2025-09-29 07:06:38] STEP: STEP_66 | MESSAGE: Creating rate limiter | MEMORY: 62 MB | PEAK: 62 MB

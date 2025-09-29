@@ -28,9 +28,9 @@
   },
   "require": {
     "php": ">=7.4",
-    "ext-curl": "*",
     "ext-json": "*",
-    "ext-openssl": "*"
+    "ext-openssl": "*",
+    "composer/installers": "^2.2"
   },
   "require-dev": {
     "phpunit/phpunit": "^9.5",
@@ -45,10 +45,9 @@
     "monolog/monolog": "Enhanced logging capabilities"
   },
   "autoload": {
-    "psr-4": {
-      "AffiliateClientIntegration\\": "includes/",
-      "ACI\\": "includes/"
-    },
+    "classmap": [
+      "includes/"
+    ],
     "files": [
       "includes/functions.php"
     ]
