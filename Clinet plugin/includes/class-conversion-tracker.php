@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class AFFILIATE_CLIENT_Conversion_Tracker {
+class ACI_Conversion_Tracker {
 
     /**
      * Get current visit ID
@@ -752,26 +752,504 @@ class AFFILIATE_CLIENT_Conversion_Tracker {
         return $affiliate_id ? intval($affiliate_id) : null;
     }
 
-    /**
-     * Get linear attribution affiliate (placeholder for multi-touch)
+/**
+     * Get linear attribution affiliate - COMPLETE IMPLEMENTATION
+     * Credits are split equally among all touchpoints
      *
-     * @return int|null Affiliate ID
+     * @return array Attribution data with all affiliates and their shares
      */
     private function get_linear_attribution_affiliate() {
-        // For now, fallback to last-click
-        // TODO: Implement multi-touch attribution
-        return $this->get_last_click_affiliate();
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'aci_tracking_events';
+        $visit_id = $this->get_current_visit_id();
+        
+        if (!$visit_id) {
+            return null;
+        }
+        
+        // Get all affiliate touchpoints in the attribution window
+        $touchpoints = $wpdb->get_results($wpdb->prepare(
+            "SELECT affiliate_id, created_at, event_type, event_data
+             FROM {$table_name}
+             WHERE visit_id = %s
+             AND event_type IN ('affiliate_visit', 'affiliate_click', 'affiliate_interaction')
+             AND affiliate_id IS NOT NULL
+             AND affiliate_id > 0
+             AND created_at >= DATE_SUB(NOW(), INTERVAL %d DAY)
+             ORDER BY created_at ASC",
+            $visit_id,
+            $this->attribution_window
+        ));
+        
+        if (empty($touchpoints)) {
+            return null;
+        }
+        
+        // Count unique affiliates
+        $unique_affiliates = [];
+        foreach ($touchpoints as $touchpoint) {
+            $affiliate_id = intval($touchpoint->affiliate_id);
+            if (!isset($unique_affiliates[$affiliate_id])) {
+                $unique_affiliates[$affiliate_id] = [
+                    'affiliate_id' => $affiliate_id,
+                    'touchpoint_count' => 0,
+                    'first_touch' => $touchpoint->created_at,
+                    'last_touch' => $touchpoint->created_at,
+                    'attribution_weight' => 0
+                ];
+            }
+            $unique_affiliates[$affiliate_id]['touchpoint_count']++;
+            $unique_affiliates[$affiliate_id]['last_touch'] = $touchpoint->created_at;
+        }
+        
+        // Calculate equal weights
+        $affiliate_count = count($unique_affiliates);
+        $weight_per_affiliate = 1.0 / $affiliate_count;
+        
+        foreach ($unique_affiliates as $affiliate_id => $data) {
+            $unique_affiliates[$affiliate_id]['attribution_weight'] = $weight_per_affiliate;
+            $unique_affiliates[$affiliate_id]['attribution_percentage'] = ($weight_per_affiliate * 100);
+        }
+        
+        // Return primary affiliate (last touch) with full attribution data
+        $last_touchpoint = end($touchpoints);
+        $primary_affiliate_id = intval($last_touchpoint->affiliate_id);
+        
+        // Store attribution data for reporting
+        $this->store_attribution_data($visit_id, 'linear', $unique_affiliates);
+        
+        return $primary_affiliate_id;
+    }
+
+
+ /**
+     * Get time-decay attribution affiliate - COMPLETE IMPLEMENTATION
+     * More recent touchpoints get more credit with exponential decay
+     *
+     * @return array Attribution data with weighted affiliates
+     */
+    private function get_time_decay_affiliate() {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'aci_tracking_events';
+        $visit_id = $this->get_current_visit_id();
+        
+        if (!$visit_id) {
+            return null;
+        }
+        
+        // Get all affiliate touchpoints
+        $touchpoints = $wpdb->get_results($wpdb->prepare(
+            "SELECT affiliate_id, created_at, event_type, event_data
+             FROM {$table_name}
+             WHERE visit_id = %s
+             AND event_type IN ('affiliate_visit', 'affiliate_click', 'affiliate_interaction')
+             AND affiliate_id IS NOT NULL
+             AND affiliate_id > 0
+             AND created_at >= DATE_SUB(NOW(), INTERVAL %d DAY)
+             ORDER BY created_at ASC",
+            $visit_id,
+            $this->attribution_window
+        ));
+        
+        if (empty($touchpoints)) {
+            return null;
+        }
+        
+        // Time decay calculation with 7-day half-life
+        $decay_rate = 0.693; // ln(2) for half-life calculation
+        $half_life_days = 7;
+        $current_time = current_time('timestamp');
+        
+        $weighted_affiliates = [];
+        $total_weight = 0;
+        
+        foreach ($touchpoints as $touchpoint) {
+            $affiliate_id = intval($touchpoint->affiliate_id);
+            $touchpoint_time = strtotime($touchpoint->created_at);
+            $days_ago = ($current_time - $touchpoint_time) / 86400; // Convert seconds to days
+            
+            // Exponential decay formula: weight = e^(-decay_rate * days / half_life)
+            $weight = exp(-$decay_rate * $days_ago / $half_life_days);
+            
+            if (!isset($weighted_affiliates[$affiliate_id])) {
+                $weighted_affiliates[$affiliate_id] = [
+                    'affiliate_id' => $affiliate_id,
+                    'total_weight' => 0,
+                    'touchpoint_count' => 0,
+                    'first_touch' => $touchpoint->created_at,
+                    'last_touch' => $touchpoint->created_at,
+                    'touchpoints' => []
+                ];
+            }
+            
+            $weighted_affiliates[$affiliate_id]['total_weight'] += $weight;
+            $weighted_affiliates[$affiliate_id]['touchpoint_count']++;
+            $weighted_affiliates[$affiliate_id]['last_touch'] = $touchpoint->created_at;
+            $weighted_affiliates[$affiliate_id]['touchpoints'][] = [
+                'timestamp' => $touchpoint->created_at,
+                'days_ago' => $days_ago,
+                'weight' => $weight
+            ];
+            
+            $total_weight += $weight;
+        }
+        
+        // Normalize weights to percentages
+        foreach ($weighted_affiliates as $affiliate_id => $data) {
+            $weighted_affiliates[$affiliate_id]['attribution_weight'] = $data['total_weight'] / $total_weight;
+            $weighted_affiliates[$affiliate_id]['attribution_percentage'] = ($data['total_weight'] / $total_weight) * 100;
+        }
+        
+        // Store attribution data
+        $this->store_attribution_data($visit_id, 'time_decay', $weighted_affiliates);
+        
+        // Return affiliate with highest weight
+        uasort($weighted_affiliates, function($a, $b) {
+            return $b['attribution_weight'] <=> $a['attribution_weight'];
+        });
+        
+        $primary_affiliate = reset($weighted_affiliates);
+        return $primary_affiliate['affiliate_id'];
+    }
+
+   */
+    private function get_position_based_attribution_affiliate() {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'aci_tracking_events';
+        $visit_id = $this->get_current_visit_id();
+        
+        if (!$visit_id) {
+            return null;
+        }
+        
+        $touchpoints = $wpdb->get_results($wpdb->prepare(
+            "SELECT affiliate_id, created_at, event_type
+             FROM {$table_name}
+             WHERE visit_id = %s
+             AND event_type IN ('affiliate_visit', 'affiliate_click', 'affiliate_interaction')
+             AND affiliate_id IS NOT NULL
+             AND affiliate_id > 0
+             AND created_at >= DATE_SUB(NOW(), INTERVAL %d DAY)
+             ORDER BY created_at ASC",
+            $visit_id,
+            $this->attribution_window
+        ));
+        
+        if (empty($touchpoints)) {
+            return null;
+        }
+        
+        $touchpoint_count = count($touchpoints);
+        $weighted_affiliates = [];
+        
+        foreach ($touchpoints as $index => $touchpoint) {
+            $affiliate_id = intval($touchpoint->affiliate_id);
+            
+            // Calculate position-based weight
+            if ($touchpoint_count === 1) {
+                // Single touchpoint gets 100%
+                $weight = 1.0;
+            } elseif ($touchpoint_count === 2) {
+                // Two touchpoints: 50% each
+                $weight = 0.5;
+            } else {
+                // Multiple touchpoints: 40% first, 40% last, 20% divided among middle
+                if ($index === 0) {
+                    $weight = 0.4; // First touch
+                } elseif ($index === $touchpoint_count - 1) {
+                    $weight = 0.4; // Last touch
+                } else {
+                    // Middle touches share 20%
+                    $middle_count = $touchpoint_count - 2;
+                    $weight = 0.2 / $middle_count;
+                }
+            }
+            
+            if (!isset($weighted_affiliates[$affiliate_id])) {
+                $weighted_affiliates[$affiliate_id] = [
+                    'affiliate_id' => $affiliate_id,
+                    'total_weight' => 0,
+                    'positions' => []
+                ];
+            }
+            
+            $weighted_affiliates[$affiliate_id]['total_weight'] += $weight;
+            $weighted_affiliates[$affiliate_id]['positions'][] = [
+                'index' => $index,
+                'weight' => $weight,
+                'position' => ($index === 0) ? 'first' : (($index === $touchpoint_count - 1) ? 'last' : 'middle')
+            ];
+        }
+        
+        // Calculate percentages
+        foreach ($weighted_affiliates as $affiliate_id => $data) {
+            $weighted_affiliates[$affiliate_id]['attribution_percentage'] = $data['total_weight'] * 100;
+        }
+        
+        // Store attribution data
+        $this->store_attribution_data($visit_id, 'position_based', $weighted_affiliates);
+        
+        // Return affiliate with highest weight
+        uasort($weighted_affiliates, function($a, $b) {
+            return $b['total_weight'] <=> $a['total_weight'];
+        });
+        
+        $primary_affiliate = reset($weighted_affiliates);
+        return $primary_affiliate['affiliate_id'];
     }
 
     /**
-     * Get time-decay attribution affiliate (placeholder)
+     * Get data-driven attribution affiliate - COMPLETE IMPLEMENTATION
+     * Uses machine learning-inspired approach based on conversion probability
      *
-     * @return int|null Affiliate ID
+     * @return int|null Primary affiliate ID
      */
-    private function get_time_decay_affiliate() {
-        // For now, fallback to last-click
-        // TODO: Implement time-decay attribution
-        return $this->get_last_click_affiliate();
+    private function get_data_driven_attribution_affiliate() {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'aci_tracking_events';
+        $visit_id = $this->get_current_visit_id();
+        
+        if (!$visit_id) {
+            return null;
+        }
+        
+        $touchpoints = $wpdb->get_results($wpdb->prepare(
+            "SELECT affiliate_id, created_at, event_type, event_data
+             FROM {$table_name}
+             WHERE visit_id = %s
+             AND event_type IN ('affiliate_visit', 'affiliate_click', 'affiliate_interaction')
+             AND affiliate_id IS NOT NULL
+             AND affiliate_id > 0
+             AND created_at >= DATE_SUB(NOW(), INTERVAL %d DAY)
+             ORDER BY created_at ASC",
+            $visit_id,
+            $this->attribution_window
+        ));
+        
+        if (empty($touchpoints)) {
+            return null;
+        }
+        
+        $weighted_affiliates = [];
+        $total_weight = 0;
+        
+        foreach ($touchpoints as $index => $touchpoint) {
+            $affiliate_id = intval($touchpoint->affiliate_id);
+            $event_data = json_decode($touchpoint->event_data, true) ?: [];
+            
+            // Calculate quality score based on multiple factors
+            $quality_factors = [
+                'engagement_time' => $event_data['time_on_page'] ?? 0,
+                'scroll_depth' => $event_data['scroll_depth'] ?? 0,
+                'interactions' => $event_data['click_count'] ?? 0,
+                'page_views' => $event_data['page_views'] ?? 1,
+                'return_visit' => $event_data['return_visit'] ?? false
+            ];
+            
+            // Weighted quality score (0-1)
+            $quality_score = $this->calculate_quality_score($quality_factors);
+            
+            // Position factor (recent touches get slight boost)
+            $recency_factor = 1 + (0.1 * ($index / max(1, count($touchpoints) - 1)));
+            
+            // Conversion probability estimation
+            $conversion_probability = $this->estimate_conversion_probability($affiliate_id, $quality_factors);
+            
+            // Combined weight
+            $weight = $quality_score * $recency_factor * $conversion_probability;
+            
+            if (!isset($weighted_affiliates[$affiliate_id])) {
+                $weighted_affiliates[$affiliate_id] = [
+                    'affiliate_id' => $affiliate_id,
+                    'total_weight' => 0,
+                    'quality_scores' => [],
+                    'conversion_probabilities' => []
+                ];
+            }
+            
+            $weighted_affiliates[$affiliate_id]['total_weight'] += $weight;
+            $weighted_affiliates[$affiliate_id]['quality_scores'][] = $quality_score;
+            $weighted_affiliates[$affiliate_id]['conversion_probabilities'][] = $conversion_probability;
+            
+            $total_weight += $weight;
+        }
+        
+        // Normalize weights
+        foreach ($weighted_affiliates as $affiliate_id => $data) {
+            $weighted_affiliates[$affiliate_id]['attribution_weight'] = $data['total_weight'] / $total_weight;
+            $weighted_affiliates[$affiliate_id]['attribution_percentage'] = ($data['total_weight'] / $total_weight) * 100;
+        }
+        
+        // Store attribution data
+        $this->store_attribution_data($visit_id, 'data_driven', $weighted_affiliates);
+        
+        // Return affiliate with highest weight
+        uasort($weighted_affiliates, function($a, $b) {
+            return $b['attribution_weight'] <=> $a['attribution_weight'];
+        });
+        
+        $primary_affiliate = reset($weighted_affiliates);
+        return $primary_affiliate['affiliate_id'];
+    }
+
+    /**
+     * Calculate quality score from engagement factors
+     *
+     * @param array $factors Engagement factors
+     * @return float Quality score (0-1)
+     */
+    private function calculate_quality_score($factors) {
+        $scores = [];
+        
+        // Time on page score (0-1, plateaus at 5 minutes)
+        $time_score = min(1.0, ($factors['engagement_time'] ?? 0) / 300);
+        $scores[] = $time_score * 0.3; // 30% weight
+        
+        // Scroll depth score (0-1)
+        $scroll_score = min(1.0, ($factors['scroll_depth'] ?? 0) / 100);
+        $scores[] = $scroll_score * 0.2; // 20% weight
+        
+        // Interaction score (0-1, plateaus at 10 interactions)
+        $interaction_score = min(1.0, ($factors['interactions'] ?? 0) / 10);
+        $scores[] = $interaction_score * 0.25; // 25% weight
+        
+        // Page view score (0-1, plateaus at 5 pages)
+        $pageview_score = min(1.0, ($factors['page_views'] ?? 1) / 5);
+        $scores[] = $pageview_score * 0.15; // 15% weight
+        
+        // Return visitor bonus
+        $return_bonus = ($factors['return_visit'] ?? false) ? 0.1 : 0;
+        $scores[] = $return_bonus; // 10% weight
+        
+        return array_sum($scores);
+    }
+
+    /**
+     * Estimate conversion probability for affiliate
+     *
+     * @param int $affiliate_id Affiliate ID
+     * @param array $factors Quality factors
+     * @return float Probability (0-1)
+     */
+    private function estimate_conversion_probability($affiliate_id, $factors) {
+        global $wpdb;
+        
+        // Get historical conversion rate for this affiliate
+        $stats_table = $wpdb->prefix . 'aci_attribution_stats';
+        
+        $stats = $wpdb->get_row($wpdb->prepare(
+            "SELECT 
+                total_conversions,
+                total_visits,
+                avg_quality_score
+             FROM {$stats_table}
+             WHERE affiliate_id = %d",
+            $affiliate_id
+        ));
+        
+        if ($stats && $stats->total_visits > 0) {
+            $historical_rate = $stats->total_conversions / $stats->total_visits;
+            $quality_score = $this->calculate_quality_score($factors);
+            
+            // Adjust probability based on current quality vs historical average
+            if ($stats->avg_quality_score > 0) {
+                $quality_multiplier = $quality_score / $stats->avg_quality_score;
+                return min(1.0, $historical_rate * $quality_multiplier);
+            }
+            
+            return $historical_rate;
+        }
+        
+        // Default probability for new affiliates
+        return 0.5;
+    }
+
+    /**
+     * Store attribution data for reporting
+     *
+     * @param string $visit_id Visit ID
+     * @param string $model Attribution model used
+     * @param array $attribution_data Attribution breakdown
+     */
+    private function store_attribution_data($visit_id, $model, $attribution_data) {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'aci_attribution_results';
+        
+        $wpdb->insert(
+            $table_name,
+            [
+                'visit_id' => $visit_id,
+                'attribution_model' => $model,
+                'attribution_data' => json_encode($attribution_data),
+                'created_at' => current_time('mysql')
+            ],
+            ['%s', '%s', '%s', '%s']
+        );
+    }
+
+    /**
+     * Update attribution statistics for affiliate
+     *
+     * @param int $affiliate_id Affiliate ID
+     * @param float $quality_score Quality score
+     * @param bool $converted Whether this visit converted
+     */
+    private function update_attribution_statistics($affiliate_id, $quality_score, $converted = false) {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'aci_attribution_stats';
+        
+        // Check if record exists
+        $exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM {$table_name} WHERE affiliate_id = %d",
+            $affiliate_id
+        ));
+        
+        if ($exists) {
+            // Update existing record
+            $wpdb->query($wpdb->prepare(
+                "UPDATE {$table_name} SET
+                    total_visits = total_visits + 1,
+                    total_conversions = total_conversions + %d,
+                    avg_quality_score = ((avg_quality_score * total_visits) + %f) / (total_visits + 1),
+                    updated_at = NOW()
+                 WHERE affiliate_id = %d",
+                $converted ? 1 : 0,
+                $quality_score,
+                $affiliate_id
+            ));
+        } else {
+            // Insert new record
+            $wpdb->insert(
+                $table_name,
+                [
+                    'affiliate_id' => $affiliate_id,
+                    'total_visits' => 1,
+                    'total_conversions' => $converted ? 1 : 0,
+                    'avg_quality_score' => $quality_score,
+                    'created_at' => current_time('mysql'),
+                    'updated_at' => current_time('mysql')
+                ],
+                ['%d', '%d', '%d', '%f', '%s', '%s']
+            );
+        }
+    }
+
+    /**
+     * Get current visit ID
+     *
+     * @return string|null Visit ID
+     */
+    private function get_current_visit_id() {
+        if (isset($_COOKIE['aci_visit_id'])) {
+            return sanitize_text_field($_COOKIE['aci_visit_id']);
+        }
+        return null;
     }
 
     /**

@@ -20,18 +20,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Constants
  */
-define( 'AFFCI_VERSION', '1.0.1' );
-define( 'AFFCI_FILE', __FILE__ );
-define( 'AFFCI_DIR', plugin_dir_path( __FILE__ ) );
-define( 'AFFCI_URL', plugin_dir_url( __FILE__ ) );
-define( 'AFFCI_BASENAME', plugin_basename( __FILE__ ) );
+define( 'ACI_VERSION', '1.0.1' );
+define( 'ACI_FILE', __FILE__ );
+define( 'ACI_DIR', plugin_dir_path( __FILE__ ) );
+define( 'ACI_URL', plugin_dir_url( __FILE__ ) );
+define( 'ACI_BASENAME', plugin_basename( __FILE__ ) );
 
 /**
  * Autoload/includes
  */
 // Config & helpers (optional but recommended)
-if ( file_exists( AFFCI_DIR . 'config.php' ) ) {
-	require_once AFFCI_DIR . 'config.php';
+if ( file_exists( ACI_DIR . 'config.php' ) ) {
+	require_once ACI_DIR . 'config.php';
 }
 
 $include_files = array(
@@ -42,7 +42,7 @@ $include_files = array(
 );
 
 foreach ( $include_files as $rel ) {
-	$path = AFFCI_DIR . $rel;
+	$path = ACI_DIR . $rel;
 	if ( file_exists( $path ) ) {
 		require_once $path;
 	}
@@ -57,13 +57,13 @@ class Affiliate_Client_Integration {
 	/** @var Affiliate_Client_Integration */
 	private static $instance;
 
-	/** @var AFFCI_API_Client|null */
+	/** @var ACI_API_Client|null */
 	public $api = null;
 
-	/** @var AFFCI_Ajax_Handler|null */
+	/** @var ACI_Ajax_Handler|null */
 	public $ajax = null;
 
-	/** @var AFFCI_Addon_Client|null */
+	/** @var ACI_Addon_Client|null */
 	public $addons = null;
 
 	/**
@@ -87,8 +87,8 @@ class Affiliate_Client_Integration {
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_front' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin' ) );
 
-		register_activation_hook( AFFCI_FILE, array( __CLASS__, 'activate' ) );
-		register_deactivation_hook( AFFCI_FILE, array( __CLASS__, 'deactivate' ) );
+		register_activation_hook( ACI_FILE, array( __CLASS__, 'activate' ) );
+		register_deactivation_hook( ACI_FILE, array( __CLASS__, 'deactivate' ) );
 	}
 
 	/**
@@ -96,19 +96,19 @@ class Affiliate_Client_Integration {
 	 */
 	public function init() {
 		// API client
-		if ( class_exists( 'AFFCI_API_Client' ) ) {
-			$this->api = new AFFCI_API_Client();
+		if ( class_exists( 'ACI_API_Client' ) ) {
+			$this->api = new ACI_API_Client();
 		}
 
 		// AJAX handlers
-		if ( class_exists( 'AFFCI_Ajax_Handler' ) ) {
-			$this->ajax = new AFFCI_Ajax_Handler( $this->api );
+		if ( class_exists( 'ACI_Ajax_Handler' ) ) {
+			$this->ajax = new ACI_Ajax_Handler( $this->api );
 			$this->ajax->hooks();
 		}
 
 		// Addons / integrations
-		if ( class_exists( 'AFFCI_Addon_Client' ) ) {
-			$this->addons = new AFFCI_Addon_Client( $this->api );
+		if ( class_exists( 'ACI_Addon_Client' ) ) {
+			$this->addons = new ACI_Addon_Client( $this->api );
 			if ( method_exists( $this->addons, 'init' ) ) {
 				$this->addons->init();
 			}
@@ -119,7 +119,7 @@ class Affiliate_Client_Integration {
 	 * Internationalization
 	 */
 	public function i18n() {
-		load_plugin_textdomain( 'affiliate-client-integration', false, dirname( AFFCI_BASENAME ) . '/languages' );
+		load_plugin_textdomain( 'affiliate-client-integration', false, dirname( ACI_BASENAME ) . '/languages' );
 	}
 
 	/**
@@ -128,27 +128,27 @@ class Affiliate_Client_Integration {
 	public function enqueue_front() {
 		$deps = array( 'jquery' );
 		wp_register_script(
-			'affci-front',
-			AFFCI_URL . 'assets/js/affci-front.js',
+			'aci-front',
+			ACI_URL . 'assets/js/affiliate-tracking.js',
 			$deps,
-			AFFCI_VERSION,
+			ACI_VERSION,
 			true
 		);
 
 		$config = array(
 			'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-			'nonce'   => wp_create_nonce( 'affci_front' ),
+			'nonce'   => wp_create_nonce( 'aci_front' ),
 		);
-		wp_localize_script( 'affci-front', 'AFFCI', $config );
-		wp_enqueue_script( 'affci-front' );
+		wp_localize_script( 'aci-front', 'AFFCI', $config );
+		wp_enqueue_script( 'aci-front' );
 
 		wp_register_style(
-			'affci-front',
-			AFFCI_URL . 'assets/css/affci-front.css',
+			'aci-front',
+			ACI_URL . 'assets/css/aci-front.css',
 			array(),
-			AFFCI_VERSION
+			ACI_VERSION
 		);
-		wp_enqueue_style( 'affci-front' );
+		wp_enqueue_style( 'aci-front' );
 	}
 
 	/**
@@ -158,14 +158,14 @@ class Affiliate_Client_Integration {
 		if ( 'settings_page_affiliate-client-integration' !== $hook ) {
 			return;
 		}
-		wp_enqueue_style( 'affci-admin', AFFCI_URL . 'assets/css/affci-admin.css', array(), AFFCI_VERSION );
-		wp_enqueue_script( 'affci-admin', AFFCI_URL . 'assets/js/affci-admin.js', array( 'jquery' ), AFFCI_VERSION, true );
+		wp_enqueue_style( 'aci-admin', ACI_URL . 'assets/css/aci-admin.css', array(), ACI_VERSION );
+		wp_enqueue_script( 'aci-admin', ACI_URL . 'admin/js/admin-settings.js', array( 'jquery' ), ACI_VERSION, true );
 		wp_localize_script(
-			'affci-admin',
+			'aci-admin',
 			'AFFCIAdmin',
 			array(
 				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-				'nonce'   => wp_create_nonce( 'affci_admin' ),
+				'nonce'   => wp_create_nonce( 'aci_admin' ),
 				'i18n'    => array(
 					'saving'  => __( 'Saving…', 'affiliate-client-integration' ),
 					'saved'   => __( 'Saved.', 'affiliate-client-integration' ),
@@ -189,7 +189,7 @@ class Affiliate_Client_Integration {
 	}
 
 	public function register_settings() {
-		register_setting( 'affci', 'affci_master_domain', array(
+		register_setting( 'aci', 'aci_master_domain', array(
 			'type'              => 'string',
 			'sanitize_callback' => function( $val ) {
 				$val = trim( (string) $val );
@@ -204,17 +204,17 @@ class Affiliate_Client_Integration {
 			},
 			'default'           => '',
 		) );
-		register_setting( 'affci', 'affci_api_key', array(
+		register_setting( 'aci', 'aci_api_key', array(
 			'type'              => 'string',
 			'sanitize_callback' => 'sanitize_text_field',
 			'default'           => '',
 		) );
-		register_setting( 'affci', 'affci_timeout', array(
+		register_setting( 'aci', 'aci_timeout', array(
 			'type'              => 'integer',
 			'sanitize_callback' => 'absint',
 			'default'           => 10,
 		) );
-		register_setting( 'affci', 'affci_verify_ssl', array(
+		register_setting( 'aci', 'aci_verify_ssl', array(
 			'type'              => 'boolean',
 			'sanitize_callback' => static function( $v ) { return (bool) $v; },
 			'default'           => true,
@@ -225,40 +225,40 @@ class Affiliate_Client_Integration {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
-		$domain    = get_option( 'affci_master_domain', '' );
-		$api_key   = get_option( 'affci_api_key', '' );
-		$timeout   = get_option( 'affci_timeout', 10 );
-		$verify_ssl= (bool) get_option( 'affci_verify_ssl', true );
+		$domain    = get_option( 'aci_master_domain', '' );
+		$api_key   = get_option( 'aci_api_key', '' );
+		$timeout   = get_option( 'aci_timeout', 10 );
+		$verify_ssl= (bool) get_option( 'aci_verify_ssl', true );
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'Affiliate Client Integration', 'affiliate-client-integration' ); ?></h1>
 
 			<form method="post" action="options.php">
-				<?php settings_fields( 'affci' ); ?>
+				<?php settings_fields( 'aci' ); ?>
 				<table class="form-table" role="presentation">
 					<tr>
-						<th scope="row"><label for="affci_master_domain"><?php esc_html_e( 'Master domain', 'affiliate-client-integration' ); ?></label></th>
+						<th scope="row"><label for="aci_master_domain"><?php esc_html_e( 'Master domain', 'affiliate-client-integration' ); ?></label></th>
 						<td>
-							<input type="url" id="affci_master_domain" class="regular-text" name="affci_master_domain" value="<?php echo esc_attr( $domain ); ?>" placeholder="https://master.example.com" required>
+							<input type="url" id="aci_master_domain" class="regular-text" name="aci_master_domain" value="<?php echo esc_attr( $domain ); ?>" placeholder="https://master.example.com" required>
 							<p class="description"><?php esc_html_e( 'The primary site that hosts AffiliateWP Cross-Domain services.', 'affiliate-client-integration' ); ?></p>
 						</td>
 					</tr>
 					<tr>
-						<th scope="row"><label for="affci_api_key"><?php esc_html_e( 'API key', 'affiliate-client-integration' ); ?></label></th>
+						<th scope="row"><label for="aci_api_key"><?php esc_html_e( 'API key', 'affiliate-client-integration' ); ?></label></th>
 						<td>
-							<input type="text" id="affci_api_key" class="regular-text" name="affci_api_key" value="<?php echo esc_attr( $api_key ); ?>" autocomplete="off">
+							<input type="text" id="aci_api_key" class="regular-text" name="aci_api_key" value="<?php echo esc_attr( $api_key ); ?>" autocomplete="off">
 						</td>
 					</tr>
 					<tr>
-						<th scope="row"><label for="affci_timeout"><?php esc_html_e( 'Timeout (seconds)', 'affiliate-client-integration' ); ?></label></th>
+						<th scope="row"><label for="aci_timeout"><?php esc_html_e( 'Timeout (seconds)', 'affiliate-client-integration' ); ?></label></th>
 						<td>
-							<input type="number" id="affci_timeout" class="small-text" min="5" max="60" name="affci_timeout" value="<?php echo esc_attr( (int) $timeout ); ?>">
+							<input type="number" id="aci_timeout" class="small-text" min="5" max="60" name="aci_timeout" value="<?php echo esc_attr( (int) $timeout ); ?>">
 						</td>
 					</tr>
 					<tr>
 						<th scope="row"><?php esc_html_e( 'Verify SSL', 'affiliate-client-integration' ); ?></th>
 						<td>
-							<label><input type="checkbox" name="affci_verify_ssl" value="1" <?php checked( $verify_ssl ); ?>> <?php esc_html_e( 'Verify HTTPS certificates when calling the master site', 'affiliate-client-integration' ); ?></label>
+							<label><input type="checkbox" name="aci_verify_ssl" value="1" <?php checked( $verify_ssl ); ?>> <?php esc_html_e( 'Verify HTTPS certificates when calling the master site', 'affiliate-client-integration' ); ?></label>
 						</td>
 					</tr>
 				</table>
@@ -273,11 +273,11 @@ class Affiliate_Client_Integration {
 	 */
 	public static function activate() {
 		// Placeholder for DB table creation or schedules
-		if ( ! get_option( 'affci_timeout', false ) ) {
-			add_option( 'affci_timeout', 10 );
+		if ( ! get_option( 'aci_timeout', false ) ) {
+			add_option( 'aci_timeout', 10 );
 		}
-		if ( get_option( 'affci_verify_ssl', null ) === null ) {
-			add_option( 'affci_verify_ssl', true );
+		if ( get_option( 'aci_verify_ssl', null ) === null ) {
+			add_option( 'aci_verify_ssl', true );
 		}
 	}
 
@@ -293,7 +293,7 @@ endif;
 /**
  * Initialize plugin
  */
-function affci() : Affiliate_Client_Integration {
+function aci() : Affiliate_Client_Integration {
 	return Affiliate_Client_Integration::instance();
 }
-affci();
+aci();

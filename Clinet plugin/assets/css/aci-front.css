@@ -1,0 +1,691 @@
+/**
+ * ACI Frontend CSS
+ * 
+ * Plugin: Affiliate Client Integration (Satellite)
+ * File: /wp-content/plugins/affiliate-client-integration/assets/css/aci-front.css
+ * Author: Richard King, starneconsulting.com
+ * Email: r.king@starneconsulting.com
+ * 
+ * Main frontend styles for affiliate functionality including forms, notifications,
+ * badges, and interactive elements. Renamed from affci-front.css to aci-front.css.
+ */
+
+/* ==========================================================================
+   CSS Custom Properties
+   ========================================================================== */
+
+:root {
+    --aci-primary: #0073aa;
+    --aci-primary-hover: #005a87;
+    --aci-success: #46b450;
+    --aci-success-hover: #3a9742;
+    --aci-error: #dc3232;
+    --aci-error-hover: #c02a2a;
+    --aci-warning: #ffb900;
+    --aci-info: #00a0d2;
+    --aci-border: #dcdcde;
+    --aci-text: #2c3338;
+    --aci-text-light: #646970;
+    --aci-bg: #ffffff;
+    --aci-bg-light: #f6f7f7;
+    --aci-radius: 6px;
+    --aci-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --aci-transition: all 0.3s ease;
+}
+
+/* ==========================================================================
+   Base Form Styles
+   ========================================================================== */
+
+.aci-affiliate-form,
+.aci-form {
+    background: var(--aci-bg);
+    border: 2px solid var(--aci-border);
+    border-radius: var(--aci-radius);
+    padding: 24px;
+    margin: 20px 0;
+    box-shadow: var(--aci-shadow);
+    transition: var(--aci-transition);
+}
+
+.aci-affiliate-form:hover,
+.aci-form:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.aci-form-title {
+    margin: 0 0 16px;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--aci-text);
+    line-height: 1.3;
+}
+
+.aci-form-description {
+    margin: 0 0 20px;
+    color: var(--aci-text-light);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.aci-form-group {
+    margin-bottom: 16px;
+}
+
+.aci-form-label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--aci-text);
+}
+
+.aci-form-input,
+.aci-code-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid var(--aci-border);
+    border-radius: var(--aci-radius);
+    font-size: 16px;
+    font-family: inherit;
+    transition: var(--aci-transition);
+    background: var(--aci-bg);
+    color: var(--aci-text);
+}
+
+.aci-form-input:focus,
+.aci-code-input:focus {
+    outline: none;
+    border-color: var(--aci-primary);
+    box-shadow: 0 0 0 3px rgba(0, 115, 170, 0.1);
+}
+
+.aci-form-input.valid,
+.aci-code-input.valid {
+    border-color: var(--aci-success);
+    background: #f0f9f1;
+}
+
+.aci-form-input.invalid,
+.aci-code-input.invalid {
+    border-color: var(--aci-error);
+    background: #fff5f5;
+}
+
+.aci-input-feedback {
+    display: none;
+    margin-top: 6px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.aci-input-feedback.success {
+    background: #f0f9f1;
+    color: #2e7d32;
+    border-left: 3px solid var(--aci-success);
+}
+
+.aci-input-feedback.error {
+    background: #fff5f5;
+    color: #c62828;
+    border-left: 3px solid var(--aci-error);
+}
+
+/* ==========================================================================
+   Button Styles
+   ========================================================================== */
+
+.aci-button,
+.aci-form button[type="submit"],
+.aci-affiliate-form button[type="submit"] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: var(--aci-primary);
+    color: #ffffff;
+    border: none;
+    border-radius: var(--aci-radius);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--aci-transition);
+    text-decoration: none;
+    line-height: 1;
+    min-height: 44px;
+}
+
+.aci-button:hover,
+.aci-form button[type="submit"]:hover,
+.aci-affiliate-form button[type="submit"]:hover {
+    background: var(--aci-primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 115, 170, 0.3);
+}
+
+.aci-button:active,
+.aci-form button[type="submit"]:active {
+    transform: translateY(0);
+}
+
+.aci-button.loading,
+.aci-form button[type="submit"].loading {
+    opacity: 0.7;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.aci-button.loading::after {
+    content: "";
+    width: 14px;
+    height: 14px;
+    margin-left: 8px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: aci-spin 0.6s linear infinite;
+}
+
+@keyframes aci-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Button variants */
+.aci-button.aci-button-success {
+    background: var(--aci-success);
+}
+
+.aci-button.aci-button-success:hover {
+    background: var(--aci-success-hover);
+}
+
+.aci-button.aci-button-secondary {
+    background: var(--aci-bg-light);
+    color: var(--aci-text);
+    border: 2px solid var(--aci-border);
+}
+
+.aci-button.aci-button-secondary:hover {
+    background: #ffffff;
+    border-color: var(--aci-primary);
+}
+
+/* ==========================================================================
+   Message Styles
+   ========================================================================== */
+
+.aci-message,
+.aci-validation-message {
+    display: none;
+    padding: 12px 16px;
+    margin-top: 16px;
+    border-radius: var(--aci-radius);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+.aci-message.success,
+.aci-validation-message.success {
+    background: #f0f9f1;
+    color: #2e7d32;
+    border-left: 4px solid var(--aci-success);
+}
+
+.aci-message.error,
+.aci-validation-message.error {
+    background: #fff5f5;
+    color: #c62828;
+    border-left: 4px solid var(--aci-error);
+}
+
+.aci-message.info,
+.aci-validation-message.info {
+    background: #e3f2fd;
+    color: #1565c0;
+    border-left: 4px solid var(--aci-info);
+}
+
+.aci-message.warning,
+.aci-validation-message.warning {
+    background: #fff8e1;
+    color: #f57c00;
+    border-left: 4px solid var(--aci-warning);
+}
+
+/* ==========================================================================
+   Notification Styles
+   ========================================================================== */
+
+.aci-notification {
+    position: fixed;
+    top: 20px;
+    right: -400px;
+    min-width: 320px;
+    max-width: 400px;
+    padding: 16px 20px;
+    background: #ffffff;
+    border-radius: var(--aci-radius);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: right 0.3s ease;
+}
+
+.aci-notification.show {
+    right: 20px;
+}
+
+.aci-notification-icon {
+    font-size: 20px;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.aci-notification-message {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--aci-text);
+}
+
+.aci-notification-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: var(--aci-text-light);
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    transition: var(--aci-transition);
+}
+
+.aci-notification-close:hover {
+    color: var(--aci-text);
+}
+
+.aci-notification.aci-success {
+    border-left: 4px solid var(--aci-success);
+}
+
+.aci-notification.aci-success .aci-notification-icon {
+    color: var(--aci-success);
+}
+
+.aci-notification.aci-error {
+    border-left: 4px solid var(--aci-error);
+}
+
+.aci-notification.aci-error .aci-notification-icon {
+    color: var(--aci-error);
+}
+
+/* ==========================================================================
+   Affiliate Display Elements
+   ========================================================================== */
+
+.aci-affiliate-display {
+    display: none;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #ffffff;
+    border-radius: var(--aci-radius);
+    font-size: 14px;
+    font-weight: 600;
+    margin: 16px 0;
+    text-align: center;
+}
+
+.aci-affiliate-display::before {
+    content: "🎉 ";
+    margin-right: 4px;
+}
+
+.aci-discount-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    background: var(--aci-bg-light);
+    border-radius: var(--aci-radius);
+    margin: 16px 0;
+}
+
+.aci-original-price {
+    text-decoration: line-through;
+    color: var(--aci-text-light);
+    font-size: 16px;
+}
+
+.aci-discounted-price {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--aci-success);
+}
+
+.aci-savings-amount {
+    padding: 6px 12px;
+    background: var(--aci-success);
+    color: #ffffff;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* ==========================================================================
+   Badge Styles
+   ========================================================================== */
+
+.aci-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: var(--aci-primary);
+    color: #ffffff;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.aci-badge.aci-success {
+    background: var(--aci-success);
+}
+
+.aci-badge.aci-error {
+    background: var(--aci-error);
+}
+
+.aci-badge.aci-warning {
+    background: var(--aci-warning);
+    color: var(--aci-text);
+}
+
+/* ==========================================================================
+   Loading States
+   ========================================================================== */
+
+.aci-loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9998;
+}
+
+.aci-spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: aci-spin 0.8s linear infinite;
+}
+
+/* ==========================================================================
+   Popup Container Styles
+   ========================================================================== */
+
+.aci-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 20px;
+}
+
+.aci-popup-content {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 32px;
+    max-width: 500px;
+    width: 100%;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    position: relative;
+    animation: aci-popup-appear 0.3s ease;
+}
+
+@keyframes aci-popup-appear {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.aci-popup-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: var(--aci-text-light);
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: var(--aci-transition);
+}
+
+.aci-popup-close:hover {
+    background: var(--aci-bg-light);
+    color: var(--aci-text);
+}
+
+/* ==========================================================================
+   Link Styles
+   ========================================================================== */
+
+.aci-link {
+    color: var(--aci-primary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: var(--aci-transition);
+}
+
+.aci-link:hover {
+    color: var(--aci-primary-hover);
+    text-decoration: underline;
+}
+
+/* ==========================================================================
+   Utility Classes
+   ========================================================================== */
+
+.aci-text-center {
+    text-align: center;
+}
+
+.aci-text-right {
+    text-align: right;
+}
+
+.aci-mt-0 {
+    margin-top: 0;
+}
+
+.aci-mt-8 {
+    margin-top: 8px;
+}
+
+.aci-mt-16 {
+    margin-top: 16px;
+}
+
+.aci-mt-24 {
+    margin-top: 24px;
+}
+
+.aci-mb-0 {
+    margin-bottom: 0;
+}
+
+.aci-mb-8 {
+    margin-bottom: 8px;
+}
+
+.aci-mb-16 {
+    margin-bottom: 16px;
+}
+
+.aci-mb-24 {
+    margin-bottom: 24px;
+}
+
+.aci-hidden {
+    display: none !important;
+}
+
+.aci-visible {
+    display: block !important;
+}
+
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
+
+@media screen and (max-width: 768px) {
+
+    .aci-affiliate-form,
+    .aci-form {
+        padding: 20px;
+        margin: 16px 0;
+    }
+
+    .aci-form-title {
+        font-size: 18px;
+    }
+
+    .aci-popup-content {
+        padding: 24px;
+        margin: 0 16px;
+    }
+
+    .aci-notification {
+        min-width: 280px;
+        max-width: calc(100% - 40px);
+    }
+
+    .aci-notification.show {
+        right: 16px;
+    }
+
+    .aci-discount-info {
+        flex-direction: column;
+        gap: 12px;
+        text-align: center;
+    }
+}
+
+@media screen and (max-width: 480px) {
+
+    .aci-affiliate-form,
+    .aci-form {
+        padding: 16px;
+    }
+
+    .aci-form-input,
+    .aci-code-input {
+        font-size: 16px;
+        /* Prevent zoom on iOS */
+    }
+
+    .aci-button,
+    .aci-form button[type="submit"] {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .aci-popup-content {
+        padding: 20px;
+    }
+}
+
+/* ==========================================================================
+   Print Styles
+   ========================================================================== */
+
+@media print {
+
+    .aci-popup-overlay,
+    .aci-notification,
+    .aci-button {
+        display: none !important;
+    }
+}
+
+/* ==========================================================================
+   Accessibility
+   ========================================================================== */
+
+.aci-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+.aci-form-input:focus,
+.aci-code-input:focus,
+.aci-button:focus {
+    outline: 2px solid var(--aci-primary);
+    outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+
+    .aci-affiliate-form,
+    .aci-form {
+        border-width: 3px;
+    }
+
+    .aci-button,
+    .aci-form button[type="submit"] {
+        border: 2px solid currentColor;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

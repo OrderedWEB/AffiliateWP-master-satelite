@@ -1,7 +1,14 @@
 <?php
 /**
  * Popup Trigger Shortcode Template
- * Plugin: Affiliate Client Integration
+ * 
+ * Plugin: Affiliate Client Integration (Satellite)
+ * File: /wp-content/plugins/affiliate-client-integration/templates/shortcodes/popup-trigger.php
+ * Author: Richard King, starneconsulting.com
+ * Email: r.king@starneconsulting.com
+ * 
+ * Renders a button or link that triggers the affiliate code popup.
+ * Used by [affiliate_popup_trigger] shortcode.
  */
 
 // Prevent direct access
@@ -10,334 +17,299 @@ if (!defined('ABSPATH')) {
 }
 
 // Extract shortcode attributes
-$button_text = !empty($button_text) ? esc_html($button_text) : __('Get Discount', 'affiliate-client-integration');
-$button_class = !empty($button_class) ? esc_attr($button_class) : 'aci-popup-trigger-btn';
-$popup_type = !empty($popup_type) ? esc_attr($popup_type) : 'compact';
-$trigger_id = 'aci-trigger-' . wp_generate_uuid4();
-$popup_id = 'aci-popup-' . wp_generate_uuid4();
-$theme = !empty($theme) ? esc_attr($theme) : 'default';
-$position = !empty($position) ? esc_attr($position) : 'center';
-$animation = !empty($animation) ? esc_attr($animation) : 'fadeIn';
+$button_text = !empty($text) ? esc_html($text) : __('Apply Discount Code', 'affiliate-client-integration');
+$button_style = !empty($style) ? esc_attr($style) : 'button';
+$button_size = !empty($size) ? esc_attr($size) : 'medium';
+$button_color = !empty($color) ? esc_attr($color) : 'primary';
+$icon = !empty($icon) ? esc_attr($icon) : 'tag';
+$position = !empty($position) ? esc_attr($position) : 'inline';
+$popup_id = !empty($popup_id) ? esc_attr($popup_id) : 'aci-popup-container';
+$trigger_event = !empty($trigger) ? esc_attr($trigger) : 'click';
+$element_id = 'aci-popup-trigger-' . wp_generate_uuid4();
+$css_class = !empty($class) ? esc_attr($class) : '';
+
+// Check if user already has discount applied
+$has_discount = false;
+if (class_exists('ACI_Session_Manager')) {
+    $session = new ACI_Session_Manager();
+    $has_discount = $session->has('affiliate_code');
+}
+
+// If user has discount and hide_when_active is true, return empty
+if ($has_discount && !empty($hide_when_active)) {
+    return '';
+}
+
+// Icon mapping
+$icon_map = [
+    'tag' => '🏷️',
+    'gift' => '🎁',
+    'star' => '⭐',
+    'percent' => '%',
+    'dollar' => ',
+    'ticket' => '🎫',
+    'cart' => '🛒',
+    'none' => ''
+];
+
+$icon_display = isset($icon_map[$icon]) ? $icon_map[$icon] : $icon_map['tag'];
+
+// Build CSS classes
+$trigger_classes = [
+    'aci-popup-trigger',
+    'aci-trigger-' . $button_style,
+    'aci-trigger-' . $button_size,
+    'aci-trigger-' . $button_color,
+    'aci-trigger-' . $position,
+];
+
+if ($css_class) {
+    $trigger_classes[] = $css_class;
+}
+
+if ($has_discount) {
+    $trigger_classes[] = 'aci-has-discount';
+}
+
+$trigger_class_string = implode(' ', $trigger_classes);
+
+// Render trigger based on style
 ?>
 
-<div class="aci-popup-trigger-wrapper" data-theme="<?php echo $theme; ?>">
-    <button 
-        type="button" 
-        id="<?php echo $trigger_id; ?>"
-        class="<?php echo $button_class; ?> aci-btn aci-btn-<?php echo $theme; ?>" 
-        data-popup-type="<?php echo $popup_type; ?>"
-        data-popup-id="<?php echo $popup_id; ?>"
-        data-position="<?php echo $position; ?>"
-        data-animation="<?php echo $animation; ?>"
-        aria-label="<?php esc_attr_e('Open affiliate discount form', 'affiliate-client-integration'); ?>"
-        role="button"
-    >
-        <?php if (!empty($icon) && $icon !== 'none'): ?>
-            <span class="aci-btn-icon aci-icon-<?php echo esc_attr($icon); ?>" aria-hidden="true"></span>
+<?php if ($button_style === 'link'): ?>
+    <!-- Link Style Trigger -->
+    <a href="#" 
+       id="<?php echo $element_id; ?>"
+       class="<?php echo $trigger_class_string; ?>"
+       data-popup-id="<?php echo $popup_id; ?>"
+       data-trigger-event="<?php echo $trigger_event; ?>"
+       role="button"
+       aria-label="<?php echo esc_attr($button_text); ?>">
+        <?php if ($icon_display): ?>
+            <span class="aci-trigger-icon"><?php echo $icon_display; ?></span>
         <?php endif; ?>
-        <span class="aci-btn-text"><?php echo $button_text; ?></span>
-        <?php if (!empty($loading_icon) && $loading_icon === 'true'): ?>
-            <span class="aci-btn-loading" style="display: none;" aria-hidden="true">
-                <svg class="aci-spinner" width="16" height="16" viewBox="0 0 50 50">
-                    <circle class="path" cx="25" cy="25" r="20" fill="none" stroke="currentColor" 
-                            stroke-width="5" stroke-miterlimit="10"/>
-                </svg>
-            </span>
+        <span class="aci-trigger-text"><?php echo $button_text; ?></span>
+    </a>
+
+<?php elseif ($button_style === 'floating'): ?>
+    <!-- Floating Button Style -->
+    <div id="<?php echo $element_id; ?>"
+         class="<?php echo $trigger_class_string; ?>"
+         data-popup-id="<?php echo $popup_id; ?>"
+         data-trigger-event="<?php echo $trigger_event; ?>"
+         role="button"
+         tabindex="0"
+         aria-label="<?php echo esc_attr($button_text); ?>">
+        <div class="aci-floating-content">
+            <?php if ($icon_display): ?>
+                <span class="aci-trigger-icon"><?php echo $icon_display; ?></span>
+            <?php endif; ?>
+            <?php if (!empty($show_text_on_floating)): ?>
+                <span class="aci-trigger-text"><?php echo $button_text; ?></span>
+            <?php endif; ?>
+        </div>
+        <?php if ($has_discount): ?>
+            <span class="aci-trigger-badge">✓</span>
+        <?php endif; ?>
+    </div>
+
+<?php elseif ($button_style === 'banner'): ?>
+    <!-- Banner Style Trigger -->
+    <div id="<?php echo $element_id; ?>"
+         class="<?php echo $trigger_class_string; ?>"
+         data-popup-id="<?php echo $popup_id; ?>"
+         data-trigger-event="<?php echo $trigger_event; ?>">
+        <div class="aci-banner-content">
+            <?php if ($icon_display): ?>
+                <span class="aci-trigger-icon"><?php echo $icon_display; ?></span>
+            <?php endif; ?>
+            <div class="aci-banner-text">
+                <div class="aci-banner-title"><?php echo $button_text; ?></div>
+                <?php if (!empty($subtitle)): ?>
+                    <div class="aci-banner-subtitle"><?php echo esc_html($subtitle); ?></div>
+                <?php endif; ?>
+            </div>
+            <button type="button" class="aci-banner-button" role="button">
+                <?php echo !empty($button_label) ? esc_html($button_label) : __('Apply Now', 'affiliate-client-integration'); ?>
+            </button>
+        </div>
+        <?php if (!empty($dismissible)): ?>
+            <button type="button" class="aci-banner-dismiss" aria-label="<?php _e('Dismiss', 'affiliate-client-integration'); ?>">×</button>
+        <?php endif; ?>
+    </div>
+
+<?php elseif ($button_style === 'icon-only'): ?>
+    <!-- Icon Only Trigger -->
+    <button type="button"
+            id="<?php echo $element_id; ?>"
+            class="<?php echo $trigger_class_string; ?>"
+            data-popup-id="<?php echo $popup_id; ?>"
+            data-trigger-event="<?php echo $trigger_event; ?>"
+            aria-label="<?php echo esc_attr($button_text); ?>"
+            title="<?php echo esc_attr($button_text); ?>">
+        <span class="aci-trigger-icon"><?php echo $icon_display; ?></span>
+        <?php if ($has_discount): ?>
+            <span class="aci-trigger-badge">✓</span>
         <?php endif; ?>
     </button>
-</div>
 
-<!-- Popup Container (will be populated dynamically) -->
-<div 
-    id="<?php echo $popup_id; ?>" 
-    class="aci-popup-container aci-popup-<?php echo $popup_type; ?> aci-theme-<?php echo $theme; ?>"
-    style="display: none;"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="<?php echo $popup_id; ?>-title"
-    aria-describedby="<?php echo $popup_id; ?>-description"
-    data-popup-type="<?php echo $popup_type; ?>"
-    data-position="<?php echo $position; ?>"
-    data-animation="<?php echo $animation; ?>"
->
-    <!-- Popup content will be loaded dynamically via AJAX -->
-</div>
+<?php else: ?>
+    <!-- Default Button Style Trigger -->
+    <button type="button"
+            id="<?php echo $element_id; ?>"
+            class="<?php echo $trigger_class_string; ?>"
+            data-popup-id="<?php echo $popup_id; ?>"
+            data-trigger-event="<?php echo $trigger_event; ?>"
+            aria-label="<?php echo esc_attr($button_text); ?>">
+        <?php if ($icon_display): ?>
+            <span class="aci-trigger-icon"><?php echo $icon_display; ?></span>
+        <?php endif; ?>
+        <span class="aci-trigger-text"><?php echo $button_text; ?></span>
+        <?php if ($has_discount): ?>
+            <span class="aci-trigger-badge">✓</span>
+        <?php endif; ?>
+    </button>
+<?php endif; ?>
 
+<?php if (!empty($animate_on_scroll)): ?>
 <script type="text/javascript">
 (function($) {
     'use strict';
     
     $(document).ready(function() {
-        // Initialize popup trigger
-        $('#<?php echo $trigger_id; ?>').on('click', function(e) {
-            e.preventDefault();
-            
-            const $trigger = $(this);
-            const $popup = $('#<?php echo $popup_id; ?>');
-            const popupType = $trigger.data('popup-type');
-            const position = $trigger.data('position');
-            const animation = $trigger.data('animation');
-            
-            // Prevent multiple clicks during loading
-            if ($trigger.hasClass('loading')) {
-                return;
-            }
-            
-            // Show loading state
-            $trigger.addClass('loading');
-            $trigger.find('.aci-btn-text').hide();
-            $trigger.find('.aci-btn-loading').show();
-            
-            // Load popup content if not already loaded
-            if ($popup.children().length === 0) {
-                loadPopupContent($popup, popupType, {
-                    position: position,
-                    animation: animation,
-                    trigger_id: '<?php echo $trigger_id; ?>'
-                });
-            } else {
-                showPopup($popup, animation);
-                $trigger.removeClass('loading');
-                $trigger.find('.aci-btn-text').show();
-                $trigger.find('.aci-btn-loading').hide();
-            }
+        const $trigger = $('#<?php echo $element_id; ?>');
+        
+        // Animate on scroll into view
+        const observer = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    $trigger.addClass('aci-animate-in');
+                }
+            });
+        }, {
+            threshold: 0.1
         });
         
-        /**
-         * Load popup content via AJAX
-         */
-        function loadPopupContent($popup, popupType, options) {
-            const $trigger = $('#<?php echo $trigger_id; ?>');
-            
-            $.ajax({
-                url: aci_ajax.ajax_url,
-                type: 'POST',
-                data: {
-                    action: 'aci_load_popup_content',
-                    popup_type: popupType,
-                    position: options.position,
-                    animation: options.animation,
-                    nonce: aci_ajax.nonce
-                },
-                success: function(response) {
-                    if (response.success) {
-                        $popup.html(response.data.content);
-                        showPopup($popup, options.animation);
-                        
-                        // Initialize form handlers
-                        initializePopupForm($popup);
-                    } else {
-                        console.error('Failed to load popup content:', response.data);
-                        showError($trigger, response.data.message || 'Failed to load content');
+        observer.observe($trigger[0]);
+    });
+})(jQuery);
+</script>
+<?php endif; ?>
+
+<?php if ($trigger_event === 'hover' || $trigger_event === 'delay'): ?>
+<script type="text/javascript">
+(function($) {
+    'use strict';
+    
+    $(document).ready(function() {
+        const $trigger = $('#<?php echo $element_id; ?>');
+        const popupId = $trigger.data('popup-id');
+        const triggerEvent = $trigger.data('trigger-event');
+        
+        if (triggerEvent === 'hover') {
+            // Show popup on hover after delay
+            let hoverTimeout;
+            $trigger.on('mouseenter', function() {
+                hoverTimeout = setTimeout(function() {
+                    if (window.ACI_Frontend && typeof window.ACI_Frontend.showPopup === 'function') {
+                        window.ACI_Frontend.showPopup(popupId);
                     }
-                },
-                error: function(xhr, status, error) {
-                    console.error('AJAX error:', error);
-                    showError($trigger, 'Network error occurred');
-                },
-                complete: function() {
-                    $trigger.removeClass('loading');
-                    $trigger.find('.aci-btn-text').show();
-                    $trigger.find('.aci-btn-loading').hide();
-                }
-            });
-        }
-        
-        /**
-         * Show popup with animation
-         */
-        function showPopup($popup, animation) {
-            $popup.show();
-            $popup.addClass('aci-popup-visible');
-            
-            // Add animation class
-            if (animation) {
-                $popup.addClass('aci-animate-' + animation);
-            }
-            
-            // Focus management for accessibility
-            const firstInput = $popup.find('input, button, select, textarea').first();
-            if (firstInput.length) {
-                firstInput.focus();
-            }
-            
-            // Add overlay click handler
-            $(document).on('click.aci-popup', function(e) {
-                if ($(e.target).hasClass('aci-popup-overlay')) {
-                    closePopup($popup);
-                }
+                }, <?php echo !empty($hover_delay) ? intval($hover_delay) : 1000; ?>);
             });
             
-            // Add escape key handler
-            $(document).on('keydown.aci-popup', function(e) {
-                if (e.key === 'Escape') {
-                    closePopup($popup);
-                }
+            $trigger.on('mouseleave', function() {
+                clearTimeout(hoverTimeout);
             });
-        }
-        
-        /**
-         * Close popup
-         */
-        function closePopup($popup) {
-            $popup.removeClass('aci-popup-visible');
-            
+        } else if (triggerEvent === 'delay') {
+            // Show popup after delay
             setTimeout(function() {
-                $popup.hide();
-            }, 300);
-            
-            // Remove event handlers
-            $(document).off('click.aci-popup keydown.aci-popup');
-            
-            // Return focus to trigger
-            $('#<?php echo $trigger_id; ?>').focus();
-        }
-        
-        /**
-         * Initialize popup form handlers
-         */
-        function initializePopupForm($popup) {
-            const $form = $popup.find('.aci-affiliate-form');
-            
-            if ($form.length) {
-                $form.on('submit', function(e) {
-                    e.preventDefault();
-                    
-                    // Form validation and submission handled by main form handler
-                    if (typeof window.aciFormHandler !== 'undefined') {
-                        window.aciFormHandler.submitForm($(this));
-                    }
-                });
-            }
-            
-            // Close button handler
-            $popup.on('click', '.aci-popup-close', function(e) {
-                e.preventDefault();
-                closePopup($popup);
-            });
-        }
-        
-        /**
-         * Show error message
-         */
-        function showError($trigger, message) {
-            const errorHtml = '<div class="aci-error-notice">' + message + '</div>';
-            $trigger.after(errorHtml);
-            
-            setTimeout(function() {
-                $trigger.next('.aci-error-notice').fadeOut(function() {
-                    $(this).remove();
-                });
-            }, 5000);
+                if (window.ACI_Frontend && typeof window.ACI_Frontend.showPopup === 'function') {
+                    window.ACI_Frontend.showPopup(popupId);
+                }
+            }, <?php echo !empty($delay) ? intval($delay) * 1000 : 3000; ?>);
         }
     });
 })(jQuery);
 </script>
+<?php endif; ?>
 
-<style>
-.aci-popup-trigger-wrapper {
-    display: inline-block;
-    position: relative;
-}
+<?php if ($button_style === 'banner' && !empty($dismissible)): ?>
+<script type="text/javascript">
+(function($) {
+    'use strict';
+    
+    $(document).ready(function() {
+        const $banner = $('#<?php echo $element_id; ?>');
+        
+        // Handle dismiss button
+        $banner.find('.aci-banner-dismiss').on('click', function(e) {
+            e.stopPropagation();
+            $banner.fadeOut(300, function() {
+                $(this).remove();
+            });
+            
+            // Set cookie to remember dismissal
+            document.cookie = 'aci_banner_dismissed=1;path=/;max-age=<?php echo !empty($dismiss_duration) ? intval($dismiss_duration) : 86400; ?>';
+        });
+        
+        // Check if banner was previously dismissed
+        if (document.cookie.indexOf('aci_banner_dismissed=1') !== -1) {
+            $banner.hide();
+        }
+    });
+})(jQuery);
+</script>
+<?php endif; ?>
 
-.aci-popup-trigger-btn {
-    background: #0073aa;
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 4px;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    text-decoration: none;
-    user-select: none;
-}
-
-.aci-popup-trigger-btn:hover {
-    background: #005a87;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,115,170,0.3);
-}
-
-.aci-popup-trigger-btn:active {
-    transform: translateY(0);
-}
-
-.aci-popup-trigger-btn.loading {
-    opacity: 0.7;
-    cursor: wait;
-}
-
-.aci-spinner {
-    animation: aci-spin 1s linear infinite;
-}
-
-.aci-spinner .path {
-    stroke-dasharray: 90, 150;
-    stroke-dashoffset: 0;
-    stroke-linecap: round;
-    animation: aci-dash 1.5s ease-in-out infinite;
-}
-
-@keyframes aci-spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-@keyframes aci-dash {
-    0% {
-        stroke-dasharray: 1, 150;
-        stroke-dashoffset: 0;
+<style type="text/css">
+/* Inline styles for trigger positioning and animations */
+<?php if ($position === 'fixed-bottom-right'): ?>
+    #<?php echo $element_id; ?> {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 9998;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
-    50% {
-        stroke-dasharray: 90, 150;
-        stroke-dashoffset: -35;
+<?php elseif ($position === 'fixed-bottom-left'): ?>
+    #<?php echo $element_id; ?> {
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        z-index: 9998;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
-    100% {
-        stroke-dasharray: 90, 150;
-        stroke-dashoffset: -124;
+<?php elseif ($position === 'fixed-top-right'): ?>
+    #<?php echo $element_id; ?> {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9998;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
-}
-
-.aci-error-notice {
-    background: #dc3232;
-    color: white;
-    padding: 8px 12px;
-    border-radius: 4px;
-    margin-top: 8px;
-    font-size: 14px;
-}
-
-/* Theme variations */
-.aci-btn-primary {
-    background: #0073aa;
-}
-
-.aci-btn-secondary {
-    background: #666;
-}
-
-.aci-btn-success {
-    background: #46b450;
-}
-
-.aci-btn-danger {
-    background: #dc3232;
-}
-
-.aci-btn-dark {
-    background: #23282d;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    .aci-popup-trigger-btn {
+<?php elseif ($position === 'sticky-top'): ?>
+    #<?php echo $element_id; ?> {
+        position: sticky;
+        top: 0;
+        z-index: 9998;
         width: 100%;
-        justify-content: center;
     }
-}
+<?php endif; ?>
+
+<?php if (!empty($animate_on_scroll)): ?>
+    #<?php echo $element_id; ?> {
+        opacity: 0;
+        transform: translateY(20px);
+        transition: all 0.5s ease;
+    }
+    
+    #<?php echo $element_id; ?>.aci-animate-in {
+        opacity: 1;
+        transform: translateY(0);
+    }
+<?php endif; ?>
+
+<?php if (!empty($custom_css)): ?>
+    <?php echo esc_html($custom_css); ?>
+<?php endif; ?>
 </style>
