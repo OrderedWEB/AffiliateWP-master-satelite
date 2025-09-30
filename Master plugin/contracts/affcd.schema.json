@@ -1,0 +1,297 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://affcd.example.com/contracts/affcd.schema.json",
+  "title": "Affiliate Cross-Domain (AFFCD) Master \u2194 Satellite Contract",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "objects": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "schema_version",
+    "objects"
+  ],
+  "objects": {
+    "TrackEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "site_id",
+        "event_id",
+        "event_type",
+        "occurred_at",
+        "affiliate_ref",
+        "signature",
+        "timestamp"
+      ],
+      "properties": {
+        "schema_version": {
+          "type": "string"
+        },
+        "site_id": {
+          "type": "string",
+          "description": "Unique ID of satellite site (domain or UUID)."
+        },
+        "event_id": {
+          "type": "string",
+          "description": "Client-generated UUID for idempotency."
+        },
+        "event_type": {
+          "type": "string",
+          "enum": [
+            "pageview",
+            "click",
+            "lead",
+            "signup",
+            "purchase",
+            "custom"
+          ]
+        },
+        "occurred_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "affiliate_ref": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "affiliate_id": {
+              "type": [
+                "integer",
+                "string"
+              ]
+            },
+            "affiliate_code": {
+              "type": "string"
+            },
+            "coupon_code": {
+              "type": "string"
+            }
+          }
+        },
+        "order": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "order_id": {
+              "type": "string"
+            },
+            "total": {
+              "type": "number"
+            },
+            "currency": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 3
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "utm": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "source": {
+              "type": "string"
+            },
+            "medium": {
+              "type": "string"
+            },
+            "campaign": {
+              "type": "string"
+            },
+            "term": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            }
+          }
+        },
+        "context": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "ip": {
+              "type": "string"
+            },
+            "user_agent": {
+              "type": "string"
+            },
+            "referer": {
+              "type": "string"
+            }
+          }
+        },
+        "idempotency_key": {
+          "type": "string",
+          "description": "Recommended: site_id|event_id or site_id|order_id"
+        },
+        "signature": {
+          "type": "string",
+          "description": "HMAC-SHA256 over canonical JSON with shared secret."
+        },
+        "timestamp": {
+          "type": "integer",
+          "description": "Unix epoch seconds when signed."
+        }
+      }
+    },
+    "ConversionEvent": {
+      "allOf": [
+        {
+          "$ref": "#/objects/TrackEvent"
+        }
+      ],
+      "properties": {
+        "event_type": {
+          "const": "purchase"
+        },
+        "order": {
+          "type": "object"
+        }
+      }
+    },
+    "BatchEnvelope": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "site_id",
+        "events",
+        "signature",
+        "timestamp"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "type": "string"
+        },
+        "site_id": {
+          "type": "string"
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "$ref": "#/objects/TrackEvent"
+          }
+        },
+        "signature": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "integer"
+        }
+      }
+    },
+    "WebhookReferralUpdate": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "site_id",
+        "referral_id",
+        "status",
+        "occurred_at",
+        "signature",
+        "timestamp"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "type": "string"
+        },
+        "site_id": {
+          "type": "string"
+        },
+        "referral_id": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "unpaid",
+            "paid",
+            "rejected",
+            "revoked"
+          ]
+        },
+        "payout_id": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        },
+        "amount": {
+          "type": "number"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "occurred_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "idempotency_key": {
+          "type": "string"
+        },
+        "signature": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "integer"
+        }
+      }
+    },
+    "DomainConfig": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "site_id",
+        "ingest_url",
+        "webhook_url"
+      ],
+      "properties": {
+        "schema_version": {
+          "type": "string"
+        },
+        "site_id": {
+          "type": "string"
+        },
+        "ingest_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "webhook_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "webhook_secret": {
+          "type": "string"
+        },
+        "features": {
+          "type": "object"
+        },
+        "limits": {
+          "type": "object"
+        }
+      }
+    }
+  }
+}

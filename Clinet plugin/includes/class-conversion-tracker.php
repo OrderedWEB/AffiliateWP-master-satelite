@@ -2139,6 +2139,27 @@ class ACI_Conversion_Tracker {
         return $deleted !== false ? $deleted : 0;
     }
 
+     /**
+     * Use the signer when sending events
+     */
+    $master_base = trailingslashit( get_option( 'affcd_master_base_url' ) ); 
+$convert_url = $master_base . 'convert';
+
+$payload = [
+    'event_id'     => wp_generate_uuid4(),
+    'event_type'   => 'purchase',
+    'occurred_at'  => gmdate('c'),
+    'affiliate_ref'=> [ 'affiliate_code' => $affiliate_code ],
+    'order'        => [ 'order_id' => $order_id, 'total' => $total, 'currency' => $currency ],
+    'idempotency_key' => AFFCD_Signer::get_site_id() . '|' . $order_id,
+];
+
+$res = AFFCD_Signer::post_json( $convert_url, $payload );
+
+if ( $res['code'] !== 200 ) {
+    error_log( 'AFFCD convert failed: ' . print_r( $res, true ) );
+}
+
     /**
      * Export conversion data
      *

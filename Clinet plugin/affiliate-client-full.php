@@ -168,6 +168,14 @@ class AffiliateClientFull {
         // Scheduled events
         add_action('affiliate_client_hourly_sync', [$this, 'hourly_sync']);
         add_action('affiliate_client_daily_cleanup', [$this, 'daily_cleanup']);
+        
+        // Api
+        register_activation_hook( __FILE__, function () {
+    if ( ! get_option( 'affcd_site_id' ) ) {
+        // Default to domain-based site_id (can override in settings page)
+        update_option( 'affcd_site_id', preg_replace( '/[^a-z0-9]/i', '-', parse_url( home_url(), PHP_URL_HOST ) ) );
+    }
+});
     }
 
     /**
@@ -913,6 +921,8 @@ class AffiliateClientFull {
         return $this->config;
     }
 }
+// Load AFFCD signer for outbound requests
+require_once plugin_dir_path( __FILE__ ) . 'includes/class-affcd-signer.php';
 
 /**
  * Initialize the plugin

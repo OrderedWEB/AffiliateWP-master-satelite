@@ -249,6 +249,7 @@ private function includes() {
         'includes/class-vanity-code-manager.php',
         'includes/class-webhook-manager.php',
         'includes/class-webhook-handler.php'
+        
     ];
     
     foreach ($core_files as $file) {
@@ -285,7 +286,18 @@ private function includes() {
             affcd_debug_log("File not found: {$file}", 'MISSING_FILE');
         }
     }
-    
+    // Load unified router
+require_once AFFCD_PLUGIN_DIR . 'includes/class-api-router.php';
+
+// Boot it (optionally pass allowed origins and custom permission callbacks)
+add_action('plugins_loaded', function () {
+    new AFFCD_API_Router([
+        'allowed_origins' => apply_filters('affcd_allowed_origins', []),
+        // 'integration_permission_cb' => [MyAuth::class, 'validate_request'],
+        // 'admin_permission_cb'       => [MyAuth::class, 'validate_admin'],
+    ]);
+});
+
     // Admin includes
     if (is_admin()) {
         self::next_debug_step('Including admin files');
@@ -1278,3 +1290,9 @@ affcd_debug_log('About to initialize plugin', 'PLUGIN_INIT');
 affcd_debug_log('Calling plugin initialization', 'FINAL_INIT');
 $GLOBALS['affiliatewp_cross_domain_full'] = affiliatewp_cross_domain_full();
 affcd_debug_log('Plugin initialization completed', 'FINAL_COMPLETE');
+
+// Resolve per-site secrets for HMAC validation
+add_filter('affcd_secret_for_site', function ($secret, $site_id) {
+    // You could look this up from your Domain Manager table or WP options
+    return get_option('affcd_secret_' . $site_id) ?: '';
+}, 10, 2);
