@@ -1002,8 +1002,7 @@ class ACI_Conversion_Tracker {
     }
 
     /**
-     * Get data-driven attribution affiliate - COMPLETE IMPLEMENTATION
-     * Uses machine learning-inspired approach based on conversion probability
+     * Get data-driven attribution affiliate 
      *
      * @return int|null Primary affiliate ID
      */

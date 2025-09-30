@@ -886,3 +886,304 @@ if (!defined('ABSPATH')) {
             $conversion_value
         ));
     }
+    /**
+     * Update lifetime value statistics for an affiliate
+     *
+     * @param array $data Lifetime value data
+     * @return void
+     */
+    private function update_lifetime_value($data) {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'affiliate_lifetime_value';
+        
+        $order_value = $data['order_value'] ?? 0;
+        $commission_earned = $data['commission_earned'] ?? 0;
+        
+        $wpdb->query($wpdb->prepare(
+            "INSERT INTO {$table_name}
+                (affiliate_id, total_orders, total_revenue, total_commission, avg_order_value, customer_count)
+             VALUES (%d, 1, %f, %f, %f, 1)
+             ON DUPLICATE KEY UPDATE
+                total_orders = total_orders + 1,
+                total_revenue = total_revenue + %f,
+                total_commission = total_commission + %f,
+                avg_order_value = (total_revenue + %f) / (total_orders + 1),
+                customer_count = customer_count + IF(%d > 0, 1, 0),
+                last_order_date = NOW()",
+            $data['affiliate_id'] ?? 0,
+            $order_value,
+            $commission_earned,
+            $order_value,
+            $order_value,
+            $commission_earned,
+            $order_value,
+            $data['new_customer'] ?? 0
+        ));
+    }
+
+    /**
+     * Update performance metrics for an affiliate
+     *
+     * @param array $data Performance metrics data
+     * @return void
+     */
+    private function update_performance_metrics($data) {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'affiliate_performance_metrics';
+        
+        $conversion_rate = $data['conversion_rate'] ?? 0;
+        $click_count = $data['click_count'] ?? 0;
+        $conversion_count = $data['conversion_count'] ?? 0;
+        
+        $wpdb->query($wpdb->prepare(
+            "INSERT INTO {$table_name}
+                (affiliate_id, total_clicks, total_conversions, conversion_rate, revenue_per_click)
+             VALUES (%d, %d, %d, %f, %f)
+             ON DUPLICATE KEY UPDATE
+                total_clicks = total_clicks + %d,
+                total_conversions = total_conversions + %d,
+                conversion_rate = (total_conversions + %d) / GREATEST(total_clicks + %d, 1) * 100,
+                revenue_per_click = total_revenue / GREATEST(total_clicks + %d, 1),
+                last_updated = NOW()",
+            $data['affiliate_id'] ?? 0,
+            $click_count,
+            $conversion_count,
+            $conversion_rate,
+            $data['revenue_per_click'] ?? 0,
+            $click_count,
+            $conversion_count,
+            $conversion_count,
+            $click_count,
+            $click_count
+        ));
+    }
+
+    /**
+     * Update cohort analysis data for an affiliate
+     *
+     * @param array $data Cohort analysis data
+     * @return void
+     */
+    private function update_cohort_analysis($data) {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'affiliate_cohort_analysis';
+        
+        $cohort_month = $data['cohort_month'] ?? date('Y-m-01');
+        $revenue = $data['revenue'] ?? 0;
+        
+        $wpdb->query($wpdb->prepare(
+            "INSERT INTO {$table_name}
+                (affiliate_id, cohort_month, orders_count, revenue, active_customers)
+             VALUES (%d, %s, 1, %f, 1)
+             ON DUPLICATE KEY UPDATE
+                orders_count = orders_count + 1,
+                revenue = revenue + %f,
+                active_customers = active_customers + IF(%d > 0, 1, 0),
+                last_activity = NOW()",
+            $data['affiliate_id'] ?? 0,
+            $cohort_month,
+            $revenue,
+            $revenue,
+            $data['new_customer'] ?? 0
+        ));
+    }
+
+    /**
+     * Update segment performance data for an affiliate
+     *
+     * @param array $data Segment performance data
+     * @return void
+     */
+    private function update_segment_performance($data) {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'affiliate_segment_performance';
+        
+        $segment_type = $data['segment_type'] ?? 'unknown';
+        $segment_value = $data['segment_value'] ?? 'default';
+        $revenue = $data['revenue'] ?? 0;
+        
+        $wpdb->query($wpdb->prepare(
+            "INSERT INTO {$table_name}
+                (affiliate_id, segment_type, segment_value, orders_count, revenue, conversion_rate)
+             VALUES (%d, %s, %s, 1, %f, %f)
+             ON DUPLICATE KEY UPDATE
+                orders_count = orders_count + 1,
+                revenue = revenue + %f,
+                conversion_rate = (conversions + %d) / GREATEST(clicks + %d, 1) * 100,
+                last_updated = NOW()",
+            $data['affiliate_id'] ?? 0,
+            $segment_type,
+            $segment_value,
+            $revenue,
+            $data['conversion_rate'] ?? 0,
+            $revenue,
+            $data['conversions'] ?? 0,
+            $data['clicks'] ?? 0
+        ));
+    }
+
+    /**
+     * Update retention metrics for an affiliate
+     *
+     * @param array $data Retention metrics data
+     * @return void
+     */
+    private function update_retention_metrics($data) {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'affiliate_retention_metrics';
+        
+        $period_type = $data['period_type'] ?? 'monthly';
+        $retained_customers = $data['retained_customers'] ?? 0;
+        
+        $wpdb->query($wpdb->prepare(
+            "INSERT INTO {$table_name}
+                (affiliate_id, period_type, total_customers, retained_customers, retention_rate)
+             VALUES (%d, %s, 1, %d, %f)
+             ON DUPLICATE KEY UPDATE
+                total_customers = total_customers + 1,
+                retained_customers = retained_customers + %d,
+                retention_rate = (retained_customers + %d) / GREATEST(total_customers + 1, 1) * 100,
+                last_calculated = NOW()",
+            $data['affiliate_id'] ?? 0,
+            $period_type,
+            $retained_customers,
+            $data['retention_rate'] ?? 0,
+            $retained_customers,
+            $retained_customers
+        ));
+    }
+
+    /**
+     * Update trend analysis data for an affiliate
+     *
+     * @param array $data Trend analysis data
+     * @return void
+     */
+    private function update_trend_analysis($data) {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'affiliate_trend_analysis';
+        
+        $trend_period = $data['trend_period'] ?? date('Y-m-d');
+        $metric_type = $data['metric_type'] ?? 'revenue';
+        $metric_value = $data['metric_value'] ?? 0;
+        
+        $wpdb->query($wpdb->prepare(
+            "INSERT INTO {$table_name}
+                (affiliate_id, trend_period, metric_type, metric_value, growth_rate)
+             VALUES (%d, %s, %s, %f, %f)
+             ON DUPLICATE KEY UPDATE
+                metric_value = metric_value + %f,
+                growth_rate = %f,
+                last_updated = NOW()",
+            $data['affiliate_id'] ?? 0,
+            $trend_period,
+            $metric_type,
+            $metric_value,
+            $data['growth_rate'] ?? 0,
+            $metric_value,
+            $data['growth_rate'] ?? 0
+        ));
+    }
+
+    /**
+     * Sanitise incoming data to prevent SQL injection and XSS
+     *
+     * @param array $data Raw data array
+     * @return array Sanitised data array
+     */
+    private function sanitise_data($data) {
+        $sanitised = array();
+        
+        foreach ($data as $key => $value) {
+            if (is_array($value)) {
+                $sanitised[$key] = $this->sanitise_data($value);
+            } elseif (is_numeric($value)) {
+                $sanitised[$key] = floatval($value);
+            } else {
+                $sanitised[$key] = sanitize_text_field($value);
+            }
+        }
+        
+        return $sanitised;
+    }
+
+    /**
+     * Validate required fields in data array
+     *
+     * @param array $data Data to validate
+     * @param array $required_fields Required field names
+     * @return bool True if all required fields present
+     */
+    private function validate_required_fields($data, $required_fields) {
+        foreach ($required_fields as $field) {
+            if (!isset($data[$field]) || empty($data[$field])) {
+                $this->log_error("Missing required field: {$field}");
+                return false;
+            }
+        }
+        
+        return true;
+    }
+
+    /**
+     * Log error message to WordPress error log
+     *
+     * @param string $message Error message
+     * @return void
+     */
+    private function log_error($message) {
+        if (defined('WP_DEBUG') && WP_DEBUG === true) {
+            error_log('Satellite Data Backflow Manager: ' . $message);
+        }
+    }
+
+    /**
+     * Get current UTC timestamp
+     *
+     * @return string UTC timestamp in Y-m-d H:i:s format
+     */
+    private function get_utc_timestamp() {
+        return gmdate('Y-m-d H:i:s');
+    }
+
+    /**
+     * Check if table exists in database
+     *
+     * @param string $table_name Table name without prefix
+     * @return bool True if table exists
+     */
+    private function table_exists($table_name) {
+        global $wpdb;
+        
+        $full_table_name = $wpdb->prefix . $table_name;
+        $query = $wpdb->prepare("SHOW TABLES LIKE %s", $full_table_name);
+        
+        return $wpdb->get_var($query) === $full_table_name;
+    }
+
+    /**
+     * Verify data integrity before processing
+     *
+     * @param array $data Data to verify
+     * @return bool True if data passes integrity checks
+     */
+    private function verify_data_integrity($data) {
+        if (empty($data)) {
+            $this->log_error('Empty data provided for verification');
+            return false;
+        }
+        
+        if (!isset($data['affiliate_id']) || intval($data['affiliate_id']) <= 0) {
+            $this->log_error('Invalid affiliate_id in data');
+            return false;
+        }
+        
+        return true;
+    }
+}

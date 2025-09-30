@@ -1,10 +1,10 @@
 <?php
 /**
- * Revolutionary Features for Affiliate Cross Domain Satellite Plugin
+ * Additional Features for Affiliate Cross Domain Satellite Plugin
  * 
- * Feature #21: Viral Coefficient Maximization
- * Feature #24: Cross-Platform Identity Resolution  
- * Feature #20: Quantum Attribution System
+ *  Viral Coefficient Maximization
+ *  Cross-Platform Identity Resolution  
+ * Advanced Attribution System
  */
 
 // Prevent direct access
@@ -810,8 +810,7 @@ class AFFCD_Viral_Engine {
         
         return implode('', $recommendations);
     }
-
-    /**
+/**
      * Generate attribution recommendations
      */
     private function generate_attribution_recommendations() {
@@ -820,25 +819,185 @@ class AFFCD_Viral_Engine {
         $confidence = get_option('affcd_revolutionary_insights', [])['attribution_accuracy']['confidence'] ?? 0;
         
         if ($confidence < 0.6) {
-            $recommendations[] = '<li>📈 <strong>Collect more touchpoints:</strong> Track micro-conversions and engagement signals        
-            
-            
-            
-            
-            
-            
+            $recommendations[] = '<li>📈 <strong>Collect more touchpoints:</strong> Track micro-conversions and engagement signals to improve attribution accuracy</li>';
+            $recommendations[] = '<li>🎯 <strong>Implement cross-device tracking:</strong> Use fingerprinting or deterministic matching to connect user journeys across devices</li>';
+        }
+        
+        $conversion_window = get_option('affcd_attribution_settings', [])['conversion_window'] ?? 30;
+        
+        if ($conversion_window < 7) {
+            $recommendations[] = '<li>⏰ <strong>Extend conversion window:</strong> Consider increasing the attribution window to capture delayed conversions</li>';
+        } elseif ($conversion_window > 90) {
+            $recommendations[] = '<li>⚡ <strong>Reduce conversion window:</strong> A shorter window may provide more actionable insights for recent campaigns</li>';
+        }
+        
+        $model_performance = $this->compare_attribution_models();
+        $current_model = get_option('affcd_attribution_settings', [])['model'] ?? 'last_click';
+        
+        if ($model_performance[$current_model]['accuracy'] < 0.7) {
+            $best_model = array_keys($model_performance, max($model_performance))[0];
+            $recommendations[] = '<li>🔄 <strong>Switch attribution model:</strong> Consider using ' . esc_html($best_model) . ' model for better accuracy</li>';
+        }
+        
+        $touchpoint_distribution = $this->analyse_touchpoint_distribution();
+        
+        if ($touchpoint_distribution['avg_touchpoints'] > 8) {
+            $recommendations[] = '<li>🎨 <strong>Optimise customer journey:</strong> High touchpoint count suggests potential friction in the conversion path</li>';
+        }
+        
+        $channel_performance = $this->analyse_channel_performance();
+        
+        foreach ($channel_performance as $channel => $metrics) {
+            if ($metrics['conversion_rate'] < 0.02) {
+                $recommendations[] = '<li>📊 <strong>Review ' . esc_html($channel) . ' performance:</strong> Low conversion rate may indicate targeting or messaging issues</li>';
+            }
+        }
+        
+        if (empty($recommendations)) {
+            $recommendations[] = '<li>✅ <strong>Attribution optimised:</strong> Current configuration is performing well</li>';
+        }
+        
+        return $recommendations;
+    }
     
+    /**
+     * Compare performance of different attribution models
+     *
+     * @return array Model performance metrics
+     */
+    private function compare_attribution_models() {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'affiliate_attribution_insights';
+        
+        $models = ['last_click', 'first_click', 'linear', 'time_decay', 'position_based', 'data_driven'];
+        $performance = [];
+        
+        foreach ($models as $model) {
+            $results = $wpdb->get_row($wpdb->prepare(
+                "SELECT AVG(touchpoint_count) as avg_touchpoints,
+                        AVG(avg_conversion_value) as avg_value,
+                        COUNT(*) as total_conversions
+                 FROM {$table_name}
+                 WHERE attribution_model = %s
+                 AND last_updated >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
+                $model
+            ), ARRAY_A);
+            
+            $performance[$model] = [
+                'accuracy' => $this->calculate_model_accuracy($model),
+                'avg_touchpoints' => floatval($results['avg_touchpoints'] ?? 0),
+                'avg_value' => floatval($results['avg_value'] ?? 0),
+                'conversions' => intval($results['total_conversions'] ?? 0)
+            ];
+        }
+        
+        return $performance;
+    }
+    
+    /**
+     * Calculate attribution model accuracy
+     *
+     * @param string $model Attribution model name
+     * @return float Accuracy score between 0 and 1
+     */
+    private function calculate_model_accuracy($model) {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'affiliate_attribution_insights';
+        
+        $total = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$table_name}
+             WHERE attribution_model = %s
+             AND last_updated >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
+            $model
+        ));
+        
+        if ($total == 0) {
+            return 0.5;
+        }
+        
+        $successful = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$table_name}
+             WHERE attribution_model = %s
+             AND total_conversions > 0
+             AND last_updated >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
+            $model
+        ));
+        
+        return floatval($successful) / floatval($total);
+    }
+    
+    /**
+     * Analyse touchpoint distribution patterns
+     *
+     * @return array Distribution metrics
+     */
+    private function analyse_touchpoint_distribution() {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'affiliate_attribution_insights';
+        
+        $results = $wpdb->get_row(
+            "SELECT AVG(avg_touchpoints) as avg_touchpoints,
+                    MIN(avg_touchpoints) as min_touchpoints,
+                    MAX(avg_touchpoints) as max_touchpoints,
+                    STDDEV(avg_touchpoints) as stddev_touchpoints
+             FROM {$table_name}
+             WHERE last_updated >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
+            ARRAY_A
+        );
+        
+        return [
+            'avg_touchpoints' => floatval($results['avg_touchpoints'] ?? 0),
+            'min_touchpoints' => floatval($results['min_touchpoints'] ?? 0),
+            'max_touchpoints' => floatval($results['max_touchpoints'] ?? 0),
+            'stddev_touchpoints' => floatval($results['stddev_touchpoints'] ?? 0)
+        ];
+    }
+    
+    /**
+     * Analyse channel performance metrics
+     *
+     * @return array Channel performance data
+     */
+    private function analyse_channel_performance() {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'affiliate_segment_performance';
+        
+        $results = $wpdb->get_results(
+            "SELECT segment_value as channel,
+                    SUM(orders_count) as total_orders,
+                    SUM(revenue) as total_revenue,
+                    AVG(conversion_rate) as avg_conversion_rate
+             FROM {$table_name}
+             WHERE segment_type = 'channel'
+             AND last_updated >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+             GROUP BY segment_value",
+            ARRAY_A
+        );
+        
+        $channel_data = [];
+        
+        foreach ($results as $row) {
+            $channel_data[$row['channel']] = [
+                'orders' => intval($row['total_orders']),
+                'revenue' => floatval($row['total_revenue']),
+                'conversion_rate' => floatval($row['avg_conversion_rate']) / 100
+            ];
+        }
+        
+        return $channel_data;
+    }
 
     /**
-     * Data-driven attribution weights
+     * Heuristic data-driven attribution weights
      */
     private function data_driven_weights($touchpoints, $quantum_state) {
-        // This would use machine learning to determine optimal weights
-        // For now, we'll use a sophisticated heuristic approach
-        
+          
         $weights = [];
         $total_weight = 0;
-
         foreach ($touchpoints as $index => $touchpoint) {
             if (empty($touchpoint['affiliate_id'])) {
                 $weights[] = 0;
@@ -1236,32 +1395,503 @@ class AFFCD_Viral_Engine {
         return min($quality_score, 1.0);
     }
 
-    private function predict_conversion_probability($form_data) {
-        // Simple heuristic for conversion probability
-        // In production, this would use machine learning
-        
-        $probability = 0.3; // Base probability
-        
-        // High-value form types
-        $high_value_indicators = ['demo', 'quote', 'consultation', 'trial'];
-        foreach ($high_value_indicators as $indicator) {
-            if (stripos(json_encode($form_data), $indicator) !== false) {
-                $probability += 0.3;
-                break;
-            }
+/**
+ * Predict conversion probability based on form submission data
+ * Uses statistical analysis and behavioural heuristics
+ *
+ * @param array $form_data Form submission data
+ * @return float Probability between 0 and 1
+ */
+private function predict_conversion_probability($form_data) {
+    $probability = 0.15; // Conservative base probability
+    $confidence_factors = [];
+    
+    // Analyse form type and intent signals (weight: 0.35)
+    $intent_score = $this->calculate_intent_score($form_data);
+    $probability += $intent_score * 0.35;
+    $confidence_factors['intent'] = $intent_score;
+    
+    // Analyse email domain quality (weight: 0.20)
+    $email_score = $this->calculate_email_domain_score($form_data);
+    $probability += $email_score * 0.20;
+    $confidence_factors['email_quality'] = $email_score;
+    
+    // Analyse data completeness and quality (weight: 0.15)
+    $completeness_score = $this->calculate_data_completeness($form_data);
+    $probability += $completeness_score * 0.15;
+    $confidence_factors['data_quality'] = $completeness_score;
+    
+    // Analyse time-based patterns (weight: 0.10)
+    $timing_score = $this->calculate_timing_score();
+    $probability += $timing_score * 0.10;
+    $confidence_factors['timing'] = $timing_score;
+    
+    // Analyse historical patterns for similar submissions (weight: 0.15)
+    $historical_score = $this->calculate_historical_conversion_rate($form_data);
+    $probability += $historical_score * 0.15;
+    $confidence_factors['historical'] = $historical_score;
+    
+    // Analyse engagement signals (weight: 0.05)
+    $engagement_score = $this->calculate_engagement_score($form_data);
+    $probability += $engagement_score * 0.05;
+    $confidence_factors['engagement'] = $engagement_score;
+    
+    // Apply decay factor for time since last interaction
+    $decay_factor = $this->calculate_time_decay_factor();
+    $probability *= $decay_factor;
+    
+    // Store prediction metadata for analysis
+    $this->store_prediction_metadata($form_data, $probability, $confidence_factors);
+    
+    // Ensure probability stays within valid range
+    return max(0.01, min($probability, 0.99));
+}
+
+/**
+ * Calculate intent score based on form content and submission context
+ *
+ * @param array $form_data Form submission data
+ * @return float Score between 0 and 1
+ */
+private function calculate_intent_score($form_data) {
+    $score = 0.0;
+    
+    // High-intent form types and keywords
+    $high_intent_indicators = [
+        'demo' => 0.85,
+        'quote' => 0.90,
+        'consultation' => 0.80,
+        'trial' => 0.75,
+        'pricing' => 0.70,
+        'purchase' => 0.95,
+        'buy' => 0.92,
+        'schedule' => 0.78,
+        'book' => 0.82,
+        'contact sales' => 0.88
+    ];
+    
+    $medium_intent_indicators = [
+        'newsletter' => 0.25,
+        'download' => 0.45,
+        'whitepaper' => 0.50,
+        'webinar' => 0.55,
+        'case study' => 0.52,
+        'guide' => 0.48
+    ];
+    
+    $low_intent_indicators = [
+        'subscribe' => 0.15,
+        'update' => 0.10,
+        'feedback' => 0.12,
+        'survey' => 0.08
+    ];
+    
+    $form_content = strtolower(json_encode($form_data));
+    
+    // Check high-intent indicators
+    foreach ($high_intent_indicators as $indicator => $weight) {
+        if (stripos($form_content, $indicator) !== false) {
+            $score = max($score, $weight);
         }
-        
-        // Corporate email domains
-        if (!empty($form_data['email'])) {
-            $domain = substr(strrchr($form_data['email'], "@"), 1);
-            $consumer_domains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com'];
-            if (!in_array($domain, $consumer_domains)) {
-                $probability += 0.2;
-            }
-        }
-        
-        return min($probability, 1.0);
     }
+    
+    // Check medium-intent indicators if no high-intent found
+    if ($score < 0.60) {
+        foreach ($medium_intent_indicators as $indicator => $weight) {
+            if (stripos($form_content, $indicator) !== false) {
+                $score = max($score, $weight);
+            }
+        }
+    }
+    
+    // Check low-intent indicators if no higher intent found
+    if ($score < 0.20) {
+        foreach ($low_intent_indicators as $indicator => $weight) {
+            if (stripos($form_content, $indicator) !== false) {
+                $score = max($score, $weight);
+            }
+        }
+    }
+    
+    // Boost for multiple fields indicating serious interest
+    $field_count = count($form_data);
+    if ($field_count > 8) {
+        $score *= 1.15;
+    } elseif ($field_count > 5) {
+        $score *= 1.08;
+    }
+    
+    // Boost for company information provided
+    if (!empty($form_data['company']) || !empty($form_data['organisation'])) {
+        $score *= 1.12;
+    }
+    
+    // Boost for phone number provided (strong buying signal)
+    if (!empty($form_data['phone']) || !empty($form_data['telephone']) || !empty($form_data['mobile'])) {
+        $score *= 1.20;
+    }
+    
+    return min($score, 1.0);
+}
+
+/**
+ * Calculate email domain quality score
+ *
+ * @param array $form_data Form submission data
+ * @return float Score between 0 and 1
+ */
+private function calculate_email_domain_score($form_data) {
+    if (empty($form_data['email'])) {
+        return 0.3; // Neutral score for missing email
+    }
+    
+    $email = strtolower(trim($form_data['email']));
+    
+    // Validate email format
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return 0.1;
+    }
+    
+    $domain = substr(strrchr($email, '@'), 1);
+    
+    // Free consumer email providers (lower conversion probability)
+    $consumer_domains = [
+        'gmail.com' => 0.35,
+        'yahoo.com' => 0.30,
+        'hotmail.com' => 0.32,
+        'outlook.com' => 0.34,
+        'aol.com' => 0.28,
+        'icloud.com' => 0.33,
+        'mail.com' => 0.30,
+        'protonmail.com' => 0.38,
+        'zoho.com' => 0.36
+    ];
+    
+    if (isset($consumer_domains[$domain])) {
+        return $consumer_domains[$domain];
+    }
+    
+    // Disposable/temporary email domains (very low conversion)
+    $disposable_patterns = ['temp', 'disposable', 'trash', 'guerrilla', '10minute', 'throwaway'];
+    foreach ($disposable_patterns as $pattern) {
+        if (stripos($domain, $pattern) !== false) {
+            return 0.05;
+        }
+    }
+    
+    // Corporate/business email (higher conversion probability)
+    $score = 0.75;
+    
+    // Known high-value TLDs
+    $premium_tlds = ['.edu' => 1.10, '.gov' => 1.15, '.mil' => 1.15, '.ac.uk' => 1.10];
+    foreach ($premium_tlds as $tld => $multiplier) {
+        if (substr($domain, -strlen($tld)) === $tld) {
+            $score *= $multiplier;
+            break;
+        }
+    }
+    
+    // Check for role-based email (lower personal engagement)
+    $role_based = ['info@', 'admin@', 'support@', 'sales@', 'noreply@', 'contact@'];
+    foreach ($role_based as $role) {
+        if (stripos($email, $role) === 0) {
+            $score *= 0.70;
+            break;
+        }
+    }
+    
+    // Check domain age and reputation (if available via API)
+    $domain_reputation = $this->check_domain_reputation($domain);
+    $score *= $domain_reputation;
+    
+    return min($score, 1.0);
+}
+
+/**
+ * Calculate data completeness and quality score
+ *
+ * @param array $form_data Form submission data
+ * @return float Score between 0 and 1
+ */
+private function calculate_data_completeness($form_data) {
+    $total_fields = count($form_data);
+    
+    if ($total_fields === 0) {
+        return 0.0;
+    }
+    
+    $filled_fields = 0;
+    $quality_score = 0;
+    
+    foreach ($form_data as $key => $value) {
+        $value = trim($value);
+        
+        if (!empty($value) && strlen($value) > 0) {
+            $filled_fields++;
+            
+            // Award quality points for substantive responses
+            if (strlen($value) > 10) {
+                $quality_score += 0.15;
+            } elseif (strlen($value) > 3) {
+                $quality_score += 0.08;
+            } else {
+                $quality_score += 0.03;
+            }
+            
+            // Check for meaningful content vs spam patterns
+            if (!$this->is_spam_pattern($value)) {
+                $quality_score += 0.05;
+            }
+        }
+    }
+    
+    $completeness_ratio = $filled_fields / $total_fields;
+    $quality_ratio = min($quality_score / $total_fields, 1.0);
+    
+    // Combined score weighted 60% completeness, 40% quality
+    return ($completeness_ratio * 0.60) + ($quality_ratio * 0.40);
+}
+
+/**
+ * Calculate timing score based on submission time patterns
+ *
+ * @return float Score between 0 and 1
+ */
+private function calculate_timing_score() {
+    $hour = intval(current_time('H'));
+    $day = intval(current_time('N')); // 1 (Monday) through 7 (Sunday)
+    
+    $score = 0.5; // Base score
+    
+    // Business hours boost (09:00 - 17:00)
+    if ($hour >= 9 && $hour < 17) {
+        $score += 0.25;
+    } elseif ($hour >= 7 && $hour < 21) {
+        $score += 0.15;
+    } else {
+        $score -= 0.10; // Late night submissions often lower quality
+    }
+    
+    // Weekday vs weekend
+    if ($day >= 1 && $day <= 5) { // Monday to Friday
+        $score += 0.15;
+    } else {
+        $score += 0.05; // Weekend submissions slightly lower conversion
+    }
+    
+    // Peak engagement times (10:00-11:00, 14:00-15:00)
+    if (($hour >= 10 && $hour < 11) || ($hour >= 14 && $hour < 15)) {
+        $score += 0.10;
+    }
+    
+    return min($score, 1.0);
+}
+
+/**
+ * Calculate historical conversion rate for similar submissions
+ *
+ * @param array $form_data Current form submission data
+ * @return float Score between 0 and 1
+ */
+private function calculate_historical_conversion_rate($form_data) {
+    global $wpdb;
+    
+    // Extract form identifier
+    $form_id = $form_data['form_id'] ?? 'unknown';
+    
+    $table_name = $wpdb->prefix . 'affiliate_form_conversions';
+    
+    // Get historical conversion rate for this form type
+    $results = $wpdb->get_row($wpdb->prepare(
+        "SELECT 
+            COUNT(*) as total_submissions,
+            SUM(CASE WHEN converted = 1 THEN 1 ELSE 0 END) as conversions
+         FROM {$table_name}
+         WHERE form_id = %s
+         AND submission_date >= DATE_SUB(NOW(), INTERVAL 90 DAY)",
+        $form_id
+    ), ARRAY_A);
+    
+    $total = intval($results['total_submissions'] ?? 0);
+    $conversions = intval($results['conversions'] ?? 0);
+    
+    if ($total < 10) {
+        // Insufficient data, return neutral score
+        return 0.50;
+    }
+    
+    $conversion_rate = $conversions / $total;
+    
+    // Apply confidence interval based on sample size
+    $confidence_adjustment = min($total / 100, 1.0);
+    
+    return $conversion_rate * $confidence_adjustment;
+}
+
+/**
+ * Calculate engagement score based on user behaviour signals
+ *
+ * @param array $form_data Form submission data
+ * @return float Score between 0 and 1
+ */
+private function calculate_engagement_score($form_data) {
+    $score = 0.5;
+    
+    // Check for referrer information
+    $referrer = $_SERVER['HTTP_REFERER'] ?? '';
+    
+    if (!empty($referrer)) {
+        // Internal referral (browsed multiple pages)
+        if (stripos($referrer, $_SERVER['HTTP_HOST']) !== false) {
+            $score += 0.25;
+        } else {
+            $score += 0.10;
+        }
+    }
+    
+    // Check for UTM parameters indicating campaign engagement
+    if (!empty($form_data['utm_source']) || !empty($_GET['utm_source'])) {
+        $score += 0.15;
+    }
+    
+    // Check session depth
+    $session_pages = intval($_COOKIE['session_pages'] ?? 1);
+    if ($session_pages > 5) {
+        $score += 0.20;
+    } elseif ($session_pages > 2) {
+        $score += 0.10;
+    }
+    
+    // Check time on site
+    $session_duration = intval($_COOKIE['session_duration'] ?? 0);
+    if ($session_duration > 300) { // 5+ minutes
+        $score += 0.15;
+    } elseif ($session_duration > 120) { // 2+ minutes
+        $score += 0.08;
+    }
+    
+    return min($score, 1.0);
+}
+
+/**
+ * Calculate time decay factor for prediction accuracy
+ *
+ * @return float Decay factor between 0.8 and 1.0
+ */
+private function calculate_time_decay_factor() {
+    // Get time since last affiliate interaction
+    $last_interaction = get_transient('affcd_last_interaction_time');
+    
+    if (!$last_interaction) {
+        return 1.0;
+    }
+    
+    $minutes_elapsed = (time() - $last_interaction) / 60;
+    
+    // Apply exponential decay
+    // 100% within 30 minutes, 95% at 2 hours, 90% at 6 hours, 80% at 24+ hours
+    if ($minutes_elapsed <= 30) {
+        return 1.0;
+    } elseif ($minutes_elapsed <= 120) {
+        return 0.95;
+    } elseif ($minutes_elapsed <= 360) {
+        return 0.90;
+    } elseif ($minutes_elapsed <= 1440) {
+        return 0.85;
+    } else {
+        return 0.80;
+    }
+}
+
+/**
+ * Check domain reputation score
+ *
+ * @param string $domain Email domain
+ * @return float Reputation multiplier between 0.5 and 1.2
+ */
+private function check_domain_reputation($domain) {
+    // Check cached reputation
+    $cache_key = 'affcd_domain_rep_' . md5($domain);
+    $cached_score = get_transient($cache_key);
+    
+    if ($cached_score !== false) {
+        return floatval($cached_score);
+    }
+    
+    $score = 1.0;
+    
+    // Check against known spam domains list
+    $spam_domains = get_option('affcd_spam_domains', []);
+    if (in_array($domain, $spam_domains)) {
+        $score = 0.5;
+    }
+    
+    // Check against verified business domains
+    $verified_domains = get_option('affcd_verified_domains', []);
+    if (in_array($domain, $verified_domains)) {
+        $score = 1.2;
+    }
+    
+    // Cache for 7 days
+    set_transient($cache_key, $score, 7 * DAY_IN_SECONDS);
+    
+    return $score;
+}
+
+/**
+ * Check if value matches spam patterns
+ *
+ * @param string $value Field value to check
+ * @return bool True if spam pattern detected
+ */
+private function is_spam_pattern($value) {
+    $spam_patterns = [
+        '/\b(viagra|cialis|casino|lottery|winner)\b/i',
+        '/(.)\1{4,}/', // Repeated characters
+        '/\b\d{4,}\b/', // Long number sequences
+        '/<script|javascript:/i',
+        '/\b(http:\/\/|https:\/\/|www\.)/i' // URLs in unexpected fields
+    ];
+    
+    foreach ($spam_patterns as $pattern) {
+        if (preg_match($pattern, $value)) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+/**
+ * Store prediction metadata for analysis and improvement
+ *
+ * @param array $form_data Form submission data
+ * @param float $probability Predicted probability
+ * @param array $confidence_factors Individual factor scores
+ * @return void
+ */
+private function store_prediction_metadata($form_data, $probability, $confidence_factors) {
+    global $wpdb;
+    
+    $table_name = $wpdb->prefix . 'affiliate_conversion_predictions';
+    
+    $wpdb->insert(
+        $table_name,
+        [
+            'form_id' => $form_data['form_id'] ?? 'unknown',
+            'predicted_probability' => $probability,
+            'intent_score' => $confidence_factors['intent'] ?? 0,
+            'email_score' => $confidence_factors['email_quality'] ?? 0,
+            'completeness_score' => $confidence_factors['data_quality'] ?? 0,
+            'timing_score' => $confidence_factors['timing'] ?? 0,
+            'historical_score' => $confidence_factors['historical'] ?? 0,
+            'engagement_score' => $confidence_factors['engagement'] ?? 0,
+            'prediction_date' => current_time('mysql'),
+            'converted' => 0 // Will be updated when actual conversion is recorded
+        ],
+        ['%s', '%f', '%f', '%f', '%f', '%f', '%f', '%f', '%s', '%d']
+    );
+}
 
     private function calculate_recency_factor($timestamp) {
         $hours_ago = (time() - strtotime($timestamp)) / 3600;
@@ -1296,25 +1926,743 @@ class AFFCD_Viral_Engine {
 }
 
     
+/**
+ * Optimise viral loop based on performance data
+ * Uses statistical analysis and adaptive algorithms without
+ *
+ * @param object $opportunity The viral opportunity object
+ * @param int $affiliate_id The affiliate ID
+ * @param string $action The action taken (accepted, declined, converted, shared)
+ * @return void
+ */
+public function optimize_viral_loop($opportunity, $affiliate_id, $action) {
+    $trigger_type = $opportunity->trigger_type ?? 'unknown';
+    
+    // Record the action for historical analysis
+    $this->record_viral_action($opportunity, $affiliate_id, $action);
+    
+    // Get current trigger performance metrics
+    $trigger_metrics = $this->get_trigger_performance_metrics($trigger_type);
+    
+    // Apply action-specific optimisations
+    switch ($action) {
+        case 'accepted':
+            $this->optimise_for_acceptance($trigger_type, $trigger_metrics, $opportunity);
+            break;
+            
+        case 'declined':
+            $this->optimise_for_decline($trigger_type, $trigger_metrics, $opportunity);
+            break;
+            
+        case 'converted':
+            $this->optimise_for_conversion($trigger_type, $trigger_metrics, $opportunity);
+            break;
+            
+        case 'shared':
+            $this->optimise_for_sharing($trigger_type, $trigger_metrics, $opportunity);
+            break;
+            
+        case 'ignored':
+            $this->optimise_for_ignorance($trigger_type, $trigger_metrics, $opportunity);
+            break;
+    }
+    
+    // Perform cross-trigger optimisation
+    $this->optimise_trigger_mix();
+    
+    // Adjust timing and frequency based on performance
+    $this->optimise_trigger_timing($trigger_type, $action);
+    
+    // Optimise audience targeting
+    $this->optimise_audience_targeting($trigger_type, $affiliate_id, $action);
+    
+    // Clean up underperforming variations
+    $this->prune_poor_performers();
+    
+    // Update global viral loop settings
+    update_option('affcd_viral_triggers', $this->viral_triggers);
+    update_option('affcd_viral_optimisation_last_run', current_time('timestamp'));
+}
 
-    /**
-     * Optimize viral loop based on performance
-     */
-    public function optimize_viral_loop($opportunity, $affiliate_id, $action) {
-        // Machine learning optimization would go here
-        // For now, we'll do basic optimization
+/**
+ * Record viral action for historical analysis
+ *
+ * @param object $opportunity Viral opportunity object
+ * @param int $affiliate_id Affiliate ID
+ * @param string $action Action taken
+ * @return void
+ */
+private function record_viral_action($opportunity, $affiliate_id, $action) {
+    global $wpdb;
+    
+    $table_name = $wpdb->prefix . 'affiliate_viral_actions';
+    
+    $wpdb->insert(
+        $table_name,
+        [
+            'opportunity_id' => $opportunity->id ?? 0,
+            'affiliate_id' => $affiliate_id,
+            'trigger_type' => $opportunity->trigger_type ?? 'unknown',
+            'action' => $action,
+            'timestamp' => current_time('mysql'),
+            'context_data' => json_encode([
+                'time_of_day' => intval(current_time('H')),
+                'day_of_week' => intval(current_time('N')),
+                'affiliate_tier' => $this->get_affiliate_tier($affiliate_id),
+                'previous_actions' => $this->get_recent_actions($affiliate_id, 5)
+            ])
+        ],
+        ['%d', '%d', '%s', '%s', '%s', '%s']
+    );
+}
+
+/**
+ * Get comprehensive performance metrics for a trigger type
+ *
+ * @param string $trigger_type Trigger type identifier
+ * @return array Performance metrics
+ */
+private function get_trigger_performance_metrics($trigger_type) {
+    global $wpdb;
+    
+    $table_name = $wpdb->prefix . 'affiliate_viral_actions';
+    
+    // Get metrics from last 90 days
+    $metrics = $wpdb->get_row($wpdb->prepare(
+        "SELECT 
+            COUNT(*) as total_shown,
+            SUM(CASE WHEN action = 'accepted' THEN 1 ELSE 0 END) as accepted,
+            SUM(CASE WHEN action = 'declined' THEN 1 ELSE 0 END) as declined,
+            SUM(CASE WHEN action = 'converted' THEN 1 ELSE 0 END) as converted,
+            SUM(CASE WHEN action = 'shared' THEN 1 ELSE 0 END) as shared,
+            SUM(CASE WHEN action = 'ignored' THEN 1 ELSE 0 END) as ignored,
+            AVG(CASE WHEN action = 'accepted' THEN 1 ELSE 0 END) as acceptance_rate,
+            AVG(CASE WHEN action = 'converted' THEN 1 ELSE 0 END) as conversion_rate
+         FROM {$table_name}
+         WHERE trigger_type = %s
+         AND timestamp >= DATE_SUB(NOW(), INTERVAL 90 DAY)",
+        $trigger_type
+    ), ARRAY_A);
+    
+    // Calculate additional derived metrics
+    $total = intval($metrics['total_shown'] ?? 0);
+    
+    if ($total > 0) {
+        $metrics['engagement_rate'] = (intval($metrics['accepted']) + intval($metrics['shared'])) / $total;
+        $metrics['negative_rate'] = (intval($metrics['declined']) + intval($metrics['ignored'])) / $total;
+        $metrics['viral_coefficient'] = floatval($metrics['shared']) / max(intval($metrics['accepted']), 1);
+    } else {
+        $metrics['engagement_rate'] = 0;
+        $metrics['negative_rate'] = 0;
+        $metrics['viral_coefficient'] = 0;
+    }
+    
+    return $metrics;
+}
+
+/**
+ * Optimise trigger for acceptance actions
+ *
+ * @param string $trigger_type Trigger type
+ * @param array $metrics Current performance metrics
+ * @param object $opportunity Opportunity object
+ * @return void
+ */
+private function optimise_for_acceptance($trigger_type, $metrics, $opportunity) {
+    if (!isset($this->viral_triggers[$trigger_type])) {
+        return;
+    }
+    
+    $current_rate = $this->viral_triggers[$trigger_type]['success_rate'] ?? 0.1;
+    $total_shown = intval($metrics['total_shown'] ?? 0);
+    $accepted = intval($metrics['accepted'] ?? 0);
+    
+    // Use Bayesian updating for success rate
+    if ($total_shown >= 20) {
+        // Calculate empirical rate with confidence adjustment
+        $empirical_rate = $accepted / $total_shown;
         
-        if ($action === 'accepted') {
-            $trigger_type = $opportunity->trigger_type;
+        // Apply confidence based on sample size
+        $confidence = min($total_shown / 100, 1.0);
+        
+        // Weighted average: more weight to empirical as confidence grows
+        $new_rate = ($current_rate * (1 - $confidence)) + ($empirical_rate * $confidence);
+        
+        // Gradual increase with acceptance (5% boost, capped at 0.8)
+        $new_rate = min($new_rate * 1.05, 0.8);
+        
+        $this->viral_triggers[$trigger_type]['success_rate'] = $new_rate;
+    } else {
+        // Small sample: conservative update
+        $this->viral_triggers[$trigger_type]['success_rate'] = min($current_rate * 1.03, 0.5);
+    }
+    
+    // Increase trigger frequency if performing well
+    $acceptance_rate = floatval($metrics['acceptance_rate'] ?? 0);
+    if ($acceptance_rate > 0.3) {
+        $current_frequency = $this->viral_triggers[$trigger_type]['frequency'] ?? 1;
+        $this->viral_triggers[$trigger_type]['frequency'] = min($current_frequency * 1.1, 3);
+    }
+    
+    // Adjust reward amounts based on conversion performance
+    if (floatval($metrics['conversion_rate'] ?? 0) > 0.15) {
+        $current_reward = $this->viral_triggers[$trigger_type]['reward_multiplier'] ?? 1.0;
+        $this->viral_triggers[$trigger_type]['reward_multiplier'] = min($current_reward * 1.05, 2.0);
+    }
+}
+
+/**
+ * Optimise trigger for decline actions
+ *
+ * @param string $trigger_type Trigger type
+ * @param array $metrics Current performance metrics
+ * @param object $opportunity Opportunity object
+ * @return void
+ */
+private function optimise_for_decline($trigger_type, $metrics, $opportunity) {
+    if (!isset($this->viral_triggers[$trigger_type])) {
+        return;
+    }
+    
+    $current_rate = $this->viral_triggers[$trigger_type]['success_rate'] ?? 0.1;
+    $declined = intval($metrics['declined'] ?? 0);
+    $total_shown = intval($metrics['total_shown'] ?? 1);
+    
+    // Decrease success rate for declined opportunities
+    $decline_rate = $declined / $total_shown;
+    
+    if ($decline_rate > 0.4) {
+        // High decline rate: significant reduction
+        $this->viral_triggers[$trigger_type]['success_rate'] = max($current_rate * 0.90, 0.05);
+        
+        // Reduce frequency
+        $current_frequency = $this->viral_triggers[$trigger_type]['frequency'] ?? 1;
+        $this->viral_triggers[$trigger_type]['frequency'] = max($current_frequency * 0.85, 0.5);
+    } else {
+        // Moderate decline rate: gentle reduction
+        $this->viral_triggers[$trigger_type]['success_rate'] = max($current_rate * 0.97, 0.05);
+    }
+    
+    // Analyse decline reasons if available
+    $decline_context = $this->analyse_decline_context($trigger_type);
+    
+    if ($decline_context['timing_issue']) {
+        // Adjust trigger timing
+        $this->viral_triggers[$trigger_type]['optimal_hours'] = $decline_context['better_hours'];
+    }
+    
+    if ($decline_context['audience_mismatch']) {
+        // Tighten audience targeting
+        $this->viral_triggers[$trigger_type]['min_tier'] = max(
+            $this->viral_triggers[$trigger_type]['min_tier'] ?? 1,
+            2
+        );
+    }
+}
+
+/**
+ * Optimise trigger for conversion actions
+ *
+ * @param string $trigger_type Trigger type
+ * @param array $metrics Current performance metrics
+ * @param object $opportunity Opportunity object
+ * @return void
+ */
+private function optimise_for_conversion($trigger_type, $metrics, $opportunity) {
+    if (!isset($this->viral_triggers[$trigger_type])) {
+        return;
+    }
+    
+    // Conversion is the ultimate success metric
+    $conversion_rate = floatval($metrics['conversion_rate'] ?? 0);
+    
+    if ($conversion_rate > 0.1) {
+        // Excellent conversion rate: boost significantly
+        $current_rate = $this->viral_triggers[$trigger_type]['success_rate'] ?? 0.1;
+        $this->viral_triggers[$trigger_type]['success_rate'] = min($current_rate * 1.15, 0.85);
+        
+        // Increase frequency and priority
+        $current_frequency = $this->viral_triggers[$trigger_type]['frequency'] ?? 1;
+        $this->viral_triggers[$trigger_type]['frequency'] = min($current_frequency * 1.2, 3);
+        $this->viral_triggers[$trigger_type]['priority'] = 'high';
+        
+        // Increase reward to reinforce behaviour
+        $current_reward = $this->viral_triggers[$trigger_type]['reward_multiplier'] ?? 1.0;
+        $this->viral_triggers[$trigger_type]['reward_multiplier'] = min($current_reward * 1.10, 2.5);
+    }
+    
+    // Analyse conversion patterns
+    $conversion_patterns = $this->analyse_conversion_patterns($trigger_type);
+    
+    // Optimise for successful conversion contexts
+    if (!empty($conversion_patterns['optimal_day'])) {
+        $this->viral_triggers[$trigger_type]['optimal_days'] = $conversion_patterns['optimal_day'];
+    }
+    
+    if (!empty($conversion_patterns['optimal_affiliate_tier'])) {
+        $this->viral_triggers[$trigger_type]['target_tiers'] = $conversion_patterns['optimal_affiliate_tier'];
+    }
+}
+
+/**
+ * Optimise trigger for sharing actions
+ *
+ * @param string $trigger_type Trigger type
+ * @param array $metrics Current performance metrics
+ * @param object $opportunity Opportunity object
+ * @return void
+ */
+private function optimise_for_sharing($trigger_type, $metrics, $opportunity) {
+    if (!isset($this->viral_triggers[$trigger_type])) {
+        return;
+    }
+    
+    // Sharing indicates high viral potential
+    $viral_coefficient = floatval($metrics['viral_coefficient'] ?? 0);
+    
+    if ($viral_coefficient > 0.5) {
+        // High viral coefficient: this trigger spreads well
+        $current_rate = $this->viral_triggers[$trigger_type]['success_rate'] ?? 0.1;
+        $this->viral_triggers[$trigger_type]['success_rate'] = min($current_rate * 1.12, 0.8);
+        
+        // Enable social sharing features
+        $this->viral_triggers[$trigger_type]['enable_social_share'] = true;
+        $this->viral_triggers[$trigger_type]['share_bonus_multiplier'] = 1.5;
+    }
+    
+    // Analyse what makes this trigger shareable
+    $shareability_factors = $this->analyse_shareability($trigger_type);
+    
+    // Apply learnings to similar triggers
+    $this->apply_shareability_insights($shareability_factors);
+}
+
+/**
+ * Optimise trigger for ignored opportunities
+ *
+ * @param string $trigger_type Trigger type
+ * @param array $metrics Current performance metrics
+ * @param object $opportunity Opportunity object
+ * @return void
+ */
+private function optimise_for_ignorance($trigger_type, $metrics, $opportunity) {
+    if (!isset($this->viral_triggers[$trigger_type])) {
+        return;
+    }
+    
+    $ignored = intval($metrics['ignored'] ?? 0);
+    $total_shown = intval($metrics['total_shown'] ?? 1);
+    $ignore_rate = $ignored / $total_shown;
+    
+    if ($ignore_rate > 0.5) {
+        // High ignore rate: trigger not engaging
+        $current_rate = $this->viral_triggers[$trigger_type]['success_rate'] ?? 0.1;
+        $this->viral_triggers[$trigger_type]['success_rate'] = max($current_rate * 0.85, 0.03);
+        
+        // Dramatically reduce frequency
+        $current_frequency = $this->viral_triggers[$trigger_type]['frequency'] ?? 1;
+        $this->viral_triggers[$trigger_type]['frequency'] = max($current_frequency * 0.7, 0.3);
+        
+        // Flag for review
+        $this->viral_triggers[$trigger_type]['requires_review'] = true;
+        $this->viral_triggers[$trigger_type]['ignore_rate'] = $ignore_rate;
+    }
+}
+
+/**
+ * Optimise the mix of triggers shown to affiliates
+ *
+ * @return void
+ */
+private function optimise_trigger_mix() {
+    $all_metrics = [];
+    
+    // Gather performance data for all triggers
+    foreach ($this->viral_triggers as $trigger_type => $config) {
+        $metrics = $this->get_trigger_performance_metrics($trigger_type);
+        $all_metrics[$trigger_type] = $metrics;
+    }
+    
+    // Calculate total engagement across all triggers
+    $total_engagement = 0;
+    foreach ($all_metrics as $metrics) {
+        $total_engagement += floatval($metrics['engagement_rate'] ?? 0);
+    }
+    
+    // Adjust trigger weights based on relative performance
+    foreach ($this->viral_triggers as $trigger_type => $config) {
+        $engagement = floatval($all_metrics[$trigger_type]['engagement_rate'] ?? 0);
+        
+        if ($total_engagement > 0) {
+            $relative_performance = $engagement / $total_engagement;
             
-            // Increase success rate for this trigger type
-            $current_rate = $this->viral_triggers[$trigger_type]['success_rate'];
-            $this->viral_triggers[$trigger_type]['success_rate'] = min($current_rate * 1.05, 0.5);
-            
-            // Update trigger settings
-            update_option('affcd_viral_triggers', $this->viral_triggers);
+            // Adjust display probability based on relative performance
+            $this->viral_triggers[$trigger_type]['display_weight'] = max($relative_performance * 10, 0.5);
         }
     }
+}
+
+/**
+ * Optimise trigger timing based on performance patterns
+ *
+ * @param string $trigger_type Trigger type
+ * @param string $action Action taken
+ * @return void
+ */
+private function optimise_trigger_timing($trigger_type, $action) {
+    global $wpdb;
+    
+    $table_name = $wpdb->prefix . 'affiliate_viral_actions';
+    
+    // Analyse hour-of-day performance
+    $hourly_performance = $wpdb->get_results($wpdb->prepare(
+        "SELECT 
+            HOUR(timestamp) as hour,
+            COUNT(*) as total,
+            SUM(CASE WHEN action IN ('accepted', 'converted', 'shared') THEN 1 ELSE 0 END) as positive
+         FROM {$table_name}
+         WHERE trigger_type = %s
+         AND timestamp >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+         GROUP BY HOUR(timestamp)",
+        $trigger_type
+    ), ARRAY_A);
+    
+    $best_hours = [];
+    foreach ($hourly_performance as $hour_data) {
+        $hour = intval($hour_data['hour']);
+        $success_rate = floatval($hour_data['positive']) / max(intval($hour_data['total']), 1);
+        
+        if ($success_rate > 0.2) {
+            $best_hours[] = $hour;
+        }
+    }
+    
+    if (!empty($best_hours)) {
+        $this->viral_triggers[$trigger_type]['optimal_hours'] = $best_hours;
+    }
+    
+    // Analyse day-of-week performance
+    $daily_performance = $wpdb->get_results($wpdb->prepare(
+        "SELECT 
+            DAYOFWEEK(timestamp) as day,
+            COUNT(*) as total,
+            SUM(CASE WHEN action IN ('accepted', 'converted', 'shared') THEN 1 ELSE 0 END) as positive
+         FROM {$table_name}
+         WHERE trigger_type = %s
+         AND timestamp >= DATE_SUB(NOW(), INTERVAL 60 DAY)
+         GROUP BY DAYOFWEEK(timestamp)",
+        $trigger_type
+    ), ARRAY_A);
+    
+    $best_days = [];
+    foreach ($daily_performance as $day_data) {
+        $day = intval($day_data['day']);
+        $success_rate = floatval($day_data['positive']) / max(intval($day_data['total']), 1);
+        
+        if ($success_rate > 0.2) {
+            $best_days[] = $day;
+        }
+    }
+    
+    if (!empty($best_days)) {
+        $this->viral_triggers[$trigger_type]['optimal_days'] = $best_days;
+    }
+}
+
+/**
+ * Optimise audience targeting for triggers
+ *
+ * @param string $trigger_type Trigger type
+ * @param int $affiliate_id Affiliate ID
+ * @param string $action Action taken
+ * @return void
+ */
+private function optimise_audience_targeting($trigger_type, $affiliate_id, $action) {
+    $affiliate_tier = $this->get_affiliate_tier($affiliate_id);
+    
+    // Track which tiers respond best
+    $tier_performance = get_option('affcd_trigger_tier_performance', []);
+    
+    if (!isset($tier_performance[$trigger_type])) {
+        $tier_performance[$trigger_type] = [];
+    }
+    
+    if (!isset($tier_performance[$trigger_type][$affiliate_tier])) {
+        $tier_performance[$trigger_type][$affiliate_tier] = [
+            'shown' => 0,
+            'positive' => 0
+        ];
+    }
+    
+    $tier_performance[$trigger_type][$affiliate_tier]['shown']++;
+    
+    if (in_array($action, ['accepted', 'converted', 'shared'])) {
+        $tier_performance[$trigger_type][$affiliate_tier]['positive']++;
+    }
+    
+    // Calculate success rate per tier
+    $tier_success_rates = [];
+    foreach ($tier_performance[$trigger_type] as $tier => $data) {
+        if ($data['shown'] >= 10) {
+            $tier_success_rates[$tier] = $data['positive'] / $data['shown'];
+        }
+    }
+    
+    // Identify best performing tiers
+    if (!empty($tier_success_rates)) {
+        arsort($tier_success_rates);
+        $best_tiers = array_slice(array_keys($tier_success_rates), 0, 3);
+        $this->viral_triggers[$trigger_type]['target_tiers'] = $best_tiers;
+    }
+    
+    update_option('affcd_trigger_tier_performance', $tier_performance);
+}
+
+/**
+ * Remove or reduce poorly performing trigger variations
+ *
+ * @return void
+ */
+private function prune_poor_performers() {
+    $pruned_count = 0;
+    
+    foreach ($this->viral_triggers as $trigger_type => $config) {
+        $metrics = $this->get_trigger_performance_metrics($trigger_type);
+        $total_shown = intval($metrics['total_shown'] ?? 0);
+        
+        // Only prune if we have sufficient data
+        if ($total_shown < 50) {
+            continue;
+        }
+        
+        $engagement_rate = floatval($metrics['engagement_rate'] ?? 0);
+        $negative_rate = floatval($metrics['negative_rate'] ?? 0);
+        
+        // Prune if engagement is very low and negative feedback is high
+        if ($engagement_rate < 0.05 && $negative_rate > 0.6) {
+            $this->viral_triggers[$trigger_type]['enabled'] = false;
+            $this->viral_triggers[$trigger_type]['pruned'] = true;
+            $this->viral_triggers[$trigger_type]['pruned_date'] = current_time('mysql');
+            $pruned_count++;
+        }
+    }
+    
+    if ($pruned_count > 0) {
+        $this->log_optimisation_event("Pruned {$pruned_count} poor performing triggers");
+    }
+}
+
+/**
+ * Analyse decline context to understand why triggers are declined
+ *
+ * @param string $trigger_type Trigger type
+ * @return array Context analysis results
+ */
+private function analyse_decline_context($trigger_type) {
+    global $wpdb;
+    
+    $table_name = $wpdb->prefix . 'affiliate_viral_actions';
+    
+    // Analyse timing of declines
+    $timing_data = $wpdb->get_results($wpdb->prepare(
+        "SELECT HOUR(timestamp) as hour, COUNT(*) as count
+         FROM {$table_name}
+         WHERE trigger_type = %s
+         AND action = 'declined'
+         AND timestamp >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+         GROUP BY HOUR(timestamp)
+         ORDER BY count DESC",
+        $trigger_type
+    ), ARRAY_A);
+    
+    $worst_hours = array_slice(array_column($timing_data, 'hour'), 0, 6);
+    $all_hours = range(0, 23);
+    $better_hours = array_diff($all_hours, $worst_hours);
+    
+    // Analyse affiliate tier patterns
+    $tier_data = $wpdb->get_results($wpdb->prepare(
+        "SELECT JSON_EXTRACT(context_data, '$.affiliate_tier') as tier, COUNT(*) as count
+         FROM {$table_name}
+         WHERE trigger_type = %s
+         AND action = 'declined'
+         AND timestamp >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+         GROUP BY tier
+         ORDER BY count DESC",
+        $trigger_type
+    ), ARRAY_A);
+    
+    $audience_mismatch = !empty($tier_data) && intval($tier_data[0]['count']) > 10;
+    
+    return [
+        'timing_issue' => !empty($worst_hours),
+        'better_hours' => $better_hours,
+        'audience_mismatch' => $audience_mismatch
+    ];
+}
+
+/**
+ * Analyse conversion patterns for optimisation
+ *
+ * @param string $trigger_type Trigger type
+ * @return array Conversion pattern analysis
+ */
+private function analyse_conversion_patterns($trigger_type) {
+    global $wpdb;
+    
+    $table_name = $wpdb->prefix . 'affiliate_viral_actions';
+    
+    // Find optimal day of week
+    $day_analysis = $wpdb->get_row($wpdb->prepare(
+        "SELECT DAYOFWEEK(timestamp) as best_day, COUNT(*) as conversions
+         FROM {$table_name}
+         WHERE trigger_type = %s
+         AND action = 'converted'
+         AND timestamp >= DATE_SUB(NOW(), INTERVAL 60 DAY)
+         GROUP BY DAYOFWEEK(timestamp)
+         ORDER BY conversions DESC
+         LIMIT 1",
+        $trigger_type
+    ), ARRAY_A);
+    
+    // Find optimal affiliate tier
+    $tier_analysis = $wpdb->get_row($wpdb->prepare(
+        "SELECT JSON_EXTRACT(context_data, '$.affiliate_tier') as best_tier, COUNT(*) as conversions
+         FROM {$table_name}
+         WHERE trigger_type = %s
+         AND action = 'converted'
+         AND timestamp >= DATE_SUB(NOW(), INTERVAL 60 DAY)
+         GROUP BY best_tier
+         ORDER BY conversions DESC
+         LIMIT 1",
+        $trigger_type
+    ), ARRAY_A);
+    
+    return [
+        'optimal_day' => $day_analysis['best_day'] ?? null,
+        'optimal_affiliate_tier' => $tier_analysis['best_tier'] ?? null
+    ];
+}
+
+/**
+ * Analyse what makes a trigger shareable
+ *
+ * @param string $trigger_type Trigger type
+ * @return array Shareability factors
+ */
+private function analyse_shareability($trigger_type) {
+    global $wpdb;
+    
+    $table_name = $wpdb->prefix . 'affiliate_viral_actions';
+    
+    $share_data = $wpdb->get_row($wpdb->prepare(
+        "SELECT 
+            AVG(JSON_EXTRACT(context_data, '$.affiliate_tier')) as avg_sharer_tier,
+            COUNT(DISTINCT affiliate_id) as unique_sharers,
+            COUNT(*) as total_shares
+         FROM {$table_name}
+         WHERE trigger_type = %s
+         AND action = 'shared'
+         AND timestamp >= DATE_SUB(NOW(), INTERVAL 60 DAY)",
+        $trigger_type
+    ), ARRAY_A);
+    
+    return [
+        'avg_sharer_tier' => floatval($share_data['avg_sharer_tier'] ?? 0),
+        'viral_reach' => intval($share_data['total_shares'] ?? 0),
+        'trigger_type' => $trigger_type
+    ];
+}
+
+/**
+ * Apply shareability insights to similar triggers
+ *
+ * @param array $factors Shareability factors
+ * @return void
+ */
+private function apply_shareability_insights($factors) {
+    $viral_reach = $factors['viral_reach'];
+    
+    if ($viral_reach > 50) {
+        // This trigger type is highly viral, boost similar triggers
+        foreach ($this->viral_triggers as $trigger_type => $config) {
+            if ($trigger_type !== $factors['trigger_type']) {
+                // Apply modest boost to related triggers
+                $this->viral_triggers[$trigger_type]['share_incentive'] = 1.2;
+            }
+        }
+    }
+}
+
+/**
+ * Get affiliate tier level
+ *
+ * @param int $affiliate_id Affiliate ID
+ * @return int Tier level (1-5)
+ */
+private function get_affiliate_tier($affiliate_id) {
+    global $wpdb;
+    
+    $lifetime_value = $wpdb->get_var($wpdb->prepare(
+        "SELECT total_revenue FROM {$wpdb->prefix}affiliate_lifetime_value
+         WHERE affiliate_id = %d",
+        $affiliate_id
+    ));
+    
+    $lifetime_value = floatval($lifetime_value ?? 0);
+    
+    if ($lifetime_value >= 50000) return 5;
+    if ($lifetime_value >= 25000) return 4;
+    if ($lifetime_value >= 10000) return 3;
+    if ($lifetime_value >= 1000) return 2;
+    return 1;
+}
+
+/**
+ * Get recent actions for an affiliate
+ *
+ * @param int $affiliate_id Affiliate ID
+ * @param int $limit Number of recent actions
+ * @return array Recent actions
+ */
+private function get_recent_actions($affiliate_id, $limit = 5) {
+    global $wpdb;
+    
+    $table_name = $wpdb->prefix . 'affiliate_viral_actions';
+    
+    $actions = $wpdb->get_col($wpdb->prepare(
+        "SELECT action FROM {$table_name}
+         WHERE affiliate_id = %d
+         ORDER BY timestamp DESC
+         LIMIT %d",
+        $affiliate_id,
+        $limit
+    ));
+    
+    return $actions ?: [];
+}
+
+/**
+ * Log optimisation event for tracking and debugging
+ *
+ * @param string $message Event message
+ * @return void
+ */
+private function log_optimisation_event($message) {
+    if (defined('WP_DEBUG') && WP_DEBUG === true) {
+        error_log('Viral Loop Optimisation: ' . $message);
+    }
+    
+    // Store in options for dashboard display
+    $log = get_option('affcd_optimisation_log', []);
+    $log[] = [
+        'timestamp' => current_time('mysql'),
+        'message' => $message
+    ];
+    
+    // Keep only last 50 events
+    $log = array_slice($log, -50);
+    update_option('affcd_optimisation_log', $log);
+}
 }
 
 /**
@@ -1800,31 +3148,521 @@ class AFFCD_Identity_Resolution {
         return $this->format_matches($matches, 'device_fingerprint');
     }
 
-    /**
-     * Behavioral pattern matching
-     */
-    private function match_behavioral_pattern($identity_data) {
-        // This would use machine learning to match behavioral patterns
-        // For now, we'll do basic pattern matching
-        
-        if (empty($identity_data['session_id'])) {
-            return [];
-        }
-
-        global $wpdb;
-
-        // Match similar interaction patterns
-        $patterns = $wpdb->get_results($wpdb->prepare("
-            SELECT i1.identity_hash, i1.additional_data, i1.collected_at
-            FROM {$wpdb->prefix}affcd_identity_data i1
-            JOIN {$wpdb->prefix}affcd_identity_data i2 ON i1.ip_address = i2.ip_address
-            WHERE i2.session_id = %s 
-            AND i1.identity_hash != i2.identity_hash
-            AND i1.collected_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-        ", $identity_data['session_id']));
-
-        return $this->format_matches($patterns, 'behavioral_pattern');
+/**
+ * Behavioural pattern matching
+ * Identifies similar user behaviour patterns
+ * Uses statistical analysis and heuristic pattern recognition
+ *
+ * @param array $identity_data Identity data to match against
+ * @return array Matched patterns with confidence scores
+ */
+private function match_behavioral_pattern($identity_data) {
+    if (empty($identity_data['session_id'])) {
+        return [];
     }
+
+    global $wpdb;
+    
+    $matches = [];
+    
+    // Extract behavioural signature from current session
+    $current_signature = $this->extract_behavioral_signature($identity_data);
+    
+    if (empty($current_signature)) {
+        return [];
+    }
+    
+    // Find sessions with similar behavioural patterns
+    $candidate_patterns = $this->find_candidate_behavioral_patterns($identity_data);
+    
+    foreach ($candidate_patterns as $candidate) {
+        // Calculate behavioural similarity score
+        $similarity_score = $this->calculate_behavioral_similarity(
+            $current_signature,
+            $candidate
+        );
+        
+        // Only include matches with meaningful similarity (>= 60%)
+        if ($similarity_score >= 0.60) {
+            $matches[] = [
+                'identity_hash' => $candidate['identity_hash'],
+                'match_type' => 'behavioral_pattern',
+                'confidence' => $similarity_score,
+                'matching_factors' => $candidate['matching_factors'],
+                'collected_at' => $candidate['collected_at'],
+                'pattern_strength' => $this->calculate_pattern_strength($candidate)
+            ];
+        }
+    }
+    
+    // Sort by confidence score descending
+    usort($matches, function($a, $b) {
+        return $b['confidence'] <=> $a['confidence'];
+    });
+    
+    // Return top 10 matches
+    return array_slice($matches, 0, 10);
+}
+
+/**
+ * Extract behavioural signature from identity data
+ *
+ * @param array $identity_data Identity data
+ * @return array Behavioural signature components
+ */
+private function extract_behavioral_signature($identity_data) {
+    $signature = [];
+    
+    // Parse additional data
+    $additional_data = [];
+    if (!empty($identity_data['additional_data'])) {
+        $additional_data = is_array($identity_data['additional_data']) 
+            ? $identity_data['additional_data'] 
+            : json_decode($identity_data['additional_data'], true);
+    }
+    
+    // Temporal patterns
+    $signature['hour_of_day'] = intval(current_time('H'));
+    $signature['day_of_week'] = intval(current_time('N'));
+    $signature['time_category'] = $this->categorise_time($signature['hour_of_day']);
+    
+    // Navigation patterns
+    $signature['pages_visited'] = intval($additional_data['pages_visited'] ?? 1);
+    $signature['session_duration'] = intval($additional_data['session_duration'] ?? 0);
+    $signature['avg_time_per_page'] = $signature['pages_visited'] > 0 
+        ? $signature['session_duration'] / $signature['pages_visited'] 
+        : 0;
+    
+    // Interaction patterns
+    $signature['click_count'] = intval($additional_data['click_count'] ?? 0);
+    $signature['scroll_depth'] = floatval($additional_data['scroll_depth'] ?? 0);
+    $signature['form_interactions'] = intval($additional_data['form_interactions'] ?? 0);
+    
+    // Entry and referral patterns
+    $signature['entry_page'] = sanitize_text_field($additional_data['entry_page'] ?? '');
+    $signature['referrer_type'] = $this->categorise_referrer($additional_data['referrer'] ?? '');
+    $signature['utm_source'] = sanitize_text_field($additional_data['utm_source'] ?? '');
+    
+    // Device and browser patterns
+    $signature['device_type'] = sanitize_text_field($identity_data['device_type'] ?? 'unknown');
+    $signature['browser_family'] = $this->extract_browser_family($identity_data['user_agent'] ?? '');
+    $signature['screen_resolution'] = sanitize_text_field($additional_data['screen_resolution'] ?? '');
+    
+    // Engagement level categorisation
+    $signature['engagement_level'] = $this->calculate_engagement_level($signature);
+    
+    // Conversion intent signals
+    $signature['intent_signals'] = $this->extract_intent_signals($additional_data);
+    
+    return $signature;
+}
+
+/**
+ * Find candidate behavioural patterns from database
+ *
+ * @param array $identity_data Current identity data
+ * @return array Candidate patterns
+ */
+private function find_candidate_behavioral_patterns($identity_data) {
+    global $wpdb;
+    
+    $session_id = $identity_data['session_id'];
+    $current_ip = $identity_data['ip_address'] ?? '';
+    
+    // Query for similar patterns using multiple criteria
+    $patterns = $wpdb->get_results($wpdb->prepare("
+        SELECT 
+            i.identity_hash,
+            i.additional_data,
+            i.collected_at,
+            i.device_type,
+            i.user_agent,
+            i.ip_address,
+            COUNT(DISTINCT DATE(i.collected_at)) as visit_days,
+            AVG(JSON_EXTRACT(i.additional_data, '$.session_duration')) as avg_session_duration,
+            AVG(JSON_EXTRACT(i.additional_data, '$.pages_visited')) as avg_pages_visited
+        FROM {$wpdb->prefix}affcd_identity_data i
+        WHERE i.collected_at >= DATE_SUB(NOW(), INTERVAL 90 DAY)
+        AND i.session_id != %s
+        AND (
+            i.ip_address = %s
+            OR i.device_type = %s
+            OR HOUR(i.collected_at) BETWEEN %d AND %d
+        )
+        GROUP BY i.identity_hash
+        HAVING visit_days >= 1
+        ORDER BY i.collected_at DESC
+        LIMIT 50
+    ", 
+        $session_id,
+        $current_ip,
+        $identity_data['device_type'] ?? '',
+        max(0, intval(current_time('H')) - 2),
+        min(23, intval(current_time('H')) + 2)
+    ), ARRAY_A);
+    
+    // Enrich candidate patterns with behavioural signatures
+    foreach ($patterns as &$pattern) {
+        $pattern_data = [
+            'session_id' => $pattern['identity_hash'],
+            'additional_data' => $pattern['additional_data'],
+            'device_type' => $pattern['device_type'],
+            'user_agent' => $pattern['user_agent'],
+            'ip_address' => $pattern['ip_address']
+        ];
+        
+        $pattern['signature'] = $this->extract_behavioral_signature($pattern_data);
+        $pattern['matching_factors'] = [];
+    }
+    
+    return $patterns;
+}
+
+/**
+ * Calculate behavioural similarity between two signatures
+ *
+ * @param array $signature1 First behavioural signature
+ * @param array $candidate Candidate pattern with signature
+ * @return float Similarity score between 0 and 1
+ */
+private function calculate_behavioral_similarity($signature1, $candidate) {
+    $signature2 = $candidate['signature'] ?? [];
+    
+    if (empty($signature2)) {
+        return 0.0;
+    }
+    
+    $similarity_scores = [];
+    $matching_factors = [];
+    
+    // Temporal similarity (weight: 0.15)
+    $temporal_similarity = 0.0;
+    if (isset($signature1['time_category']) && isset($signature2['time_category'])) {
+        if ($signature1['time_category'] === $signature2['time_category']) {
+            $temporal_similarity += 0.6;
+            $matching_factors[] = 'time_of_day';
+        }
+        
+        $hour_diff = abs($signature1['hour_of_day'] - $signature2['hour_of_day']);
+        if ($hour_diff <= 2) {
+            $temporal_similarity += 0.4;
+            $matching_factors[] = 'similar_hours';
+        }
+    }
+    $similarity_scores['temporal'] = $temporal_similarity * 0.15;
+    
+    // Navigation pattern similarity (weight: 0.25)
+    $navigation_similarity = $this->compare_navigation_patterns($signature1, $signature2);
+    if ($navigation_similarity > 0.6) {
+        $matching_factors[] = 'navigation_pattern';
+    }
+    $similarity_scores['navigation'] = $navigation_similarity * 0.25;
+    
+    // Interaction pattern similarity (weight: 0.20)
+    $interaction_similarity = $this->compare_interaction_patterns($signature1, $signature2);
+    if ($interaction_similarity > 0.6) {
+        $matching_factors[] = 'interaction_pattern';
+    }
+    $similarity_scores['interaction'] = $interaction_similarity * 0.20;
+    
+    // Device and browser similarity (weight: 0.15)
+    $device_similarity = 0.0;
+    if ($signature1['device_type'] === $signature2['device_type']) {
+        $device_similarity += 0.5;
+        $matching_factors[] = 'device_type';
+    }
+    if ($signature1['browser_family'] === $signature2['browser_family']) {
+        $device_similarity += 0.5;
+        $matching_factors[] = 'browser_family';
+    }
+    $similarity_scores['device'] = $device_similarity * 0.15;
+    
+    // Engagement level similarity (weight: 0.15)
+    $engagement_similarity = 0.0;
+    if ($signature1['engagement_level'] === $signature2['engagement_level']) {
+        $engagement_similarity = 1.0;
+        $matching_factors[] = 'engagement_level';
+    } elseif (abs($signature1['engagement_level'] - $signature2['engagement_level']) <= 1) {
+        $engagement_similarity = 0.5;
+    }
+    $similarity_scores['engagement'] = $engagement_similarity * 0.15;
+    
+    // Referral pattern similarity (weight: 0.10)
+    $referral_similarity = 0.0;
+    if ($signature1['referrer_type'] === $signature2['referrer_type']) {
+        $referral_similarity += 0.7;
+        $matching_factors[] = 'referrer_type';
+    }
+    if (!empty($signature1['utm_source']) && $signature1['utm_source'] === $signature2['utm_source']) {
+        $referral_similarity = 1.0;
+        $matching_factors[] = 'utm_source';
+    }
+    $similarity_scores['referral'] = $referral_similarity * 0.10;
+    
+    // Store matching factors in candidate
+    $candidate['matching_factors'] = $matching_factors;
+    
+    // Calculate total weighted similarity
+    $total_similarity = array_sum($similarity_scores);
+    
+    return min($total_similarity, 1.0);
+}
+
+/**
+ * Compare navigation patterns between two signatures
+ *
+ * @param array $sig1 First signature
+ * @param array $sig2 Second signature
+ * @return float Similarity score between 0 and 1
+ */
+private function compare_navigation_patterns($sig1, $sig2) {
+    $similarity = 0.0;
+    
+    // Compare pages visited
+    $pages_diff = abs($sig1['pages_visited'] - $sig2['pages_visited']);
+    $pages_similarity = max(0, 1 - ($pages_diff / 10));
+    $similarity += $pages_similarity * 0.35;
+    
+    // Compare session duration
+    $duration_diff = abs($sig1['session_duration'] - $sig2['session_duration']);
+    $duration_similarity = max(0, 1 - ($duration_diff / 600)); // 10 minute tolerance
+    $similarity += $duration_similarity * 0.35;
+    
+    // Compare average time per page
+    $time_per_page_diff = abs($sig1['avg_time_per_page'] - $sig2['avg_time_per_page']);
+    $time_per_page_similarity = max(0, 1 - ($time_per_page_diff / 120)); // 2 minute tolerance
+    $similarity += $time_per_page_similarity * 0.30;
+    
+    return $similarity;
+}
+
+/**
+ * Compare interaction patterns between two signatures
+ *
+ * @param array $sig1 First signature
+ * @param array $sig2 Second signature
+ * @return float Similarity score between 0 and 1
+ */
+private function compare_interaction_patterns($sig1, $sig2) {
+    $similarity = 0.0;
+    
+    // Compare click behaviour
+    $click_diff = abs($sig1['click_count'] - $sig2['click_count']);
+    $click_similarity = max(0, 1 - ($click_diff / 20));
+    $similarity += $click_similarity * 0.40;
+    
+    // Compare scroll behaviour
+    $scroll_diff = abs($sig1['scroll_depth'] - $sig2['scroll_depth']);
+    $scroll_similarity = max(0, 1 - ($scroll_diff / 100));
+    $similarity += $scroll_similarity * 0.30;
+    
+    // Compare form interactions
+    $form_diff = abs($sig1['form_interactions'] - $sig2['form_interactions']);
+    $form_similarity = max(0, 1 - ($form_diff / 5));
+    $similarity += $form_similarity * 0.30;
+    
+    return $similarity;
+}
+
+/**
+ * Categorise time of day into meaningful periods
+ *
+ * @param int $hour Hour of day (0-23)
+ * @return string Time category
+ */
+private function categorise_time($hour) {
+    if ($hour >= 6 && $hour < 9) return 'early_morning';
+    if ($hour >= 9 && $hour < 12) return 'morning';
+    if ($hour >= 12 && $hour < 14) return 'lunch';
+    if ($hour >= 14 && $hour < 17) return 'afternoon';
+    if ($hour >= 17 && $hour < 20) return 'evening';
+    if ($hour >= 20 && $hour < 23) return 'night';
+    return 'late_night';
+}
+
+/**
+ * Categorise referrer source
+ *
+ * @param string $referrer Referrer URL
+ * @return string Referrer category
+ */
+private function categorise_referrer($referrer) {
+    if (empty($referrer)) {
+        return 'direct';
+    }
+    
+    $referrer = strtolower($referrer);
+    
+    // Search engines
+    $search_engines = ['google', 'bing', 'yahoo', 'duckduckgo', 'baidu'];
+    foreach ($search_engines as $engine) {
+        if (stripos($referrer, $engine) !== false) {
+            return 'search';
+        }
+    }
+    
+    // Social media
+    $social_platforms = ['facebook', 'twitter', 'linkedin', 'instagram', 'pinterest', 'reddit'];
+    foreach ($social_platforms as $platform) {
+        if (stripos($referrer, $platform) !== false) {
+            return 'social';
+        }
+    }
+    
+    // Email
+    if (stripos($referrer, 'mail') !== false || stripos($referrer, 'email') !== false) {
+        return 'email';
+    }
+    
+    // Internal
+    if (stripos($referrer, $_SERVER['HTTP_HOST']) !== false) {
+        return 'internal';
+    }
+    
+    return 'referral';
+}
+
+/**
+ * Extract browser family from user agent
+ *
+ * @param string $user_agent User agent string
+ * @return string Browser family
+ */
+private function extract_browser_family($user_agent) {
+    $user_agent = strtolower($user_agent);
+    
+    if (stripos($user_agent, 'edge') !== false) return 'edge';
+    if (stripos($user_agent, 'chrome') !== false) return 'chrome';
+    if (stripos($user_agent, 'safari') !== false) return 'safari';
+    if (stripos($user_agent, 'firefox') !== false) return 'firefox';
+    if (stripos($user_agent, 'opera') !== false) return 'opera';
+    if (stripos($user_agent, 'msie') !== false || stripos($user_agent, 'trident') !== false) return 'ie';
+    
+    return 'other';
+}
+
+/**
+ * Calculate engagement level from signature
+ *
+ * @param array $signature Behavioural signature
+ * @return int Engagement level (1-5)
+ */
+private function calculate_engagement_level($signature) {
+    $score = 0;
+    
+    // Pages visited scoring
+    if ($signature['pages_visited'] >= 10) $score += 2;
+    elseif ($signature['pages_visited'] >= 5) $score += 1;
+    
+    // Session duration scoring
+    if ($signature['session_duration'] >= 600) $score += 2; // 10+ minutes
+    elseif ($signature['session_duration'] >= 300) $score += 1; // 5+ minutes
+    
+    // Interaction scoring
+    if ($signature['click_count'] >= 10) $score += 1;
+    if ($signature['scroll_depth'] >= 75) $score += 1;
+    if ($signature['form_interactions'] > 0) $score += 1;
+    
+    // Convert score to level (1-5)
+    if ($score >= 6) return 5; // Very high engagement
+    if ($score >= 5) return 4; // High engagement
+    if ($score >= 3) return 3; // Medium engagement
+    if ($score >= 1) return 2; // Low engagement
+    return 1; // Very low engagement
+}
+
+/**
+ * Extract intent signals from additional data
+ *
+ * @param array $additional_data Additional behavioural data
+ * @return array Intent signals
+ */
+private function extract_intent_signals($additional_data) {
+    $signals = [];
+    
+    // High-intent page visits
+    $high_intent_pages = ['pricing', 'checkout', 'quote', 'demo', 'trial', 'contact-sales'];
+    $visited_pages = $additional_data['visited_pages'] ?? [];
+    
+    foreach ($high_intent_pages as $intent_page) {
+        if (is_array($visited_pages)) {
+            foreach ($visited_pages as $page) {
+                if (stripos($page, $intent_page) !== false) {
+                    $signals[] = 'visited_' . $intent_page;
+                }
+            }
+        }
+    }
+    
+    // Cart or wishlist activity
+    if (!empty($additional_data['cart_items'])) {
+        $signals[] = 'has_cart_items';
+    }
+    
+    // Product comparison
+    if (!empty($additional_data['compared_products'])) {
+        $signals[] = 'compared_products';
+    }
+    
+    // Download activity
+    if (!empty($additional_data['downloads'])) {
+        $signals[] = 'downloaded_content';
+    }
+    
+    return $signals;
+}
+
+/**
+ * Calculate pattern strength based on historical consistency
+ *
+ * @param array $candidate Candidate pattern data
+ * @return float Pattern strength between 0 and 1
+ */
+private function calculate_pattern_strength($candidate) {
+    $visit_days = intval($candidate['visit_days'] ?? 1);
+    $avg_session_duration = floatval($candidate['avg_session_duration'] ?? 0);
+    $avg_pages_visited = floatval($candidate['avg_pages_visited'] ?? 1);
+    
+    $strength = 0.0;
+    
+    // Consistency over time
+    if ($visit_days >= 5) $strength += 0.4;
+    elseif ($visit_days >= 3) $strength += 0.25;
+    elseif ($visit_days >= 2) $strength += 0.1;
+    
+    // Sustained engagement
+    if ($avg_session_duration >= 300) $strength += 0.3;
+    elseif ($avg_session_duration >= 120) $strength += 0.15;
+    
+    // Depth of interaction
+    if ($avg_pages_visited >= 5) $strength += 0.3;
+    elseif ($avg_pages_visited >= 3) $strength += 0.15;
+    
+    return min($strength, 1.0);
+}
+
+/**
+ * Format matched patterns for return
+ * (This method was referenced in the original code)
+ *
+ * @param array $patterns Raw pattern matches
+ * @param string $match_type Type of match
+ * @return array Formatted matches
+ */
+private function format_matches($patterns, $match_type) {
+    $formatted = [];
+    
+    foreach ($patterns as $pattern) {
+        $formatted[] = [
+            'identity_hash' => $pattern['identity_hash'] ?? '',
+            'match_type' => $match_type,
+            'collected_at' => $pattern['collected_at'] ?? '',
+            'additional_data' => $pattern['additional_data'] ?? null
+        ];
+    }
+    
+    return $formatted;
+}
 
     /**
      * Household clustering matching
@@ -2528,42 +4366,634 @@ class AFFCD_Quantum_Attribution {
         return $weights;
     }
 
-    /**
-     * Data-driven attribution weights
-     */
-    private function data_driven_weights($touchpoints, $quantum_state) {
-        // This would use machine learning to determine optimal weights
-        // For now, we'll use a sophisticated heuristic approach
-        
-        $weights = [];
-        $total_weight = 0;
-
-        foreach ($touchpoints as $index => $touchpoint) {
-            if (empty($touchpoint['affiliate_id'])) {
-                $weights[] = 0;
-                continue;
-            }
-
-            // Calculate weight based on multiple factors
-            $quality_score = $touchpoint['interaction_quality'] ?? 0.5;
-            $conversion_prob = $touchpoint['conversion_probability'] ?? 0.5;
-            $recency_factor = $this->calculate_recency_factor($touchpoint['timestamp']);
-            $position_factor = $this->calculate_position_factor($index, count($touchpoints));
-
-            $weight = $quality_score * $conversion_prob * $recency_factor * $position_factor;
-            $weights[] = $weight;
-            $total_weight += $weight;
-        }
-
-        // Normalize weights
-        if ($total_weight > 0) {
-            foreach ($weights as &$weight) {
-                $weight /= $total_weight;
-            }
-        }
-
-        return $weights;
+/**
+ * Data-driven attribution weights
+ * Calculate optimal attribution weights using statistical analysis and heuristics,
+ * uses historical performance data and multi-factor weighting
+ *
+ * @param array $touchpoints Array of customer touchpoints
+ * @param array $quantum_state Current attribution state data
+ * @return array Normalised attribution weights
+ */
+private function data_driven_weights($touchpoints, $quantum_state) {
+    if (empty($touchpoints)) {
+        return [];
     }
+    
+    $weights = [];
+    $total_weight = 0;
+    $touchpoint_count = count($touchpoints);
+    
+    // Calculate historical conversion rates for context
+    $historical_context = $this->get_historical_attribution_context($touchpoints);
+    
+    // Analyse the complete customer journey
+    $journey_analysis = $this->analyse_journey_structure($touchpoints);
+    
+    foreach ($touchpoints as $index => $touchpoint) {
+        if (empty($touchpoint['affiliate_id'])) {
+            $weights[] = 0;
+            continue;
+        }
+        
+        // Base quality score (0-1)
+        $quality_score = floatval($touchpoint['interaction_quality'] ?? 0.5);
+        
+        // Conversion probability (0-1)
+        $conversion_prob = floatval($touchpoint['conversion_probability'] ?? 0.5);
+        
+        // Recency factor - exponential decay (0-1)
+        $recency_factor = $this->calculate_recency_factor($touchpoint['timestamp']);
+        
+        // Position factor - considers both early and late touchpoints (0-1)
+        $position_factor = $this->calculate_position_factor($index, $touchpoint_count);
+        
+        // Channel effectiveness factor based on historical performance (0-2)
+        $channel_factor = $this->calculate_channel_effectiveness(
+            $touchpoint['channel'] ?? 'unknown',
+            $historical_context
+        );
+        
+        // Touchpoint type factor - different types have different influence (0.5-1.5)
+        $type_factor = $this->calculate_touchpoint_type_factor($touchpoint['type'] ?? 'click');
+        
+        // Engagement depth factor - measures interaction quality (0-1.5)
+        $engagement_factor = $this->calculate_engagement_depth($touchpoint);
+        
+        // Incremental value factor - contribution beyond other touchpoints (0-1.2)
+        $incremental_factor = $this->calculate_incremental_value(
+            $touchpoint,
+            $touchpoints,
+            $index
+        );
+        
+        // Journey context factor - how this fits in the overall journey (0.8-1.2)
+        $journey_context_factor = $this->calculate_journey_context_factor(
+            $touchpoint,
+            $journey_analysis,
+            $index
+        );
+        
+        // Affiliate performance factor - historical conversion rate (0.5-1.5)
+        $affiliate_factor = $this->calculate_affiliate_performance_factor(
+            $touchpoint['affiliate_id'],
+            $historical_context
+        );
+        
+        // Time-to-conversion factor - timing appropriateness (0.8-1.2)
+        $timing_factor = $this->calculate_timing_appropriateness(
+            $touchpoint['timestamp'],
+            $touchpoints
+        );
+        
+        // Calculate composite weight using multiplicative model
+        $weight = $quality_score 
+                * $conversion_prob 
+                * $recency_factor 
+                * $position_factor 
+                * $channel_factor 
+                * $type_factor 
+                * $engagement_factor 
+                * $incremental_factor 
+                * $journey_context_factor 
+                * $affiliate_factor 
+                * $timing_factor;
+        
+        // Apply quantum state adjustments if available
+        if (!empty($quantum_state['attribution_boost'][$index])) {
+            $weight *= floatval($quantum_state['attribution_boost'][$index]);
+        }
+        
+        // Store individual factor contributions for debugging
+        $touchpoint['weight_factors'] = [
+            'quality' => $quality_score,
+            'conversion_prob' => $conversion_prob,
+            'recency' => $recency_factor,
+            'position' => $position_factor,
+            'channel' => $channel_factor,
+            'type' => $type_factor,
+            'engagement' => $engagement_factor,
+            'incremental' => $incremental_factor,
+            'journey_context' => $journey_context_factor,
+            'affiliate' => $affiliate_factor,
+            'timing' => $timing_factor
+        ];
+        
+        $weights[] = $weight;
+        $total_weight += $weight;
+    }
+    
+    // Normalise weights to sum to 1.0
+    if ($total_weight > 0) {
+        foreach ($weights as $key => &$weight) {
+            $weight /= $total_weight;
+            
+            // Apply minimum threshold (no touchpoint gets less than 1%)
+            $min_weight = 0.01;
+            if ($weight < $min_weight && $weight > 0) {
+                $weight = $min_weight;
+            }
+        }
+        
+        // Re-normalise after applying minimum thresholds
+        $adjusted_total = array_sum($weights);
+        if ($adjusted_total > 0 && abs($adjusted_total - 1.0) > 0.001) {
+            foreach ($weights as &$weight) {
+                $weight /= $adjusted_total;
+            }
+        }
+    }
+    
+    // Store attribution decision data for analysis
+    $this->store_attribution_decision($touchpoints, $weights, $quantum_state);
+    
+    return $weights;
+}
+
+/**
+ * Get historical attribution context for weighting decisions
+ *
+ * @param array $touchpoints Current touchpoints
+ * @return array Historical context data
+ */
+private function get_historical_attribution_context($touchpoints) {
+    global $wpdb;
+    
+    $table_name = $wpdb->prefix . 'affiliate_attribution_insights';
+    
+    // Get channel performance data
+    $channels = array_unique(array_column($touchpoints, 'channel'));
+    $channel_performance = [];
+    
+    foreach ($channels as $channel) {
+        if (empty($channel)) continue;
+        
+        $perf = $wpdb->get_row($wpdb->prepare(
+            "SELECT 
+                AVG(avg_conversion_value) as avg_value,
+                AVG(touchpoint_count) as avg_touchpoints,
+                COUNT(*) as total_conversions
+             FROM {$table_name}
+             WHERE JSON_EXTRACT(attribution_model, '$.channel') = %s
+             AND last_updated >= DATE_SUB(NOW(), INTERVAL 90 DAY)",
+            $channel
+        ), ARRAY_A);
+        
+        $channel_performance[$channel] = [
+            'avg_value' => floatval($perf['avg_value'] ?? 0),
+            'avg_touchpoints' => floatval($perf['avg_touchpoints'] ?? 0),
+            'conversions' => intval($perf['total_conversions'] ?? 0)
+        ];
+    }
+    
+    // Get affiliate performance data
+    $affiliate_ids = array_unique(array_column($touchpoints, 'affiliate_id'));
+    $affiliate_performance = [];
+    
+    foreach ($affiliate_ids as $affiliate_id) {
+        if (empty($affiliate_id)) continue;
+        
+        $perf = $wpdb->get_row($wpdb->prepare(
+            "SELECT 
+                total_conversions,
+                total_value,
+                avg_conversion_value
+             FROM {$table_name}
+             WHERE affiliate_id = %d
+             ORDER BY last_updated DESC
+             LIMIT 1",
+            $affiliate_id
+        ), ARRAY_A);
+        
+        $affiliate_performance[$affiliate_id] = [
+            'total_conversions' => intval($perf['total_conversions'] ?? 0),
+            'total_value' => floatval($perf['total_value'] ?? 0),
+            'avg_value' => floatval($perf['avg_conversion_value'] ?? 0)
+        ];
+    }
+    
+    return [
+        'channels' => $channel_performance,
+        'affiliates' => $affiliate_performance
+    ];
+}
+
+/**
+ * Analyse journey structure to understand customer path
+ *
+ * @param array $touchpoints Array of touchpoints
+ * @return array Journey analysis data
+ */
+private function analyse_journey_structure($touchpoints) {
+    $analysis = [
+        'total_touchpoints' => count($touchpoints),
+        'journey_duration' => 0,
+        'channel_diversity' => 0,
+        'engagement_trend' => 'stable',
+        'key_moments' => []
+    ];
+    
+    if (empty($touchpoints)) {
+        return $analysis;
+    }
+    
+    // Calculate journey duration
+    $first_timestamp = strtotime($touchpoints[0]['timestamp']);
+    $last_timestamp = strtotime($touchpoints[count($touchpoints) - 1]['timestamp']);
+    $analysis['journey_duration'] = ($last_timestamp - $first_timestamp) / 3600; // hours
+    
+    // Calculate channel diversity
+    $unique_channels = array_unique(array_column($touchpoints, 'channel'));
+    $analysis['channel_diversity'] = count($unique_channels);
+    
+    // Analyse engagement trend (increasing, decreasing, stable)
+    $early_engagement = 0;
+    $late_engagement = 0;
+    $midpoint = floor(count($touchpoints) / 2);
+    
+    for ($i = 0; $i < count($touchpoints); $i++) {
+        $engagement = floatval($touchpoints[$i]['interaction_quality'] ?? 0.5);
+        
+        if ($i < $midpoint) {
+            $early_engagement += $engagement;
+        } else {
+            $late_engagement += $engagement;
+        }
+    }
+    
+    $early_avg = $midpoint > 0 ? $early_engagement / $midpoint : 0;
+    $late_avg = (count($touchpoints) - $midpoint) > 0 ? $late_engagement / (count($touchpoints) - $midpoint) : 0;
+    
+    if ($late_avg > $early_avg * 1.2) {
+        $analysis['engagement_trend'] = 'increasing';
+    } elseif ($late_avg < $early_avg * 0.8) {
+        $analysis['engagement_trend'] = 'decreasing';
+    }
+    
+    // Identify key moments (high engagement points)
+    foreach ($touchpoints as $index => $touchpoint) {
+        $quality = floatval($touchpoint['interaction_quality'] ?? 0);
+        if ($quality >= 0.8) {
+            $analysis['key_moments'][] = $index;
+        }
+    }
+    
+    return $analysis;
+}
+
+/**
+ * Calculate recency factor using exponential decay
+ *
+ * @param string $timestamp Touchpoint timestamp
+ * @return float Recency factor between 0 and 1
+ */
+private function calculate_recency_factor($timestamp) {
+    $touchpoint_time = strtotime($timestamp);
+    $current_time = current_time('timestamp');
+    
+    // Time difference in hours
+    $hours_ago = ($current_time - $touchpoint_time) / 3600;
+    
+    // Exponential decay with half-life of 168 hours (7 days)
+    $half_life = 168;
+    $decay_rate = log(2) / $half_life;
+    
+    $recency_factor = exp(-$decay_rate * $hours_ago);
+    
+    // Ensure minimum value of 0.1 for very old touchpoints
+    return max($recency_factor, 0.1);
+}
+
+/**
+ * Calculate position factor considering U-shaped attribution bias
+ *
+ * @param int $index Touchpoint index
+ * @param int $total_count Total number of touchpoints
+ * @return float Position factor between 0.5 and 1.5
+ */
+private function calculate_position_factor($index, $total_count) {
+    if ($total_count <= 1) {
+        return 1.0;
+    }
+    
+    // First touchpoint gets 40% boost (discovery/awareness)
+    if ($index === 0) {
+        return 1.4;
+    }
+    
+    // Last touchpoint gets 50% boost (conversion trigger)
+    if ($index === $total_count - 1) {
+        return 1.5;
+    }
+    
+    // Middle touchpoints get less weight but still valuable
+    // U-shaped curve: higher at start and end, lower in middle
+    $normalized_position = $index / ($total_count - 1);
+    
+    // Parabolic function: y = -0.6x² + 0.6x + 0.8
+    // This gives values between 0.8-1.0 for middle touchpoints
+    $position_factor = -0.6 * pow($normalized_position - 0.5, 2) + 0.95;
+    
+    return max($position_factor, 0.5);
+}
+
+/**
+ * Calculate channel effectiveness factor based on historical performance
+ *
+ * @param string $channel Channel name
+ * @param array $historical_context Historical performance data
+ * @return float Channel factor between 0.5 and 2.0
+ */
+private function calculate_channel_effectiveness($channel, $historical_context) {
+    if (empty($channel) || !isset($historical_context['channels'][$channel])) {
+        return 1.0; // Neutral if no data
+    }
+    
+    $channel_data = $historical_context['channels'][$channel];
+    $conversions = intval($channel_data['conversions']);
+    
+    // Need sufficient data for reliable factor
+    if ($conversions < 10) {
+        return 1.0;
+    }
+    
+    $avg_value = floatval($channel_data['avg_value']);
+    
+    // Calculate factor based on conversion value
+    // Channels with higher average values get higher weights
+    if ($avg_value >= 500) {
+        return 1.8;
+    } elseif ($avg_value >= 250) {
+        return 1.5;
+    } elseif ($avg_value >= 100) {
+        return 1.2;
+    } elseif ($avg_value >= 50) {
+        return 1.0;
+    } elseif ($avg_value >= 20) {
+        return 0.8;
+    } else {
+        return 0.6;
+    }
+}
+
+/**
+ * Calculate touchpoint type factor
+ *
+ * @param string $type Touchpoint type
+ * @return float Type factor between 0.5 and 1.5
+ */
+private function calculate_touchpoint_type_factor($type) {
+    $type_weights = [
+        'purchase_intent' => 1.5,    // Viewing pricing, checkout
+        'high_engagement' => 1.4,     // Demo request, trial signup
+        'content_download' => 1.2,    // Whitepaper, guide download
+        'form_submission' => 1.3,     // Contact forms, quotes
+        'product_view' => 1.1,        // Product page views
+        'click' => 1.0,               // Standard clicks
+        'impression' => 0.6,          // Ad impressions
+        'email_open' => 0.7,          // Email opens
+        'social_engagement' => 0.8    // Social interactions
+    ];
+    
+    return $type_weights[$type] ?? 1.0;
+}
+
+/**
+ * Calculate engagement depth factor
+ *
+ * @param array $touchpoint Touchpoint data
+ * @return float Engagement factor between 0.5 and 1.5
+ */
+private function calculate_engagement_depth($touchpoint) {
+    $base_factor = 1.0;
+    
+    // Time spent
+    $time_spent = intval($touchpoint['time_spent'] ?? 0);
+    if ($time_spent >= 300) {
+        $base_factor += 0.3; // 5+ minutes
+    } elseif ($time_spent >= 120) {
+        $base_factor += 0.2; // 2-5 minutes
+    } elseif ($time_spent >= 30) {
+        $base_factor += 0.1; // 30s-2 minutes
+    }
+    
+    // Pages viewed in session
+    $pages_viewed = intval($touchpoint['pages_viewed'] ?? 1);
+    if ($pages_viewed >= 5) {
+        $base_factor += 0.2;
+    } elseif ($pages_viewed >= 3) {
+        $base_factor += 0.1;
+    }
+    
+    // Interactions (clicks, scrolls, etc.)
+    $interactions = intval($touchpoint['interactions'] ?? 0);
+    if ($interactions >= 10) {
+        $base_factor += 0.2;
+    } elseif ($interactions >= 5) {
+        $base_factor += 0.1;
+    }
+    
+    return min($base_factor, 1.5);
+}
+
+/**
+ * Calculate incremental value contributed by this touchpoint
+ *
+ * @param array $touchpoint Current touchpoint
+ * @param array $all_touchpoints All touchpoints in journey
+ * @param int $current_index Current touchpoint index
+ * @return float Incremental factor between 0.7 and 1.2
+ */
+private function calculate_incremental_value($touchpoint, $all_touchpoints, $current_index) {
+    $incremental_factor = 1.0;
+    
+    $current_channel = $touchpoint['channel'] ?? '';
+    $current_affiliate = $touchpoint['affiliate_id'] ?? 0;
+    
+    // Check if this is a new channel in the journey
+    $new_channel = true;
+    for ($i = 0; $i < $current_index; $i++) {
+        if (($all_touchpoints[$i]['channel'] ?? '') === $current_channel) {
+            $new_channel = false;
+            break;
+        }
+    }
+    
+    if ($new_channel) {
+        $incremental_factor += 0.15; // New channel adds value
+    }
+    
+    // Check if this affiliate brought new value
+    $repeated_affiliate = false;
+    for ($i = max(0, $current_index - 3); $i < $current_index; $i++) {
+        if (($all_touchpoints[$i]['affiliate_id'] ?? 0) === $current_affiliate) {
+            $repeated_affiliate = true;
+            break;
+        }
+    }
+    
+    if ($repeated_affiliate) {
+        $incremental_factor -= 0.15; // Repeated recent touchpoint less valuable
+    }
+    
+    // Check for journey progression (moved to higher-intent pages)
+    if ($current_index > 0) {
+        $prev_quality = floatval($all_touchpoints[$current_index - 1]['interaction_quality'] ?? 0.5);
+        $current_quality = floatval($touchpoint['interaction_quality'] ?? 0.5);
+        
+        if ($current_quality > $prev_quality + 0.2) {
+            $incremental_factor += 0.1; // Significant quality increase
+        }
+    }
+    
+    return max(min($incremental_factor, 1.2), 0.7);
+}
+
+/**
+ * Calculate journey context factor
+ *
+ * @param array $touchpoint Current touchpoint
+ * @param array $journey_analysis Journey structure analysis
+ * @param int $index Touchpoint index
+ * @return float Context factor between 0.8 and 1.2
+ */
+private function calculate_journey_context_factor($touchpoint, $journey_analysis, $index) {
+    $factor = 1.0;
+    
+    // Boost key moment touchpoints
+    if (in_array($index, $journey_analysis['key_moments'])) {
+        $factor += 0.15;
+    }
+    
+    // Adjust based on engagement trend
+    $total = $journey_analysis['total_touchpoints'];
+    $is_late_stage = $index >= ($total * 0.7);
+    
+    if ($journey_analysis['engagement_trend'] === 'increasing' && $is_late_stage) {
+        $factor += 0.1; // Late touchpoints more important in growing engagement
+    } elseif ($journey_analysis['engagement_trend'] === 'decreasing' && !$is_late_stage) {
+        $factor += 0.1; // Early touchpoints more important in declining engagement
+    }
+    
+    // Penalise if journey is too long (fatigue factor)
+    if ($journey_analysis['journey_duration'] > 720) { // 30 days
+        $factor -= 0.1;
+    }
+    
+    return max(min($factor, 1.2), 0.8);
+}
+
+/**
+ * Calculate affiliate performance factor
+ *
+ * @param int $affiliate_id Affiliate ID
+ * @param array $historical_context Historical performance data
+ * @return float Performance factor between 0.5 and 1.5
+ */
+private function calculate_affiliate_performance_factor($affiliate_id, $historical_context) {
+    if (empty($affiliate_id) || !isset($historical_context['affiliates'][$affiliate_id])) {
+        return 1.0;
+    }
+    
+    $perf = $historical_context['affiliates'][$affiliate_id];
+    $conversions = intval($perf['total_conversions']);
+    
+    if ($conversions < 5) {
+        return 1.0; // Insufficient data
+    }
+    
+    $avg_value = floatval($perf['avg_value']);
+    
+    // High-performing affiliates get boosted weights
+    if ($avg_value >= 500) {
+        return 1.5;
+    } elseif ($avg_value >= 250) {
+        return 1.3;
+    } elseif ($avg_value >= 100) {
+        return 1.1;
+    } elseif ($avg_value >= 50) {
+        return 1.0;
+    } elseif ($avg_value >= 20) {
+        return 0.8;
+    } else {
+        return 0.6;
+    }
+}
+
+/**
+ * Calculate timing appropriateness factor
+ *
+ * @param string $timestamp Touchpoint timestamp
+ * @param array $all_touchpoints All journey touchpoints
+ * @return float Timing factor between 0.8 and 1.2
+ */
+private function calculate_timing_appropriateness($timestamp, $all_touchpoints) {
+    $touchpoint_time = strtotime($timestamp);
+    $hour = intval(date('H', $touchpoint_time));
+    $day_of_week = intval(date('N', $touchpoint_time)); // 1-7
+    
+    $factor = 1.0;
+    
+    // Business hours boost (9-17)
+    if ($hour >= 9 && $hour <= 17) {
+        $factor += 0.1;
+    }
+    
+    // Weekday boost
+    if ($day_of_week >= 1 && $day_of_week <= 5) {
+        $factor += 0.05;
+    }
+    
+    // Check spacing between touchpoints
+    if (count($all_touchpoints) > 1) {
+        $timestamps = array_column($all_touchpoints, 'timestamp');
+        $timestamps = array_map('strtotime', $timestamps);
+        sort($timestamps);
+        
+        $current_pos = array_search($touchpoint_time, $timestamps);
+        
+        if ($current_pos > 0) {
+            $time_since_prev = ($touchpoint_time - $timestamps[$current_pos - 1]) / 3600;
+            
+            // Optimal spacing: 2-48 hours
+            if ($time_since_prev >= 2 && $time_since_prev <= 48) {
+                $factor += 0.05;
+            }
+        }
+    }
+    
+    return max(min($factor, 1.2), 0.8);
+}
+
+/**
+ * Store attribution decision for analysis and improvement
+ *
+ * @param array $touchpoints Touchpoints in journey
+ * @param array $weights Calculated weights
+ * @param array $quantum_state Attribution state
+ * @return void
+ */
+private function store_attribution_decision($touchpoints, $weights, $quantum_state) {
+    global $wpdb;
+    
+    $table_name = $wpdb->prefix . 'affiliate_attribution_decisions';
+    
+    $decision_data = [
+        'touchpoint_count' => count($touchpoints),
+        'weights' => $weights,
+        'quantum_state' => $quantum_state,
+        'timestamp' => current_time('mysql')
+    ];
+    
+    $wpdb->insert(
+        $table_name,
+        [
+            'decision_data' => json_encode($decision_data),
+            'created_at' => current_time('mysql')
+        ],
+        ['%s', '%s']
+    );
+}
 
     /**
      * Quantum superposition attribution weights
@@ -2935,32 +5365,643 @@ class AFFCD_Quantum_Attribution {
         return min($quality_score, 1.0);
     }
 
-    private function predict_conversion_probability($form_data) {
-        // Simple heuristic for conversion probability
-        // In production, this would use machine learning
-        
-        $probability = 0.3; // Base probability
-        
-        // High-value form types
-        $high_value_indicators = ['demo', 'quote', 'consultation', 'trial'];
-        foreach ($high_value_indicators as $indicator) {
-            if (stripos(json_encode($form_data), $indicator) !== false) {
-                $probability += 0.3;
-                break;
-            }
+
+/**
+ * Predict conversion probability for form submission
+ * Uses statistical analysis and behavioural heuristics
+ * Considers multiple signals to provide accurate probability estimation
+ *
+ * @param array $form_data Form submission data
+ * @return float Probability between 0 and 1
+ */
+private function predict_conversion_probability($form_data) {
+    $probability = 0.10; // Conservative base probability
+    $signal_weights = [];
+    
+    // Intent signal analysis (weight: 0.30)
+    $intent_score = $this->analyse_form_intent_signals($form_data);
+    $probability += $intent_score * 0.30;
+    $signal_weights['intent'] = $intent_score;
+    
+    // Email domain quality analysis (weight: 0.20)
+    $email_score = $this->analyse_email_domain_quality($form_data);
+    $probability += $email_score * 0.20;
+    $signal_weights['email_quality'] = $email_score;
+    
+    // Form completion quality (weight: 0.15)
+    $completion_score = $this->analyse_form_completion_quality($form_data);
+    $probability += $completion_score * 0.15;
+    $signal_weights['completion'] = $completion_score;
+    
+    // Behavioural context analysis (weight: 0.15)
+    $behaviour_score = $this->analyse_behavioural_context($form_data);
+    $probability += $behaviour_score * 0.15;
+    $signal_weights['behaviour'] = $behaviour_score;
+    
+    // Historical conversion patterns (weight: 0.10)
+    $historical_score = $this->analyse_historical_conversion_patterns($form_data);
+    $probability += $historical_score * 0.10;
+    $signal_weights['historical'] = $historical_score;
+    
+    // Temporal and contextual factors (weight: 0.10)
+    $temporal_score = $this->analyse_temporal_context();
+    $probability += $temporal_score * 0.10;
+    $signal_weights['temporal'] = $temporal_score;
+    
+    // Apply confidence adjustment based on data availability
+    $confidence_adjustment = $this->calculate_prediction_confidence($form_data);
+    $probability *= $confidence_adjustment;
+    
+    // Store prediction metadata for model improvement
+    $this->store_conversion_prediction_data($form_data, $probability, $signal_weights);
+    
+    // Ensure probability stays within valid range with reasonable bounds
+    return max(0.01, min($probability, 0.95));
+}
+
+/**
+ * Analyse form intent signals to determine purchase readiness
+ *
+ * @param array $form_data Form submission data
+ * @return float Intent score between 0 and 1
+ */
+private function analyse_form_intent_signals($form_data) {
+    $intent_score = 0.0;
+    $form_content = strtolower(json_encode($form_data));
+    
+    // High-intent indicators with graduated weights
+    $high_intent = [
+        'purchase' => 0.95,
+        'buy now' => 0.93,
+        'quote' => 0.90,
+        'pricing' => 0.85,
+        'demo' => 0.82,
+        'consultation' => 0.80,
+        'trial' => 0.75,
+        'implementation' => 0.78,
+        'enterprise' => 0.77,
+        'contract' => 0.88,
+        'proposal' => 0.83
+    ];
+    
+    $medium_intent = [
+        'information' => 0.45,
+        'learn more' => 0.48,
+        'case study' => 0.52,
+        'whitepaper' => 0.50,
+        'webinar' => 0.55,
+        'download' => 0.47,
+        'ebook' => 0.46,
+        'guide' => 0.49
+    ];
+    
+    $low_intent = [
+        'newsletter' => 0.15,
+        'subscribe' => 0.18,
+        'blog' => 0.12,
+        'updates' => 0.14,
+        'follow' => 0.10
+    ];
+    
+    // Check for high-intent signals
+    foreach ($high_intent as $signal => $weight) {
+        if (stripos($form_content, $signal) !== false) {
+            $intent_score = max($intent_score, $weight);
         }
-        
-        // Corporate email domains
-        if (!empty($form_data['email'])) {
-            $domain = substr(strrchr($form_data['email'], "@"), 1);
-            $consumer_domains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com'];
-            if (!in_array($domain, $consumer_domains)) {
-                $probability += 0.2;
-            }
-        }
-        
-        return min($probability, 1.0);
     }
+    
+    // Check medium-intent if no high-intent found
+    if ($intent_score < 0.60) {
+        foreach ($medium_intent as $signal => $weight) {
+            if (stripos($form_content, $signal) !== false) {
+                $intent_score = max($intent_score, $weight);
+            }
+        }
+    }
+    
+    // Check low-intent as baseline
+    if ($intent_score < 0.20) {
+        foreach ($low_intent as $signal => $weight) {
+            if (stripos($form_content, $signal) !== false) {
+                $intent_score = max($intent_score, $weight);
+            }
+        }
+    }
+    
+    // Boost for multiple high-value fields
+    $high_value_field_count = 0;
+    $high_value_fields = ['company', 'job_title', 'phone', 'budget', 'timeline', 'team_size', 'industry'];
+    
+    foreach ($high_value_fields as $field) {
+        if (!empty($form_data[$field])) {
+            $high_value_field_count++;
+        }
+    }
+    
+    if ($high_value_field_count >= 4) {
+        $intent_score *= 1.20;
+    } elseif ($high_value_field_count >= 2) {
+        $intent_score *= 1.10;
+    }
+    
+    // Boost for urgency indicators
+    $urgency_keywords = ['urgent', 'asap', 'immediately', 'soon', 'this week', 'this month'];
+    foreach ($urgency_keywords as $keyword) {
+        if (stripos($form_content, $keyword) !== false) {
+            $intent_score *= 1.15;
+            break;
+        }
+    }
+    
+    return min($intent_score, 1.0);
+}
+
+/**
+ * Analyse email domain quality and business legitimacy
+ *
+ * @param array $form_data Form submission data
+ * @return float Email quality score between 0 and 1
+ */
+private function analyse_email_domain_quality($form_data) {
+    if (empty($form_data['email'])) {
+        return 0.30; // Neutral for missing email
+    }
+    
+    $email = strtolower(trim($form_data['email']));
+    
+    // Validate email format
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return 0.05;
+    }
+    
+    $domain = substr(strrchr($email, '@'), 1);
+    
+    // Free consumer email providers (lower conversion likelihood)
+    $consumer_providers = [
+        'gmail.com' => 0.30,
+        'yahoo.com' => 0.25,
+        'hotmail.com' => 0.28,
+        'outlook.com' => 0.32,
+        'aol.com' => 0.22,
+        'icloud.com' => 0.29,
+        'live.com' => 0.27,
+        'mail.com' => 0.24,
+        'protonmail.com' => 0.35,
+        'gmx.com' => 0.23,
+        'yandex.com' => 0.26,
+        'zoho.com' => 0.33
+    ];
+    
+    if (isset($consumer_providers[$domain])) {
+        return $consumer_providers[$domain];
+    }
+    
+    // Disposable/temporary email detection (very low conversion)
+    $disposable_patterns = [
+        'temp', 'disposable', 'trash', 'guerrilla', '10minute', 
+        'throwaway', 'fake', 'spam', 'mailinator', 'tempmail'
+    ];
+    
+    foreach ($disposable_patterns as $pattern) {
+        if (stripos($domain, $pattern) !== false) {
+            return 0.02;
+        }
+    }
+    
+    // Role-based emails (lower personal engagement)
+    $role_prefixes = ['info@', 'admin@', 'support@', 'sales@', 'noreply@', 'contact@', 'help@'];
+    foreach ($role_prefixes as $prefix) {
+        if (strpos($email, $prefix) === 0) {
+            return 0.45; // Still valuable but less personal
+        }
+    }
+    
+    // Corporate/business email (higher conversion likelihood)
+    $business_score = 0.70;
+    
+    // Premium business TLDs
+    $premium_tlds = [
+        '.edu' => 1.15,
+        '.gov' => 1.20,
+        '.mil' => 1.18,
+        '.ac.uk' => 1.12,
+        '.edu.au' => 1.12,
+        '.org' => 1.05
+    ];
+    
+    foreach ($premium_tlds as $tld => $multiplier) {
+        if (substr($domain, -strlen($tld)) === $tld) {
+            $business_score *= $multiplier;
+            break;
+        }
+    }
+    
+    // Check domain reputation and age
+    $domain_reputation = $this->check_domain_reputation_score($domain);
+    $business_score *= $domain_reputation;
+    
+    // Check for company name in email matching form data
+    if (!empty($form_data['company'])) {
+        $company_name = strtolower(preg_replace('/[^a-z0-9]/', '', $form_data['company']));
+        $domain_name = strtolower(preg_replace('/[^a-z0-9]/', '', explode('.', $domain)[0]));
+        
+        similar_text($company_name, $domain_name, $similarity);
+        
+        if ($similarity > 60) {
+            $business_score *= 1.15; // Email domain matches company name
+        }
+    }
+    
+    return min($business_score, 1.0);
+}
+
+/**
+ * Analyse form completion quality and data richness
+ *
+ * @param array $form_data Form submission data
+ * @return float Completion quality score between 0 and 1
+ */
+private function analyse_form_completion_quality($form_data) {
+    $total_fields = count($form_data);
+    
+    if ($total_fields === 0) {
+        return 0.0;
+    }
+    
+    $quality_score = 0.0;
+    $filled_quality_fields = 0;
+    
+    // Field quality assessment
+    foreach ($form_data as $key => $value) {
+        $value = trim($value);
+        
+        if (empty($value)) {
+            continue;
+        }
+        
+        // Check for substantive responses (not just "test", "asdf", etc.)
+        if ($this->is_quality_response($value)) {
+            $filled_quality_fields++;
+            
+            // Award points based on response length and type
+            $field_score = 0;
+            
+            if (strlen($value) > 50) {
+                $field_score += 0.20; // Detailed response
+            } elseif (strlen($value) > 20) {
+                $field_score += 0.12; // Good response
+            } elseif (strlen($value) > 5) {
+                $field_score += 0.06; // Basic response
+            } else {
+                $field_score += 0.02; // Minimal response
+            }
+            
+            // Bonus for key business fields
+            $key_fields = ['company', 'job_title', 'phone', 'industry', 'budget', 'timeline'];
+            if (in_array($key, $key_fields)) {
+                $field_score *= 1.5;
+            }
+            
+            $quality_score += $field_score;
+        }
+    }
+    
+    // Completeness ratio
+    $completeness = $filled_quality_fields / $total_fields;
+    
+    // Combined score: 60% quality, 40% completeness
+    $final_score = ($quality_score / max($total_fields, 1)) * 0.60 + $completeness * 0.40;
+    
+    // Bonus for extremely thorough submissions
+    if ($filled_quality_fields >= 8) {
+        $final_score *= 1.15;
+    }
+    
+    return min($final_score, 1.0);
+}
+
+/**
+ * Analyse behavioural context from session data
+ *
+ * @param array $form_data Form submission data
+ * @return float Behaviour score between 0 and 1
+ */
+private function analyse_behavioural_context($form_data) {
+    $behaviour_score = 0.5; // Neutral baseline
+    
+    // Session engagement indicators
+    $pages_visited = intval($form_data['pages_visited'] ?? $_COOKIE['session_pages'] ?? 1);
+    $session_duration = intval($form_data['session_duration'] ?? $_COOKIE['session_duration'] ?? 0);
+    $referrer = $_SERVER['HTTP_REFERER'] ?? '';
+    
+    // Multi-page engagement (strong buying signal)
+    if ($pages_visited >= 10) {
+        $behaviour_score += 0.30;
+    } elseif ($pages_visited >= 5) {
+        $behaviour_score += 0.20;
+    } elseif ($pages_visited >= 3) {
+        $behaviour_score += 0.10;
+    }
+    
+    // Time on site engagement
+    if ($session_duration >= 600) { // 10+ minutes
+        $behaviour_score += 0.25;
+    } elseif ($session_duration >= 300) { // 5+ minutes
+        $behaviour_score += 0.15;
+    } elseif ($session_duration >= 120) { // 2+ minutes
+        $behaviour_score += 0.08;
+    }
+    
+    // Referrer quality
+    if (!empty($referrer)) {
+        $referrer_lower = strtolower($referrer);
+        
+        // Direct traffic or internal navigation (strong intent)
+        if (stripos($referrer, $_SERVER['HTTP_HOST']) !== false) {
+            $behaviour_score += 0.15;
+        }
+        // Search engine (research phase)
+        elseif (preg_match('/(google|bing|yahoo|duckduckgo)/i', $referrer)) {
+            $behaviour_score += 0.10;
+        }
+        // Social media (awareness phase)
+        elseif (preg_match('/(facebook|twitter|linkedin|instagram)/i', $referrer)) {
+            $behaviour_score += 0.05;
+        }
+    }
+    
+    // UTM campaign tracking
+    if (!empty($form_data['utm_campaign']) || !empty($_GET['utm_campaign'])) {
+        $behaviour_score += 0.08;
+    }
+    
+    // Returning visitor (tracked via cookie or session)
+    $returning_visitor = !empty($_COOKIE['returning_visitor']) || 
+                        !empty($form_data['returning_visitor']);
+    
+    if ($returning_visitor) {
+        $behaviour_score += 0.12; // Return visits indicate genuine interest
+    }
+    
+    return min($behaviour_score, 1.0);
+}
+
+/**
+ * Analyse historical conversion patterns for similar submissions
+ *
+ * @param array $form_data Form submission data
+ * @return float Historical score between 0 and 1
+ */
+private function analyse_historical_conversion_patterns($form_data) {
+    global $wpdb;
+    
+    $form_id = $form_data['form_id'] ?? 'unknown';
+    $table_name = $wpdb->prefix . 'affiliate_form_submissions';
+    
+    // Get historical conversion rate for this form
+    $stats = $wpdb->get_row($wpdb->prepare(
+        "SELECT 
+            COUNT(*) as total_submissions,
+            SUM(CASE WHEN converted = 1 THEN 1 ELSE 0 END) as conversions,
+            AVG(CASE WHEN converted = 1 THEN conversion_value ELSE 0 END) as avg_value
+         FROM {$table_name}
+         WHERE form_id = %s
+         AND submission_date >= DATE_SUB(NOW(), INTERVAL 90 DAY)",
+        $form_id
+    ), ARRAY_A);
+    
+    $total = intval($stats['total_submissions'] ?? 0);
+    $conversions = intval($stats['conversions'] ?? 0);
+    
+    // Need minimum sample size for reliable prediction
+    if ($total < 20) {
+        return 0.50; // Neutral score with insufficient data
+    }
+    
+    $conversion_rate = $conversions / $total;
+    
+    // Apply Laplace smoothing for small samples
+    $smoothed_rate = ($conversions + 1) / ($total + 2);
+    
+    // Weight by sample size confidence
+    $confidence = min($total / 100, 1.0);
+    $final_rate = ($conversion_rate * $confidence) + ($smoothed_rate * (1 - $confidence));
+    
+    // Check for similar patterns (same industry, company size, etc.)
+    if (!empty($form_data['industry'])) {
+        $industry_rate = $this->get_industry_conversion_rate($form_data['industry']);
+        
+        // Blend form-specific and industry rates
+        $final_rate = ($final_rate * 0.7) + ($industry_rate * 0.3);
+    }
+    
+    return min($final_rate, 1.0);
+}
+
+/**
+ * Analyse temporal context for optimal conversion timing
+ *
+ * @return float Temporal score between 0 and 1
+ */
+private function analyse_temporal_context() {
+    $hour = intval(current_time('H'));
+    $day = intval(current_time('N')); // 1=Monday, 7=Sunday
+    
+    $temporal_score = 0.5;
+    
+    // Business hours premium (9 AM - 5 PM)
+    if ($hour >= 9 && $hour < 17) {
+        $temporal_score += 0.25;
+    }
+    // Extended business hours (7 AM - 9 PM)
+    elseif ($hour >= 7 && $hour < 21) {
+        $temporal_score += 0.15;
+    }
+    // Off-hours penalty
+    else {
+        $temporal_score -= 0.10;
+    }
+    
+    // Weekday premium (Monday-Friday)
+    if ($day >= 1 && $day <= 5) {
+        $temporal_score += 0.20;
+    }
+    // Weekend moderate reduction
+    else {
+        $temporal_score += 0.05;
+    }
+    
+    // Peak conversion times (Tuesday-Thursday, 10-11 AM or 2-3 PM)
+    if ($day >= 2 && $day <= 4) {
+        if (($hour >= 10 && $hour < 11) || ($hour >= 14 && $hour < 15)) {
+            $temporal_score += 0.10;
+        }
+    }
+    
+    // Month-end boost (budget spending pressure)
+    $day_of_month = intval(current_time('j'));
+    if ($day_of_month >= 25) {
+        $temporal_score += 0.05;
+    }
+    
+    return min($temporal_score, 1.0);
+}
+
+/**
+ * Calculate prediction confidence based on available data
+ *
+ * @param array $form_data Form submission data
+ * @return float Confidence adjustment between 0.7 and 1.0
+ */
+private function calculate_prediction_confidence($form_data) {
+    $confidence = 1.0;
+    $data_points = 0;
+    
+    // Count available data points
+    $key_indicators = ['email', 'company', 'phone', 'industry', 'pages_visited', 'session_duration'];
+    
+    foreach ($key_indicators as $indicator) {
+        if (!empty($form_data[$indicator])) {
+            $data_points++;
+        }
+    }
+    
+    // Reduce confidence if insufficient data
+    if ($data_points < 2) {
+        $confidence = 0.70;
+    } elseif ($data_points < 4) {
+        $confidence = 0.85;
+    } elseif ($data_points >= 5) {
+        $confidence = 1.0;
+    }
+    
+    return $confidence;
+}
+
+/**
+ * Check if response value is quality (not spam or test)
+ *
+ * @param string $value Field value
+ * @return bool True if quality response
+ */
+private function is_quality_response($value) {
+    $value_lower = strtolower(trim($value));
+    
+    // Spam/test patterns
+    $spam_patterns = [
+        '/^(test|asdf|qwerty|xxx|none|n\/a|na)$/i',
+        '/^(.)\1{3,}$/', // Repeated characters
+        '/^\d{8,}$/', // Long number strings
+        '/<script|javascript:/i',
+        '/\b(viagra|cialis|casino|lottery)\b/i'
+    ];
+    
+    foreach ($spam_patterns as $pattern) {
+        if (preg_match($pattern, $value)) {
+            return false;
+        }
+    }
+    
+    // Too short to be meaningful
+    if (strlen($value) < 2) {
+        return false;
+    }
+    
+    return true;
+}
+
+/**
+ * Check domain reputation score from cache or database
+ *
+ * @param string $domain Email domain
+ * @return float Reputation multiplier between 0.5 and 1.2
+ */
+private function check_domain_reputation_score($domain) {
+    $cache_key = 'affcd_domain_reputation_' . md5($domain);
+    $cached = get_transient($cache_key);
+    
+    if ($cached !== false) {
+        return floatval($cached);
+    }
+    
+    $reputation = 1.0;
+    
+    // Check against known spam domains
+    $spam_list = get_option('affcd_spam_domains', []);
+    if (in_array($domain, $spam_list)) {
+        $reputation = 0.50;
+    }
+    
+    // Check against verified business domains
+    $verified_list = get_option('affcd_verified_domains', []);
+    if (in_array($domain, $verified_list)) {
+        $reputation = 1.20;
+    }
+    
+    // Cache for 7 days
+    set_transient($cache_key, $reputation, 7 * DAY_IN_SECONDS);
+    
+    return $reputation;
+}
+
+/**
+ * Get industry-specific conversion rate
+ *
+ * @param string $industry Industry name
+ * @return float Industry conversion rate between 0 and 1
+ */
+private function get_industry_conversion_rate($industry) {
+    global $wpdb;
+    
+    $table_name = $wpdb->prefix . 'affiliate_form_submissions';
+    
+    $stats = $wpdb->get_row($wpdb->prepare(
+        "SELECT 
+            COUNT(*) as total,
+            SUM(CASE WHEN converted = 1 THEN 1 ELSE 0 END) as conversions
+         FROM {$table_name}
+         WHERE JSON_EXTRACT(form_data, '$.industry') = %s
+         AND submission_date >= DATE_SUB(NOW(), INTERVAL 180 DAY)",
+        $industry
+    ), ARRAY_A);
+    
+    $total = intval($stats['total'] ?? 0);
+    $conversions = intval($stats['conversions'] ?? 0);
+    
+    if ($total < 10) {
+        return 0.50; // Default if insufficient data
+    }
+    
+    return $conversions / $total;
+}
+
+/**
+ * Store conversion prediction data for model refinement
+ *
+ * @param array $form_data Form submission data
+ * @param float $probability Predicted probability
+ * @param array $signal_weights Individual signal weights
+ * @return void
+ */
+private function store_conversion_prediction_data($form_data, $probability, $signal_weights) {
+    global $wpdb;
+    
+    $table_name = $wpdb->prefix . 'affiliate_conversion_predictions';
+    
+    $wpdb->insert(
+        $table_name,
+        [
+            'form_id' => $form_data['form_id'] ?? 'unknown',
+            'predicted_probability' => $probability,
+            'signal_weights' => json_encode($signal_weights),
+            'form_data_hash' => md5(json_encode($form_data)),
+            'predicted_at' => current_time('mysql'),
+            'converted' => 0 // Updated later when actual outcome is known
+        ],
+        ['%s', '%f', '%s', '%s', '%s', '%d']
+    );
+}
+
 
     private function calculate_recency_factor($timestamp) {
         $hours_ago = (time() - strtotime($timestamp)) / 3600;
